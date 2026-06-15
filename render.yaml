@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: jannatie-web
+    runtime: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 20.11.0
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://jannatie.com
+      # Set all other env vars in the Render dashboard (not here — keep secrets out of git)

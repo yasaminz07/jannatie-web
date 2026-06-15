@@ -1,0 +1,60 @@
+import { NextRequest, NextResponse } from "next/server";
+import OpenAI from "openai";
+
+function getOpenAIClient() {
+  return new OpenAI({
+    apiKey: process.env.AZURE_OPENAI_API_KEY ?? "placeholder",
+    baseURL: `${process.env.AZURE_OPENAI_ENDPOINT}/openai/deployments/${process.env.AZURE_OPENAI_DEPLOYMENT_NAME}`,
+    defaultQuery: { "api-version": "2024-02-01" },
+    defaultHeaders: { "api-key": process.env.AZURE_OPENAI_API_KEY ?? "" },
+  });
+}
+
+const SYSTEM_PROMPT = `You are Jannatie AI, a knowledgeable and warm Islamic companion. You follow the Sunni tradition (Ahl as-Sunnah wal-Jama'ah).
+
+RULES:
+1. Always mention the Prophet Muhammad ﷺ with full salawat after his name
+2. Always cite hadiths with collection name and number (e.g. Sahih al-Bukhari 5027)
+3. Always cite Quranic verses with surah name and verse number (e.g. Quran 2:183)
+4. Use ONLY authentic sources: Sahih al-Bukhari, Sahih Muslim, Abu Dawud, Tirmidhi, Nasai, Ibn Majah, and the Quran
+5. ALWAYS end every response with: "For guidance only — not a fatwa. Please consult a qualified Islamic scholar for personal rulings."
+6. Be warm, encouraging, and speak like a knowledgeable Muslim friend
+7. Never give fatwas or definitive legal rulings
+8. If asked about divisive topics (e.g. inter-madhab disputes), present the mainstream scholarly consensus
+9. Use "Allah ﷻ" when referring to God
+10. Respond concisely — aim for 3-5 sentences plus citation`;
+
+export async function POST(request: NextRequest) {
+  try {
+    const { message } = await request.json();
+
+    if (!message || typeof message !== "string" || message.length > 1000) {
+      return NextResponse.json({ error: "Invalid message" }, { status: 400 });
+    }
+
+    const openai = getOpenAIClient();
+    const completion = await openai.chat.completions.create({
+      model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME ?? "gpt-4",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: message },
+      ],
+      max_tokens: 500,
+      temperature: 0.4,
+    });
+
+    const reply = completion.choices[0]?.message?.content ?? "I apologise, I was unable to generate a response. Please try again.";
+
+    return NextResponse.json({ reply, verified: true });
+  } catch (error) {
+    console.error("AI API error:", error);
+    return NextResponse.json(
+      {
+        reply:
+          "I apologise — I'm unable to connect right now. Please try again shortly. For urgent matters, please consult a qualified Islamic scholar. For guidance only — not a fatwa.",
+        verified: false,
+      },
+      { status: 200 }
+    );
+  }
+}

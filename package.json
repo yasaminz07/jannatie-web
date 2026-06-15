@@ -1,0 +1,41 @@
+{
+  "name": "jannatie-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node ./node_modules/next/dist/bin/next dev",
+    "build": "node ./node_modules/next/dist/bin/next build",
+    "start": "node ./node_modules/next/dist/bin/next start",
+    "lint": "node ./node_modules/next/dist/bin/next lint"
+  },
+  "dependencies": {
+    "next": "14.2.35",
+    "react": "^18",
+    "react-dom": "^18",
+    "framer-motion": "^11.3.31",
+    "firebase": "^10.13.2",
+    "stripe": "^16.12.0",
+    "@stripe/stripe-js": "^4.6.0",
+    "openai": "^4.63.0",
+    "posthog-js": "^1.182.0",
+    "@sentry/nextjs": "^8.34.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.4",
+    "lucide-react": "^0.447.0",
+    "date-fns": "^4.1.0",
+    "react-hot-toast": "^2.4.1",
+    "next-pwa": "^5.6.0",
+    "zustand": "^5.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.35",
+    "tailwindcss": "^3.4.1",
+    "autoprefixer": "^10.0.1",
+    "postcss": "^8"
+  }
+}
