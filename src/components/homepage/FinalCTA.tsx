@@ -2,40 +2,65 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 export default function FinalCTA() {
   return (
-    <section className="py-24 bg-primary-50">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <section className="py-32 bg-slate-900 relative overflow-hidden">
+
+      {/* Subtle radial glow */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] rounded-full bg-blue-600/15 blur-[100px]" />
+      </div>
+
+      {/* Dot grid */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
+        }}
+      />
+
+      <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <div className="arabic text-accent text-3xl mb-4">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</div>
-          <p className="text-xs text-muted mb-8">In the name of Allah, the Most Gracious, the Most Merciful</p>
+          <p className="arabic text-3xl text-white/20 mb-2">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</p>
+          <p className="text-white/25 text-xs mb-14 tracking-widest">
+            In the name of Allah, the Most Gracious, the Most Merciful
+          </p>
 
-          <h2 className="text-4xl sm:text-5xl font-bold text-foreground mb-6 leading-tight">
-            Your deen deserves more than a reminder app.
-            <span className="text-primary-500"> Start your journey today.</span>
+          <h2 className="text-5xl sm:text-6xl lg:text-7xl font-black text-white leading-[1.0] tracking-tight mb-6">
+            Your deen deserves
+            <br />
+            <span className="text-gradient">more than a reminder.</span>
           </h2>
 
-          <p className="text-muted text-lg mb-10 max-w-xl mx-auto leading-relaxed">
-            Join thousands of Muslims building consistent habits, growing in
-            knowledge, and earning reward every single day — with Jannatie.
+          <p className="text-slate-400 text-lg leading-relaxed mb-12 max-w-lg mx-auto">
+            Join thousands of Muslims building better habits, deepening their knowledge and getting closer to Allah every single day.
           </p>
 
-          <Link
-            href="/signup"
-            className="inline-flex items-center gap-2 bg-primary-500 text-white font-bold px-10 py-4 rounded-xl text-lg hover:bg-primary-600 hover:shadow-blue-glow hover:scale-[1.02] transition-all duration-150"
-          >
-            Create your free account →
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
+            <Link
+              href="/signup"
+              className="group inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-4 rounded-xl text-base transition-all shadow-lg shadow-blue-500/20"
+            >
+              Create your free account
+              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <Link
+              href="/features"
+              className="inline-flex items-center gap-2 bg-white/8 hover:bg-white/12 border border-white/10 text-white/70 hover:text-white font-medium px-8 py-4 rounded-xl text-base transition-all"
+            >
+              Explore features
+            </Link>
+          </div>
 
-          <p className="text-sm text-muted mt-5">
-            No credit card. No commitment. Cancel anytime.
-          </p>
+          <p className="text-slate-600 text-sm">No credit card. Cancel anytime.</p>
         </motion.div>
       </div>
     </section>

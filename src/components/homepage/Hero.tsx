@@ -2,137 +2,270 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Shield, Star, Users } from "lucide-react";
-
-const trustBadges = [
-  { icon: Shield, label: "Scholar-reviewed content" },
-  { icon: Star, label: "Sahih Hadith only" },
-  { icon: Users, label: "Built for the Ummah" },
-];
+import { ArrowRight, CheckCircle2, Flame } from "lucide-react";
 
 export default function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center pt-16 overflow-hidden">
-      {/* Background glow + star pattern */}
-      <div className="absolute inset-0 star-pattern pointer-events-none" />
-      <div className="absolute top-1/3 left-1/4 w-[600px] h-[600px] bg-primary-500/8 rounded-full blur-3xl pointer-events-none" />
+    <section className="relative bg-white overflow-hidden">
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-        {/* Left — copy */}
+      {/* Subtle dot grid */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: "radial-gradient(circle, #cbd5e1 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
+          opacity: 0.35,
+        }}
+      />
+
+      {/* Top gradient wash */}
+      <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-blue-50/60 to-transparent pointer-events-none" />
+
+      {/* Centered copy */}
+      <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-16 text-center">
+
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
+          transition={{ duration: 0.45 }}
+          className="inline-flex items-center gap-2 bg-white border border-slate-200 shadow-sm rounded-full px-4 py-1.5 mb-10"
         >
-          <div className="inline-flex items-center gap-2 bg-accent/10 border border-accent/20 rounded-full px-4 py-1.5 mb-6">
-            <span className="arabic text-accent text-sm">جنتي</span>
-            <span className="text-sm text-accent font-medium">My Paradise</span>
-          </div>
-
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground leading-[1.05] tracking-tight mb-6">
-            GROW YOUR DEEN.<br />
-            BUILD YOUR HABITS.<br />
-            <span className="text-gradient-blue">EVERY SINGLE DAY.</span>
-          </h1>
-
-          <p className="text-lg text-muted leading-relaxed mb-8 max-w-lg">
-            Jannatie is your AI-powered Islamic growth companion — helping you
-            track Salah, learn Quran, and build consistent habits with the
-            warmth of a knowledgeable Muslim friend.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 mb-10">
-            <Link
-              href="/signup"
-              className="inline-flex items-center justify-center gap-2 bg-primary-500 text-white font-semibold px-8 py-3.5 rounded-xl hover:bg-primary-600 hover:shadow-blue-glow hover:scale-[1.02] transition-all duration-150 text-base"
-            >
-              Start for free
-            </Link>
-            <button className="inline-flex items-center justify-center gap-2 border border-border text-foreground font-semibold px-8 py-3.5 rounded-xl hover:bg-foreground hover:text-white transition-all duration-150 text-base">
-              Watch demo ▶
-            </button>
-          </div>
-
-          <div className="flex flex-wrap gap-4">
-            {trustBadges.map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-1.5 text-sm text-accent font-medium">
-                <Icon size={14} className="text-accent" />
-                {label}
-              </div>
-            ))}
-          </div>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <span className="text-sm font-medium text-slate-600">Trusted by Muslims across the UK, UAE and Malaysia</span>
         </motion.div>
 
-        {/* Right — phone mockup */}
-        <motion.div
-          initial={{ opacity: 0, x: 40 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
-          className="flex justify-center lg:justify-end"
+        <motion.h1
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.08 }}
+          className="text-6xl sm:text-7xl lg:text-[5.5rem] font-black text-slate-900 leading-[0.95] tracking-tight mb-8"
         >
-          <PhoneMockup />
+          Grow closer
+          <br />
+          to{" "}
+          <span className="italic text-indigo-500">Allah</span>{" "}
+          <span className="arabic text-indigo-500 not-italic" style={{ fontSize: "68%" }}>ﷻ</span>
+          <br />
+          every day.
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.18 }}
+          className="text-slate-500 text-xl leading-relaxed max-w-xl mx-auto mb-10"
+        >
+          Build Islamic habits that last, deepen your knowledge of the deen and get answers grounded in authentic scholarship. Everything you need, beautifully designed.
+        </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.26 }}
+          className="flex flex-col sm:flex-row justify-center gap-3 mb-10"
+        >
+          <Link
+            href="/signup"
+            className="group inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-4 rounded-xl text-base transition-all duration-200 shadow-lg shadow-blue-600/20"
+          >
+            Start for free
+            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          </Link>
+          <Link
+            href="/features"
+            className="inline-flex items-center justify-center bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-medium px-8 py-4 rounded-xl text-base transition-all duration-200"
+          >
+            See features
+          </Link>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.36 }}
+          className="flex flex-wrap justify-center gap-6"
+        >
+          {[
+            "Free to start, no card needed",
+            "Every hadith is cited and verified",
+            "Authentic Sunni scholarship only",
+          ].map((t) => (
+            <span key={t} className="flex items-center gap-1.5 text-slate-400 text-sm">
+              <CheckCircle2 size={14} className="text-blue-500 flex-shrink-0" />
+              {t}
+            </span>
+          ))}
         </motion.div>
       </div>
+
+      {/* Wide dashboard preview */}
+      <motion.div
+        initial={{ opacity: 0, y: 56 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.9, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-0"
+      >
+        <DashboardPreview />
+      </motion.div>
     </section>
   );
 }
 
-function PhoneMockup() {
+function DashboardPreview() {
   const habits = [
-    { name: "Fajr Salah", done: true, streak: 14 },
-    { name: "Quran (1 page)", done: true, streak: 8 },
-    { name: "Morning Dhikr", done: true, streak: 22 },
-    { name: "Dhuhr Salah", done: false, streak: 6 },
-    { name: "Fast (Monday)", done: false, streak: 3 },
+    { name: "Fajr Salah", done: true, xp: "+10 XP" },
+    { name: "Quran · 1 page", done: true, xp: "+10 XP" },
+    { name: "Morning Dhikr", done: true, xp: "+5 XP" },
+    { name: "Dhuhr Salah", done: false, xp: "" },
   ];
 
   return (
     <div className="relative">
-      {/* Floating glow */}
-      <div className="absolute inset-0 bg-primary-500/20 blur-3xl rounded-full scale-75 pointer-events-none" />
+      {/* Glow behind card */}
+      <div className="absolute -bottom-4 inset-x-16 h-16 bg-blue-300/20 blur-2xl rounded-full pointer-events-none" />
 
-      <div className="relative w-[280px] bg-white rounded-[40px] shadow-2xl border-4 border-gray-900 overflow-hidden">
-        {/* Status bar */}
-        <div className="bg-foreground text-white px-6 py-2 flex justify-between text-[10px]">
-          <span>9:41</span>
-          <span className="arabic text-accent text-xs">جنتي</span>
+      <div className="bg-white rounded-2xl shadow-2xl shadow-slate-300/40 ring-1 ring-slate-100 overflow-hidden">
+
+        {/* Browser chrome */}
+        <div className="bg-slate-50 border-b border-slate-100 px-5 py-3 flex items-center gap-3">
+          <div className="flex gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-slate-300" />
+            <div className="w-3 h-3 rounded-full bg-slate-300" />
+            <div className="w-3 h-3 rounded-full bg-slate-300" />
+          </div>
+          <div className="flex-1 mx-4">
+            <div className="bg-white rounded-md px-3 py-1 text-xs text-slate-400 border border-slate-100 text-center max-w-xs mx-auto">
+              jannatie.com/dashboard
+            </div>
+          </div>
         </div>
 
-        <div className="p-4 bg-background min-h-[480px]">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-xs text-muted">Good morning</p>
-              <p className="text-sm font-bold text-foreground">Aisha ✨</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] text-muted">Next prayer</p>
-              <p className="text-xs font-bold text-accent">Dhuhr 1:15pm</p>
-            </div>
-          </div>
+        {/* Dashboard body */}
+        <div className="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-3 gap-5">
 
-          <div className="bg-primary-500 rounded-xl p-3 mb-4 text-white">
-            <p className="text-[10px] opacity-80 mb-1">Today&apos;s progress</p>
-            <p className="text-lg font-bold">3 of 5 habits</p>
-            <div className="h-1.5 bg-white/30 rounded-full mt-2 overflow-hidden">
-              <div className="h-full bg-white rounded-full" style={{ width: "60%" }} />
-            </div>
-          </div>
+          {/* Main area */}
+          <div className="sm:col-span-2 space-y-5">
 
-          <p className="text-xs font-semibold text-foreground mb-2">Today&apos;s Habits</p>
-          <div className="space-y-2">
-            {habits.map((h) => (
-              <div key={h.name} className="flex items-center gap-2 bg-white rounded-lg p-2.5 border border-border">
-                <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 ${h.done ? "bg-primary-500" : "border border-gray-300"}`}>
-                  {h.done && <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                </div>
-                <span className={`text-[11px] flex-1 ${h.done ? "text-muted line-through" : "text-foreground font-medium"}`}>
-                  {h.name}
-                </span>
-                <span className={`text-[10px] font-bold ${h.streak >= 7 ? "text-accent" : "text-muted"}`}>
-                  🔥{h.streak}
-                </span>
+            {/* Greeting + level */}
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-slate-400 text-xs mb-0.5">Monday, 15 June 2026</p>
+                <p className="text-slate-900 font-bold text-xl">Good morning, Aisha</p>
               </div>
-            ))}
+              <div className="text-right">
+                <span className="inline-block bg-blue-50 text-blue-600 text-xs font-semibold px-3 py-1 rounded-full">Level 12</span>
+              </div>
+            </div>
+
+            {/* XP bar */}
+            <div className="bg-slate-50 rounded-xl p-4">
+              <div className="flex justify-between text-xs mb-2">
+                <span className="text-slate-600 font-medium">2,450 XP</span>
+                <span className="text-slate-400">550 XP to Level 13</span>
+              </div>
+              <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: "82%" }}
+                  transition={{ duration: 1.6, delay: 1.0, ease: "easeOut" }}
+                  className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full"
+                />
+              </div>
+            </div>
+
+            {/* Habit list */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-slate-900 font-semibold text-sm">Today&apos;s habits</p>
+                <p className="text-blue-600 text-xs font-bold mono">3 / 4</p>
+              </div>
+              <div className="space-y-2">
+                {habits.map((h, i) => (
+                  <motion.div
+                    key={h.name}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.7 + i * 0.1 }}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
+                      h.done ? "bg-blue-50" : "bg-slate-50"
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${
+                      h.done ? "bg-blue-500" : "border-2 border-slate-300"
+                    }`}>
+                      {h.done && (
+                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                          <path d="M1 4l2.5 2.5 5.5-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
+                    <span className={`text-sm font-medium flex-1 ${h.done ? "text-slate-700" : "text-slate-400"}`}>
+                      {h.name}
+                    </span>
+                    {h.xp && (
+                      <span className="text-xs text-blue-500 font-semibold">{h.xp}</span>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-4">
+
+            {/* Prayer */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8 }}
+              className="bg-blue-600 rounded-2xl p-5 text-white"
+            >
+              <p className="text-blue-200 text-xs font-medium mb-2">Next prayer</p>
+              <p className="font-black text-2xl mb-0.5">Dhuhr</p>
+              <p className="text-blue-200 text-sm">1:15 PM · in 42 min</p>
+              <div className="mt-3 h-1 bg-blue-500/50 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: "60%" }}
+                  transition={{ duration: 1.4, delay: 1.2 }}
+                  className="h-full bg-white/70 rounded-full"
+                />
+              </div>
+            </motion.div>
+
+            {/* Streak */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.9 }}
+              className="bg-orange-50 rounded-2xl p-5"
+            >
+              <p className="text-orange-400 text-xs font-medium mb-1">Current streak</p>
+              <div className="flex items-end gap-2">
+                <p className="font-black text-3xl text-slate-900">22</p>
+                <Flame size={22} className="text-orange-500 mb-0.5" />
+              </div>
+              <p className="text-slate-500 text-xs">days in a row</p>
+            </motion.div>
+
+            {/* AI snippet */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.0 }}
+              className="bg-slate-50 rounded-2xl p-4"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-[8px] font-bold">J</span>
+                </div>
+                <p className="text-slate-500 text-xs font-medium">AI Buddy</p>
+              </div>
+              <p className="text-slate-600 text-xs leading-relaxed">
+                &ldquo;Recite Ayat al-Kursi before sleep for protection until morning (Bukhari 5010)&rdquo;
+              </p>
+            </motion.div>
           </div>
         </div>
       </div>

@@ -2,29 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Check, BadgeCheck } from "lucide-react";
+import { ShieldCheck, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 const conversation = [
-  { role: "user", text: "What is the ruling on praying Witr?" },
+  { role: "user", text: "What is the ruling on combining prayers while travelling?" },
   {
     role: "ai",
-    text: "Witr prayer is Sunnah Mu'akkadah (highly recommended). The Prophet ﷺ said: 'Make Witr the last of your night prayer.' (Bukhari 990). It can be prayed as 1, 3, 5, 7, or 9 rak'ahs.",
-    verified: true,
+    text: "The Prophet ﷺ combined Dhuhr with Asr, and Maghrib with Isha while on a journey (Sahih Muslim 705). This is permissible according to all four major madhabs for a traveller.",
   },
-  { role: "user", text: "Can I combine my Dhur and Asr prayers while travelling?" },
+  { role: "user", text: "What dua should I read before sleeping?" },
   {
     role: "ai",
-    text: "Yes. The Prophet ﷺ combined Dhuhr with Asr and Maghrib with Isha while on a journey (Muslim 705). This is permissible for a traveller according to all four madhabs.",
-    verified: true,
+    text: "Recite Ayat al-Kursi (Quran 2:255) before sleeping. The Prophet ﷺ said it will protect you until morning (Sahih al-Bukhari 5010).",
   },
-];
-
-const bulletPoints = [
-  "Answers grounded in Sahih Bukhari & Sahih Muslim",
-  "Responses include hadith collection and number",
-  "Covers Fiqh, Aqeedah, Seerah, and daily life",
-  "Always cites the madhab where applicable",
-  "Clear disclaimer: guidance only, not a fatwa",
 ];
 
 export default function AIBuddySpotlight() {
@@ -35,129 +26,126 @@ export default function AIBuddySpotlight() {
 
   useEffect(() => {
     if (visibleChars < currentText.length) {
-      const t = setTimeout(() => setVisibleChars((v) => v + 1), 30);
+      const t = setTimeout(() => setVisibleChars((v) => v + 1), 22);
       return () => clearTimeout(t);
     } else {
-      const t = setTimeout(() => {
-        if (msgIndex < conversation.length - 1) {
-          setMsgIndex((i) => i + 1);
-          setVisibleChars(0);
-        } else {
-          const t2 = setTimeout(() => { setMsgIndex(0); setVisibleChars(0); }, 4000);
-          return () => clearTimeout(t2);
-        }
-      }, 1200);
-      return () => clearTimeout(t);
+      if (msgIndex < conversation.length - 1) {
+        const t = setTimeout(() => { setMsgIndex((i) => i + 1); setVisibleChars(0); }, 900);
+        return () => clearTimeout(t);
+      } else {
+        const t = setTimeout(() => { setMsgIndex(0); setVisibleChars(0); }, 3500);
+        return () => clearTimeout(t);
+      }
     }
   }, [visibleChars, currentText, msgIndex]);
 
   return (
-    <section className="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-        {/* Left — animated chat */}
-        <motion.div
-          initial={{ opacity: 0, x: -30 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="bg-card border border-border rounded-2xl overflow-hidden shadow-card-hover"
-        >
-          <div className="bg-foreground px-5 py-3 flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-bold">J</span>
+    <section className="py-28 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+
+          {/* Left — Chat UI */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="bg-white rounded-3xl overflow-hidden shadow-xl shadow-slate-200/80 ring-1 ring-slate-100">
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">J</span>
+                </div>
+                <div>
+                  <p className="text-slate-900 text-sm font-semibold">Jannatie AI</p>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
+                    <p className="text-slate-400 text-xs">Online · Scholar-reviewed</p>
+                  </div>
+                </div>
+                <div className="ml-auto">
+                  <ShieldCheck size={16} className="text-blue-500" />
+                </div>
+              </div>
+
+              {/* Messages */}
+              <div className="p-6 min-h-[300px] flex flex-col gap-4 bg-slate-50/50">
+                {conversation.slice(0, msgIndex).map((msg, i) => (
+                  <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                      msg.role === "user"
+                        ? "bg-blue-600 text-white rounded-br-sm"
+                        : "bg-white text-slate-700 shadow-sm rounded-bl-sm"
+                    }`}>
+                      {msg.text}
+                    </div>
+                  </div>
+                ))}
+
+                {msgIndex < conversation.length && (
+                  <div className={`flex ${conversation[msgIndex].role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                      conversation[msgIndex].role === "user"
+                        ? "bg-blue-600 text-white rounded-br-sm"
+                        : "bg-white text-slate-700 shadow-sm rounded-bl-sm"
+                    }`}>
+                      {currentText.slice(0, visibleChars)}
+                      <span className="inline-block w-0.5 h-4 bg-blue-400 ml-0.5 animate-pulse" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-3 border-t border-slate-100 text-center bg-white">
+                <p className="text-slate-400 text-xs">For guidance only. Not a fatwa.</p>
+              </div>
             </div>
-            <div>
-              <p className="text-white text-sm font-semibold">Jannatie AI</p>
-              <p className="text-gray-400 text-xs">Scholar-reviewed</p>
-            </div>
-            <div className="ml-auto flex gap-1.5">
-              {["#ef4444", "#f59e0b", "#22c55e"].map((c) => (
-                <div key={c} className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />
+          </motion.div>
+
+          {/* Right — copy */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+          >
+            <p className="text-blue-600 text-sm font-semibold uppercase tracking-widest mb-4">AI Buddy</p>
+            <h2 className="text-4xl sm:text-5xl font-black text-slate-900 leading-tight mb-6">
+              Islamic knowledge,
+              <br />
+              always cited.
+            </h2>
+            <p className="text-slate-500 text-lg leading-relaxed mb-8">
+              Every response includes the exact hadith collection and number so you can verify it yourself. No opinions. No fabrications.
+            </p>
+
+            <div className="space-y-3 mb-10">
+              {[
+                "Sources: Sahih al-Bukhari, Sahih Muslim, and major collections",
+                "Every hadith cited with collection name and number",
+                "Scholar-reviewed badge on verified responses",
+                "Clear disclaimer on every reply. Never a fatwa.",
+              ].map((point) => (
+                <div key={point} className="flex items-start gap-3">
+                  <div className="w-5 h-5 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <div className="w-1.5 h-1.5 bg-blue-600 rounded-full" />
+                  </div>
+                  <p className="text-slate-500 text-sm">{point}</p>
+                </div>
               ))}
             </div>
-          </div>
 
-          <div className="p-5 min-h-[320px] flex flex-col gap-4">
-            {conversation.slice(0, msgIndex).map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                    msg.role === "user"
-                      ? "bg-primary-500 text-white rounded-br-sm"
-                      : "bg-gray-100 text-foreground rounded-bl-sm"
-                  }`}
-                >
-                  {msg.text}
-                  {msg.role === "ai" && msg.verified && (
-                    <div className="flex items-center gap-1 mt-2 text-primary-500 text-xs">
-                      <BadgeCheck size={12} />
-                      <span>Scholar-verified</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {msgIndex < conversation.length && (
-              <div className={`flex ${conversation[msgIndex].role === "user" ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                    conversation[msgIndex].role === "user"
-                      ? "bg-primary-500 text-white rounded-br-sm"
-                      : "bg-gray-100 text-foreground rounded-bl-sm"
-                  }`}
-                >
-                  {currentText.slice(0, visibleChars)}
-                  <span className="inline-block w-0.5 h-4 bg-current ml-0.5 animate-pulse" />
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="border-t border-border px-5 py-3">
-            <p className="text-xs text-muted text-center">
-              For guidance only — not a fatwa. Free tier: 5 messages/day.
-            </p>
-          </div>
-        </motion.div>
-
-        {/* Right — bullets */}
-        <motion.div
-          initial={{ opacity: 0, x: 30 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-        >
-          <div className="inline-flex items-center gap-2 bg-accent/10 border border-accent/20 rounded-full px-4 py-1.5 mb-4">
-            <BadgeCheck size={14} className="text-accent" />
-            <span className="text-sm text-accent font-semibold">Scholar-reviewed knowledge base</span>
-          </div>
-
-          <h2 className="text-4xl font-bold text-foreground mb-4">
-            Your AI Buddy, grounded in authentic Islamic knowledge
-          </h2>
-          <p className="text-muted text-lg mb-8 leading-relaxed">
-            Every response cites real hadith with collection name and number.
-            No opinions. No fabrications. Just authentic Sunni knowledge from
-            Sahih al-Bukhari, Sahih Muslim, and trusted scholars.
-          </p>
-
-          <ul className="space-y-4">
-            {bulletPoints.map((point) => (
-              <li key={point} className="flex items-start gap-3">
-                <div className="w-5 h-5 bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Check size={11} className="text-white" strokeWidth={3} />
-                </div>
-                <span className="text-foreground text-sm leading-relaxed">{point}</span>
-              </li>
-            ))}
-          </ul>
-
-          <p className="text-xs text-muted mt-6 border-t border-border pt-4">
-            AI responses are for guidance only — not a fatwa. Always consult a
-            qualified scholar for personal rulings.
-          </p>
-        </motion.div>
+            <Link
+              href="/signup"
+              className="inline-flex items-center gap-2 text-blue-600 font-semibold text-sm hover:gap-3 transition-all group"
+            >
+              Try the AI Buddy free
+              <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </motion.div>
+        </div>
       </div>
     </section>
   );

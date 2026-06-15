@@ -9,52 +9,33 @@ const plans = [
   {
     name: "Free",
     monthly: 0,
-    annual: 0,
+    annualTotal: 0,
     description: "Get started with the essentials.",
-    features: [
-      "Core habit tracker",
-      "10 lessons per month",
-      "5 AI messages per day",
-      "Islamic calendar",
-      "Basic progress stats",
-    ],
+    features: ["Core habit tracker", "10 lessons per month", "5 AI messages per day", "Islamic calendar", "Basic progress stats"],
     cta: "Start free",
     ctaHref: "/signup",
-    variant: "ghost" as const,
+    highlight: false,
   },
   {
     name: "Premium",
     monthly: 4.99,
-    annual: 39.99,
+    annualTotal: 39.99,
     description: "Unlimited growth for committed Muslims.",
-    features: [
-      "Everything in Free",
-      "Unlimited AI messages",
-      "Unlimited lessons",
-      "Full analytics dashboard",
-      "Offline mode",
-      "Priority support",
-    ],
+    features: ["Everything in Free", "Unlimited AI messages", "Unlimited lessons", "Full analytics dashboard", "Offline mode", "Priority support"],
     cta: "Start Premium",
     ctaHref: "/signup?plan=premium",
-    variant: "primary" as const,
+    highlight: true,
     popular: true,
   },
   {
     name: "Family",
     monthly: 9.99,
-    annual: null,
-    description: "Grow together — up to 5 accounts.",
-    features: [
-      "5 family accounts",
-      "All Premium features",
-      "Family leaderboard",
-      "Shared Islamic calendar",
-      "Parental controls",
-    ],
+    annualTotal: null,
+    description: "Grow together with up to 5 accounts.",
+    features: ["5 family accounts", "All Premium features", "Family leaderboard", "Shared Islamic calendar", "Parental controls"],
     cta: "Get Family plan",
     ctaHref: "/signup?plan=family",
-    variant: "accent" as const,
+    highlight: false,
   },
 ];
 
@@ -62,87 +43,94 @@ export default function PricingPreview() {
   const [annual, setAnnual] = useState(false);
 
   return (
-    <section className="py-24 bg-primary-50">
+    <section className="py-28 bg-slate-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-10"
+          className="text-center mb-12"
         >
-          <h2 className="text-4xl font-bold text-foreground mb-4">
-            Simple, honest pricing
-          </h2>
-          <p className="text-muted text-lg mb-6">Start free. Upgrade when you&apos;re ready.</p>
+          <p className="text-blue-600 text-sm font-semibold uppercase tracking-widest mb-3">Pricing</p>
+          <h2 className="text-4xl sm:text-5xl font-black text-slate-900 mb-4">Simple, honest pricing.</h2>
+          <p className="text-slate-500 text-lg mb-8">Start free. Upgrade when you&apos;re ready.</p>
 
-          {/* Toggle */}
-          <div className="inline-flex items-center gap-3 bg-card border border-border rounded-full p-1">
+          <div className="inline-flex items-center gap-1 bg-white rounded-full p-1 shadow-sm">
             <button
               onClick={() => setAnnual(false)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${!annual ? "bg-foreground text-white" : "text-muted"}`}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${!annual ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-700"}`}
             >
               Monthly
             </button>
             <button
               onClick={() => setAnnual(true)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${annual ? "bg-foreground text-white" : "text-muted"}`}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-2 ${annual ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-700"}`}
             >
               Annual
-              <span className="bg-accent text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                Save 33%
-              </span>
+              <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Save 33%</span>
             </button>
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-          {plans.map(({ name, monthly, annual: annualPrice, description, features, cta, ctaHref, variant, popular }, i) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+          {plans.map(({ name, monthly, annualTotal, description, features, cta, ctaHref, highlight, popular }, i) => (
             <motion.div
               key={name}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
-              className={`relative bg-card rounded-2xl p-8 border ${popular ? "border-primary-500 shadow-blue-glow" : "border-border"}`}
+              className={`relative rounded-2xl p-8 ${
+                highlight
+                  ? "bg-blue-600 shadow-lg shadow-blue-200"
+                  : "bg-white shadow-sm"
+              }`}
             >
               {popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary-500 text-white text-xs font-bold px-4 py-1 rounded-full">
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-bold px-4 py-1.5 rounded-full">
                   Most Popular
                 </div>
               )}
 
-              <h3 className="text-xl font-bold text-foreground mb-1">{name}</h3>
-              <p className="text-sm text-muted mb-5">{description}</p>
-
               <div className="mb-6">
-                <span className="mono text-4xl font-bold text-foreground">
-                  {monthly === 0 ? "Free" : `£${annual && annualPrice ? (annualPrice / 12).toFixed(2) : monthly}`}
-                </span>
+                <h3 className={`text-lg font-bold mb-1 ${highlight ? "text-white" : "text-slate-900"}`}>{name}</h3>
+                <p className={`text-sm ${highlight ? "text-blue-100" : "text-slate-500"}`}>{description}</p>
+              </div>
+
+              <div className="mb-8">
+                <div className={`text-5xl font-black mono ${highlight ? "text-white" : "text-slate-900"}`}>
+                  {monthly === 0
+                    ? "Free"
+                    : `£${annual && annualTotal ? (annualTotal / 12).toFixed(2) : monthly}`}
+                </div>
                 {monthly > 0 && (
-                  <span className="text-muted text-sm ml-1">/mo</span>
-                )}
-                {annual && annualPrice && (
-                  <p className="text-xs text-muted mt-1">£{annualPrice}/year billed annually</p>
+                  <p className={`text-sm mt-1 ${highlight ? "text-blue-100" : "text-slate-400"}`}>
+                    {annual && annualTotal
+                      ? `£${annualTotal}/year`
+                      : "per month"}
+                  </p>
                 )}
               </div>
 
               <ul className="space-y-3 mb-8">
                 {features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-foreground">
-                    <Check size={15} className="text-primary-500 flex-shrink-0 mt-0.5" strokeWidth={2.5} />
-                    {f}
+                  <li key={f} className="flex items-start gap-2.5 text-sm">
+                    <Check
+                      size={14}
+                      className={`flex-shrink-0 mt-0.5 ${highlight ? "text-white" : "text-blue-600"}`}
+                      strokeWidth={2.5}
+                    />
+                    <span className={highlight ? "text-blue-50" : "text-slate-600"}>{f}</span>
                   </li>
                 ))}
               </ul>
 
               <Link
                 href={ctaHref}
-                className={`block text-center font-semibold py-3 rounded-xl transition-all duration-150 ${
-                  variant === "primary"
-                    ? "bg-primary-500 text-white hover:bg-primary-600 hover:shadow-blue-glow"
-                    : variant === "accent"
-                    ? "border-2 border-accent text-accent hover:bg-accent hover:text-white"
-                    : "border border-foreground text-foreground hover:bg-foreground hover:text-white"
+                className={`block text-center font-semibold py-3.5 rounded-xl transition-all text-sm ${
+                  highlight
+                    ? "bg-white text-blue-600 hover:bg-blue-50"
+                    : "bg-slate-900 text-white hover:bg-slate-800"
                 }`}
               >
                 {cta}
@@ -151,10 +139,10 @@ export default function PricingPreview() {
           ))}
         </div>
 
-        <p className="text-center text-sm text-muted mt-8">
+        <p className="text-center text-sm text-slate-400 mt-8">
           Also available: Mosque (£29/mo) and School (£49/mo) plans.{" "}
-          <Link href="/pricing" className="text-primary-500 hover:underline">
-            See full pricing →
+          <Link href="/pricing" className="text-blue-600 hover:underline font-medium">
+            See full pricing
           </Link>
         </p>
       </div>

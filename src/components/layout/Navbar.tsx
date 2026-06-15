@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
@@ -36,18 +37,21 @@ export default function Navbar() {
       <header
         className={cn(
           "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-          scrolled ? "glass-nav border-b border-border" : "bg-transparent"
+          scrolled ? "bg-white/90 backdrop-blur-xl border-b border-slate-100" : "bg-transparent"
         )}
       >
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <span className="text-xl font-bold text-foreground tracking-tight">
-              Jannatie
-            </span>
-            <span className="arabic text-accent text-lg leading-none">
-              جنتي
-            </span>
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/images/logo-black.png"
+              alt="Jannatie"
+              width={24}
+              height={24}
+              className="object-contain"
+              priority
+            />
+            <span className="text-xl font-bold text-slate-900 tracking-tight">Jannatie</span>
           </Link>
 
           {/* Desktop links */}
@@ -57,19 +61,13 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "text-sm font-medium relative group transition-colors",
+                  "text-sm font-medium transition-colors",
                   pathname === link.href
-                    ? "text-primary-500"
-                    : "text-foreground hover:text-primary-500"
+                    ? "text-blue-600"
+                    : "text-slate-500 hover:text-slate-900"
                 )}
               >
                 {link.label}
-                <span
-                  className={cn(
-                    "absolute -bottom-0.5 left-0 h-0.5 bg-primary-500 transition-all duration-200",
-                    pathname === link.href ? "w-full" : "w-0 group-hover:w-full"
-                  )}
-                />
               </Link>
             ))}
           </div>
@@ -79,7 +77,7 @@ export default function Navbar() {
             {user ? (
               <Link
                 href="/dashboard"
-                className="bg-primary-500 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-primary-600 hover:shadow-blue-glow transition-all duration-150 hover:scale-[1.02]"
+                className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-all"
               >
                 Dashboard
               </Link>
@@ -87,13 +85,13 @@ export default function Navbar() {
               <>
                 <Link
                   href="/login"
-                  className="text-sm font-medium text-foreground border border-foreground px-4 py-2 rounded-lg hover:bg-foreground hover:text-white transition-all duration-150"
+                  className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-3 py-2"
                 >
                   Log in
                 </Link>
                 <Link
                   href="/signup"
-                  className="bg-primary-500 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-primary-600 hover:shadow-blue-glow transition-all duration-150 hover:scale-[1.02]"
+                  className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-all"
                 >
                   Sign up
                 </Link>
@@ -103,7 +101,7 @@ export default function Navbar() {
 
           {/* Mobile burger */}
           <button
-            className="md:hidden p-2 rounded-lg text-foreground"
+            className="md:hidden p-2 rounded-lg text-slate-700"
             onClick={() => setMobileOpen((v) => !v)}
             aria-label="Toggle menu"
           >
@@ -120,14 +118,14 @@ export default function Navbar() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-background flex flex-col pt-20 px-6 md:hidden"
+            className="fixed inset-0 z-40 bg-white flex flex-col pt-20 px-6 md:hidden"
           >
             <div className="flex flex-col gap-6 mt-4">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="text-2xl font-bold text-foreground hover:text-primary-500 transition-colors"
+                  className="text-2xl font-bold text-slate-900 hover:text-blue-600 transition-colors"
                 >
                   {link.label}
                 </Link>
@@ -137,7 +135,7 @@ export default function Navbar() {
               {user ? (
                 <Link
                   href="/dashboard"
-                  className="bg-primary-500 text-white text-center font-semibold py-3 rounded-xl"
+                  className="bg-blue-600 text-white text-center font-semibold py-3 rounded-xl hover:bg-blue-700 transition-colors"
                 >
                   Dashboard
                 </Link>
@@ -145,13 +143,13 @@ export default function Navbar() {
                 <>
                   <Link
                     href="/login"
-                    className="border border-foreground text-foreground text-center font-semibold py-3 rounded-xl"
+                    className="border border-slate-200 text-slate-900 text-center font-semibold py-3 rounded-xl hover:bg-slate-50 transition-colors"
                   >
                     Log in
                   </Link>
                   <Link
                     href="/signup"
-                    className="bg-primary-500 text-white text-center font-semibold py-3 rounded-xl"
+                    className="bg-blue-600 text-white text-center font-semibold py-3 rounded-xl hover:bg-blue-700 transition-colors"
                   >
                     Sign up free
                   </Link>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Instagram, Twitter, Youtube, Facebook } from "lucide-react";
 
 const footerLinks = {
@@ -27,21 +28,27 @@ const footerLinks = {
 
 export default function Footer() {
   return (
-    <footer className="bg-[#0D0D0D] text-white border-t-2 border-accent">
+    <footer className="bg-slate-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
           {/* Brand */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2 mb-4">
+              <Image
+                src="/images/logo-white.png"
+                alt="Jannatie"
+                width={42}
+                height={42}
+                className="object-contain"
+              />
               <span className="text-2xl font-bold text-white">Jannatie</span>
-              <span className="arabic text-accent text-xl leading-none">جنتي</span>
             </div>
-            <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
+            <p className="text-slate-400 text-sm leading-relaxed max-w-xs mb-6">
               Your AI-powered Islamic growth companion. Grow your deen, build
               your habits, every single day.
             </p>
             {/* Newsletter */}
-            <div className="mt-6">
+            <div>
               <p className="text-sm font-semibold text-white mb-2">
                 Get Islamic tips & updates
               </p>
@@ -49,11 +56,11 @@ export default function Footer() {
                 <input
                   type="email"
                   placeholder="your@email.com"
-                  className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary-500"
+                  className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
                 />
                 <button
                   type="submit"
-                  className="bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                 >
                   Subscribe
                 </button>
@@ -64,7 +71,7 @@ export default function Footer() {
           {/* Links */}
           {Object.entries(footerLinks).map(([section, links]) => (
             <div key={section}>
-              <h3 className="text-sm font-semibold text-white mb-4 uppercase tracking-wide">
+              <h3 className="text-xs font-semibold text-slate-400 mb-4 uppercase tracking-widest">
                 {section}
               </h3>
               <ul className="space-y-3">
@@ -72,7 +79,7 @@ export default function Footer() {
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                      className="text-sm text-slate-400 hover:text-white transition-colors"
                     >
                       {link.label}
                     </Link>
@@ -84,7 +91,7 @@ export default function Footer() {
 
           {/* Social */}
           <div>
-            <h3 className="text-sm font-semibold text-white mb-4 uppercase tracking-wide">
+            <h3 className="text-xs font-semibold text-slate-400 mb-4 uppercase tracking-widest">
               Follow Us
             </h3>
             <div className="flex gap-3">
@@ -99,7 +106,7 @@ export default function Footer() {
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-9 h-9 bg-white/10 rounded-lg flex items-center justify-center hover:bg-primary-500 transition-colors"
+                  className="w-9 h-9 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors text-slate-400 hover:text-white"
                 >
                   <Icon size={16} />
                 </a>
@@ -108,12 +115,11 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-gray-500">
-            © {new Date().getFullYear()} Jannatie Ltd. All rights reserved.
-            Registered in England & Wales.
+        <div className="mt-12 pt-8 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <p className="text-xs text-slate-500">
+            © {new Date().getFullYear()} Jannatie Ltd. All rights reserved. Registered in England & Wales.
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-slate-500">
             ICO Registration No. XXXXXXX · Built with ♥ for the Ummah
           </p>
         </div>

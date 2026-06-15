@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap');
 
 :root {
   --font-inter: 'Inter', sans-serif;
@@ -17,13 +17,8 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-white text-[#0A0A0A] antialiased;
     font-family: var(--font-inter);
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-inter);
-    font-weight: 700;
   }
 
   * {
@@ -42,35 +37,34 @@
   }
 
   .skeleton {
-    background: linear-gradient(
-      90deg,
-      #e5e7eb 25%,
-      #f3f4f6 50%,
-      #e5e7eb 75%
-    );
+    background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
   }
 
   .glass-nav {
-    background: rgba(246, 246, 243, 0.92);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
 
-  .blue-glow {
-    box-shadow: 0 0 20px rgba(0, 102, 204, 0.3);
-  }
-
-  .star-pattern {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M30 5l3.09 9.5H43l-8.09 5.88 3.09 9.5L30 24.5l-8 5.88 3.09-9.5L17 15.5h9.91z' fill='%230066CC' opacity='0.06'/%3E%3C/svg%3E");
-    background-repeat: repeat;
+  .glass-nav-dark {
+    background: rgba(10, 10, 10, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
 }
 
 @layer utilities {
-  .text-gradient-blue {
-    background: linear-gradient(135deg, #0066CC, #003D7A);
+  .text-gradient {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 60%, #1d4ed8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-white {
+    background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -83,4 +77,75 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  .glow-blue {
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.4);
+  }
+
+  .noise {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  }
+}
+
+/* Ticker animation */
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-ticker {
+  animation: ticker 40s linear infinite;
+}
+
+/* Shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Floating blob */
+@keyframes float {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-20px) scale(1.05); }
+}
+
+.animate-float {
+  animation: float 8s ease-in-out infinite;
+}
+
+@keyframes float-delayed {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-15px) scale(1.03); }
+}
+
+.animate-float-delayed {
+  animation: float-delayed 10s ease-in-out infinite;
+  animation-delay: 2s;
+}
+
+/* Pulse dot for AI typing indicator */
+@keyframes pulseDot {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+.animate-pulse-dot {
+  animation: pulseDot 1.4s ease-in-out infinite;
+}
+
+/* Gradient border */
+.gradient-border {
+  position: relative;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(59,130,246,0.5), rgba(59,130,246,0.1));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
 }
