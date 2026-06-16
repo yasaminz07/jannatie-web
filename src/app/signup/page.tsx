@@ -9,6 +9,7 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import toast from "react-hot-toast";
 import { CheckSquare, BookOpen, MessageCircle, ChevronRight } from "lucide-react";
+import Image from "next/image";
 
 const HABIT_OPTIONS = [
   "Fajr Salah", "Dhuhr Salah", "Asr Salah", "Maghrib Salah", "Isha Salah",
@@ -69,7 +70,7 @@ export default function SignupPage() {
   const steps = [
     { label: "Account", num: 1 },
     { label: "Habits", num: 2 },
-    { label: "You&apos;re set", num: 3 },
+    { label: "Confirm", num: 3 },
   ];
 
   return (
@@ -77,8 +78,8 @@ export default function SignupPage() {
       {/* Left panel */}
       <div className="hidden lg:flex flex-col justify-between w-1/2 bg-foreground text-white p-12">
         <Link href="/" className="flex items-center gap-2">
+          <Image src="/images/logo-white.PNG" alt="Jannatie" width={28} height={28} className="object-contain" />
           <span className="text-2xl font-bold">Jannatie</span>
-          <span className="arabic text-accent text-xl">جنتي</span>
         </Link>
 
         <div className="space-y-8">
@@ -99,7 +100,7 @@ export default function SignupPage() {
           ))}
         </div>
 
-        <p className="text-gray-500 text-xs">© 2025 Jannatie Ltd · UK GDPR compliant</p>
+        <p className="text-gray-500 text-xs">© 2026 Jannatie Ltd · UK GDPR compliant</p>
       </div>
 
       {/* Right panel */}
@@ -158,7 +159,7 @@ export default function SignupPage() {
                 </div>
 
                 <form onSubmit={handleStep1} className="space-y-4">
-                  <Input id="name" label="Your name" placeholder="Aisha" value={name} onChange={(e) => setName(e.target.value)} required />
+                  <Input id="name" label="Your name" placeholder="Your full name" value={name} onChange={(e) => setName(e.target.value)} required />
                   <Input id="email" type="email" label="Email address" placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
                   <Input id="password" type="password" label="Password" placeholder="At least 8 characters" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
                   <Button type="submit" className="w-full py-3" size="lg">

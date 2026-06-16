@@ -98,7 +98,7 @@ export default function PricingPreview() {
               </div>
 
               <div className="mb-8">
-                <div className={`text-5xl font-black mono ${highlight ? "text-white" : "text-slate-900"}`}>
+                <div className={`text-5xl font-black ${highlight ? "text-white" : "text-slate-900"}`}>
                   {monthly === 0
                     ? "Free"
                     : `£${annual && annualTotal ? (annualTotal / 12).toFixed(2) : monthly}`}

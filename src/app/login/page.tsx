@@ -8,6 +8,7 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import toast from "react-hot-toast";
 import { Eye, EyeOff } from "lucide-react";
+import Image from "next/image";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -45,8 +46,8 @@ export default function LoginPage() {
       {/* Left panel */}
       <div className="hidden lg:flex flex-col justify-between w-1/2 bg-foreground text-white p-12">
         <Link href="/" className="flex items-center gap-2">
+          <Image src="/images/logo-white.PNG" alt="Jannatie" width={28} height={28} className="object-contain" />
           <span className="text-2xl font-bold">Jannatie</span>
-          <span className="arabic text-accent text-xl">جنتي</span>
         </Link>
         <div>
           <div className="arabic text-accent text-5xl mb-4">
@@ -57,7 +58,7 @@ export default function LoginPage() {
           </p>
           <p className="text-gray-500 text-xs">Quran 65:2</p>
         </div>
-        <p className="text-gray-500 text-xs">© 2025 Jannatie Ltd</p>
+        <p className="text-gray-500 text-xs">© 2026 Jannatie Ltd</p>
       </div>
 
       {/* Right panel */}
@@ -65,8 +66,8 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           <div className="lg:hidden mb-8 text-center">
             <Link href="/" className="inline-flex items-center gap-2">
+              <Image src="/images/logo-black.PNG" alt="Jannatie" width={26} height={26} className="object-contain" />
               <span className="text-2xl font-bold text-foreground">Jannatie</span>
-              <span className="arabic text-accent text-xl">جنتي</span>
             </Link>
           </div>
 

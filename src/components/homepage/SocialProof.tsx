@@ -19,7 +19,7 @@ export default function SocialProof() {
       <div className="max-w-7xl mx-auto px-4 mb-10 flex items-center justify-between">
         <p className="text-sm font-medium text-slate-400 uppercase tracking-widest">Loved by the Ummah</p>
         <div className="flex items-center gap-2">
-          <span className="mono text-2xl font-black text-slate-900">10,000+</span>
+          <span className="text-2xl font-black text-slate-900">10,000+</span>
           <span className="text-slate-400 text-sm">Muslims growing daily</span>
         </div>
       </div>

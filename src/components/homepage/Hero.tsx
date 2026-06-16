@@ -150,7 +150,7 @@ function DashboardPreview() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-slate-400 text-xs mb-0.5">Monday, 15 June 2026</p>
-                <p className="text-slate-900 font-bold text-xl">Good morning, Aisha</p>
+                <p className="text-slate-900 font-bold text-xl">Good morning</p>
               </div>
               <div className="text-right">
                 <span className="inline-block bg-blue-50 text-blue-600 text-xs font-semibold px-3 py-1 rounded-full">Level 12</span>
@@ -177,7 +177,7 @@ function DashboardPreview() {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-slate-900 font-semibold text-sm">Today&apos;s habits</p>
-                <p className="text-blue-600 text-xs font-bold mono">3 / 4</p>
+                <p className="text-blue-600 text-xs font-bold">3 / 4</p>
               </div>
               <div className="space-y-2">
                 {habits.map((h, i) => (

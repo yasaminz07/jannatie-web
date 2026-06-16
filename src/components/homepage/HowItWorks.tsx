@@ -49,14 +49,14 @@ export default function HowItWorks() {
               transition={{ duration: 0.5, delay: i * 0.12 }}
               className="bg-white rounded-3xl p-8 shadow-sm relative overflow-hidden group"
             >
-              <div className={`inline-flex items-center justify-center w-10 h-10 ${color} rounded-xl text-sm font-black mb-6 mono`}>
+              <div className={`inline-flex items-center justify-center w-10 h-10 ${color} rounded-xl text-sm font-black mb-6`}>
                 {num}
               </div>
               <h3 className="text-slate-900 font-bold text-lg mb-3">{title}</h3>
               <p className="text-slate-500 text-sm leading-relaxed">{desc}</p>
 
               {/* Big number bg */}
-              <span className="absolute -bottom-4 -right-2 text-[7rem] font-black text-slate-100 leading-none select-none mono group-hover:text-slate-200 transition-colors">
+              <span className="absolute -bottom-4 -right-2 text-[7rem] font-black text-slate-100 leading-none select-none group-hover:text-slate-200 transition-colors">
                 {num.slice(1)}
               </span>
             </motion.div>
