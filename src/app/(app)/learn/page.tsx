@@ -463,8 +463,8 @@ export default function LearnPage() {
   const [activeLesson, setActiveLesson] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const learnProgress: Record<string, number> = (profile as any)?.learnProgress ?? {};
+  const learnProgress: Record<string, number> =
+    ((profile as unknown as { learnProgress?: Record<string, number> })?.learnProgress) ?? {};
   const streak = profile?.streak ?? 0;
   const xp = profile?.xp ?? 0;
 
