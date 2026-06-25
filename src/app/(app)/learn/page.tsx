@@ -8,6 +8,8 @@ import {
   Flame, Play, Star,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 // --- Types ---
 interface Topic {
@@ -26,7 +28,7 @@ interface Unit {
   unlocked: boolean;
 }
 
-// --- Constants ---
+// --- Static config (lesson counts only) ---
 const TOPIC_ICONS: Record<string, React.ElementType> = {
   quran: BookOpen,
   duas: Hand,
@@ -38,18 +40,17 @@ const TOPIC_ICONS: Record<string, React.ElementType> = {
   manners: Heart,
 };
 
-const UNITS: Unit[] = [
+const UNIT_CONFIG = [
   {
     id: 1,
     label: "Unit 1",
     name: "Daily Essentials",
     description: "Master the foundations of daily Islamic practice",
     topics: [
-      { id: "quran", name: "Quran", lessons: 12, completed: 0 },
-      { id: "duas", name: "Duas", lessons: 20, completed: 0 },
-      { id: "manners", name: "Manners", lessons: 8, completed: 0 },
+      { id: "quran", name: "Quran", lessons: 12 },
+      { id: "duas", name: "Duas", lessons: 20 },
+      { id: "manners", name: "Manners", lessons: 8 },
     ],
-    unlocked: true,
   },
   {
     id: 2,
@@ -57,11 +58,10 @@ const UNITS: Unit[] = [
     name: "Islamic History",
     description: "Learn from the lives of the Prophets and Companions",
     topics: [
-      { id: "seerah", name: "Seerah", lessons: 15, completed: 0 },
-      { id: "prophets", name: "Prophets", lessons: 10, completed: 0 },
-      { id: "history", name: "History", lessons: 14, completed: 0 },
+      { id: "seerah", name: "Seerah", lessons: 15 },
+      { id: "prophets", name: "Prophets", lessons: 10 },
+      { id: "history", name: "History", lessons: 14 },
     ],
-    unlocked: false,
   },
   {
     id: 3,
@@ -69,10 +69,9 @@ const UNITS: Unit[] = [
     name: "Knowledge and Law",
     description: "Dive into Fiqh and the Arabic language",
     topics: [
-      { id: "fiqh", name: "Fiqh", lessons: 18, completed: 0 },
-      { id: "arabic", name: "Arabic", lessons: 24, completed: 0 },
+      { id: "fiqh", name: "Fiqh", lessons: 18 },
+      { id: "arabic", name: "Arabic", lessons: 24 },
     ],
-    unlocked: false,
   },
 ];
 
@@ -108,7 +107,26 @@ const glassCard = {
   boxShadow: "0 4px 24px rgba(15, 23, 42, 0.07)",
 } as const;
 
-// SVG progress ring (no colored box — just the ring around the icon circle)
+// Build units with real progress from Firestore
+function buildUnits(learnProgress: Record<string, number>): Unit[] {
+  const c = (id: string, max: number) => Math.min(learnProgress[id] ?? 0, max);
+
+  const u1 = UNIT_CONFIG[0].topics.map((t) => ({ ...t, completed: c(t.id, t.lessons) }));
+  const u2 = UNIT_CONFIG[1].topics.map((t) => ({ ...t, completed: c(t.id, t.lessons) }));
+  const u3 = UNIT_CONFIG[2].topics.map((t) => ({ ...t, completed: c(t.id, t.lessons) }));
+
+  // Next unit unlocks once every topic in the previous unit has ≥1 lesson done
+  const unit1Started = u1.some((t) => t.completed > 0);
+  const unit2Started = u2.some((t) => t.completed > 0);
+
+  return [
+    { ...UNIT_CONFIG[0], topics: u1, unlocked: true },
+    { ...UNIT_CONFIG[1], topics: u2, unlocked: unit1Started },
+    { ...UNIT_CONFIG[2], topics: u3, unlocked: unit2Started },
+  ];
+}
+
+// SVG progress ring
 function ProgressRing({ percent, size }: { percent: number; size: number }) {
   const sw = 3.5;
   const r = (size - sw * 2) / 2;
@@ -162,60 +180,61 @@ function TopicNode({
   const done = pct === 100;
 
   return (
-    <motion.button
-      whileHover={!isLocked ? { y: -3 } : {}}
-      whileTap={!isLocked ? { scale: 0.95 } : {}}
-      onClick={() => !isLocked && onStart(topic.id)}
-      disabled={isLocked}
-      className="flex flex-col items-center gap-2 min-w-[72px]"
-    >
-      <div className="relative w-[70px] h-[70px]">
-        <ProgressRing percent={pct} size={70} />
+    // Extra padding so the hover (y:-3) and pulse ring (scale:1.18) never get clipped
+    <div className="p-3">
+      <motion.button
+        whileHover={!isLocked ? { y: -3 } : {}}
+        whileTap={!isLocked ? { scale: 0.95 } : {}}
+        onClick={() => !isLocked && onStart(topic.id)}
+        disabled={isLocked}
+        className="flex flex-col items-center gap-2 min-w-[72px]"
+      >
+        <div className="relative w-[70px] h-[70px]">
+          <ProgressRing percent={pct} size={70} />
 
-        {/* Pulse ring for current topic */}
-        {isCurrent && (
-          <motion.div
-            className="absolute inset-0 rounded-full border-2 border-blue-400 pointer-events-none"
-            animate={{ scale: [1, 1.18, 1], opacity: [0.7, 0, 0.7] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          />
-        )}
-
-        {/* Inner circle — white, no color tint */}
-        <div
-          className="absolute rounded-full flex items-center justify-center"
-          style={{
-            inset: "6px",
-            background: isLocked ? "rgba(241,245,249,0.90)" : "rgba(255,255,255,0.90)",
-            boxShadow: isCurrent
-              ? "0 4px 16px rgba(59,130,246,0.18)"
-              : "0 2px 8px rgba(15,23,42,0.07)",
-          }}
-        >
-          {isLocked ? (
-            <Lock size={18} className="text-slate-300" />
-          ) : done ? (
-            <Check size={20} className="text-emerald-500" />
-          ) : (
-            <Icon
-              size={20}
-              className={isCurrent ? "text-blue-500" : "text-slate-500"}
+          {/* Pulse ring — rendered in a portal-like outer wrapper so it never clips */}
+          {isCurrent && (
+            <motion.div
+              className="absolute rounded-full border-2 border-blue-400 pointer-events-none"
+              style={{ inset: "-8px" }}
+              animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0, 0.6] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
             />
           )}
-        </div>
-      </div>
 
-      <p
-        className={`text-[11px] font-semibold text-center leading-tight ${
-          isLocked ? "text-slate-300" : "text-slate-700"
-        }`}
-      >
-        {topic.name}
-      </p>
-      <p className={`text-[10px] ${isLocked ? "text-slate-200" : "text-slate-400"}`}>
-        {topic.completed}/{topic.lessons}
-      </p>
-    </motion.button>
+          {/* Inner circle */}
+          <div
+            className="absolute rounded-full flex items-center justify-center"
+            style={{
+              inset: "6px",
+              background: isLocked ? "rgba(241,245,249,0.90)" : "rgba(255,255,255,0.90)",
+              boxShadow: isCurrent
+                ? "0 4px 16px rgba(59,130,246,0.18)"
+                : "0 2px 8px rgba(15,23,42,0.07)",
+            }}
+          >
+            {isLocked ? (
+              <Lock size={18} className="text-slate-300" />
+            ) : done ? (
+              <Check size={20} className="text-emerald-500" />
+            ) : (
+              <Icon size={20} className={isCurrent ? "text-blue-500" : "text-slate-500"} />
+            )}
+          </div>
+        </div>
+
+        <p
+          className={`text-[11px] font-semibold text-center leading-tight ${
+            isLocked ? "text-slate-300" : "text-slate-700"
+          }`}
+        >
+          {topic.name}
+        </p>
+        <p className={`text-[10px] ${isLocked ? "text-slate-200" : "text-slate-400"}`}>
+          {topic.completed}/{topic.lessons}
+        </p>
+      </motion.button>
+    </div>
   );
 }
 
@@ -223,9 +242,11 @@ function TopicNode({
 function QuizView({
   topicId,
   onClose,
+  onComplete,
 }: {
   topicId: string;
   onClose: () => void;
+  onComplete: (topicId: string, xpEarned: number) => void;
 }) {
   const [qIndex, setQIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
@@ -254,28 +275,23 @@ function QuizView({
             <Star size={56} className="text-amber-400 mx-auto mb-5 fill-amber-400" />
           </motion.div>
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Lesson complete!</h2>
-          <p className="text-slate-500 mb-6">
-            Masha&apos;Allah! You earned {xpEarned} XP.
-          </p>
+          <p className="text-slate-500 mb-6">Masha&apos;Allah! You earned {xpEarned} XP.</p>
           <div className="flex gap-3 justify-center mb-6">
-            <div
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl"
-              style={glassCard}
-            >
+            <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl" style={glassCard}>
               <Zap size={15} className="text-blue-500" />
               <span className="font-bold text-slate-800 text-sm">+{xpEarned} XP</span>
             </div>
-            <div
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl"
-              style={glassCard}
-            >
+            <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl" style={glassCard}>
               {Array.from({ length: hearts }).map((_, i) => (
                 <Heart key={i} size={13} className="text-red-400 fill-red-400" />
               ))}
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => {
+              onComplete(topicId, xpEarned);
+              onClose();
+            }}
             className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-colors text-sm"
           >
             Back to lessons
@@ -317,13 +333,9 @@ function QuizView({
       <div className="max-w-2xl mx-auto px-5 py-6">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 transition-colors"
-          >
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 transition-colors">
             <X size={20} />
           </button>
-
           <div className="flex-1 h-2.5 rounded-full overflow-hidden bg-slate-200">
             <motion.div
               className="h-full bg-blue-500 rounded-full"
@@ -332,22 +344,15 @@ function QuizView({
               transition={{ duration: 0.4 }}
             />
           </div>
-
           <div className="flex items-center gap-1 text-xs font-bold text-blue-600">
-            <Zap size={13} />
-            {xpEarned}
+            <Zap size={13} /> {xpEarned}
           </div>
-
           <div className="flex gap-0.5">
             {Array.from({ length: 5 }).map((_, i) => (
               <Heart
                 key={i}
                 size={15}
-                className={
-                  i < hearts
-                    ? "text-red-400 fill-red-400"
-                    : "text-slate-200 fill-slate-200"
-                }
+                className={i < hearts ? "text-red-400 fill-red-400" : "text-slate-200 fill-slate-200"}
               />
             ))}
           </div>
@@ -359,9 +364,7 @@ function QuizView({
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.22 }}
         >
-          <p className="text-xl font-bold text-slate-900 mb-8 leading-relaxed">
-            {q.question}
-          </p>
+          <p className="text-xl font-bold text-slate-900 mb-8 leading-relaxed">{q.question}</p>
 
           <div className="space-y-3 mb-6 relative">
             <AnimatePresence>
@@ -382,30 +385,18 @@ function QuizView({
               const isThisCorrect = i === q.correct;
               const isThisSelected = i === selected;
 
-              let style: React.CSSProperties = {
-                background: "rgba(255,255,255,0.65)",
-                border: "2px solid rgba(255,255,255,0.80)",
-              };
+              let style: React.CSSProperties = { background: "rgba(255,255,255,0.65)", border: "2px solid rgba(255,255,255,0.80)" };
               let textClass = "text-slate-700";
 
               if (showResult) {
                 if (isThisCorrect) {
-                  style = {
-                    background: "rgba(209,250,229,0.80)",
-                    border: "2px solid rgba(110,231,183,0.65)",
-                  };
+                  style = { background: "rgba(209,250,229,0.80)", border: "2px solid rgba(110,231,183,0.65)" };
                   textClass = "text-emerald-700";
                 } else if (isThisSelected) {
-                  style = {
-                    background: "rgba(254,226,226,0.80)",
-                    border: "2px solid rgba(252,165,165,0.65)",
-                  };
+                  style = { background: "rgba(254,226,226,0.80)", border: "2px solid rgba(252,165,165,0.65)" };
                   textClass = "text-red-700";
                 } else {
-                  style = {
-                    background: "rgba(248,250,252,0.55)",
-                    border: "2px solid rgba(226,232,240,0.55)",
-                  };
+                  style = { background: "rgba(248,250,252,0.55)", border: "2px solid rgba(226,232,240,0.55)" };
                   textClass = "text-slate-400";
                 }
               }
@@ -413,17 +404,11 @@ function QuizView({
               return (
                 <motion.button
                   key={i}
-                  animate={
-                    shake && isThisSelected
-                      ? { x: [-5, 5, -5, 5, -3, 3, 0] }
-                      : {}
-                  }
+                  animate={shake && isThisSelected ? { x: [-5, 5, -5, 5, -3, 3, 0] } : {}}
                   transition={{ duration: 0.4 }}
                   onClick={() => handleAnswer(i)}
                   disabled={showResult}
-                  className={`w-full text-left rounded-2xl px-5 py-4 text-sm font-semibold transition-all flex items-center gap-3 ${textClass} ${
-                    !showResult ? "hover:scale-[1.01] active:scale-[0.98]" : ""
-                  }`}
+                  className={`w-full text-left rounded-2xl px-5 py-4 text-sm font-semibold transition-all flex items-center gap-3 ${textClass} ${!showResult ? "hover:scale-[1.01] active:scale-[0.98]" : ""}`}
                   style={style}
                 >
                   {!showResult && (
@@ -431,39 +416,26 @@ function QuizView({
                       {String.fromCharCode(65 + i)}
                     </span>
                   )}
-                  {showResult && isThisCorrect && (
-                    <Check size={17} className="text-emerald-500 flex-shrink-0" />
-                  )}
-                  {showResult && isThisSelected && !isThisCorrect && (
-                    <X size={17} className="text-red-400 flex-shrink-0" />
-                  )}
+                  {showResult && isThisCorrect && <Check size={17} className="text-emerald-500 flex-shrink-0" />}
+                  {showResult && isThisSelected && !isThisCorrect && <X size={17} className="text-red-400 flex-shrink-0" />}
                   {opt}
                 </motion.button>
               );
             })}
           </div>
 
-          {/* Explanation */}
           {showExp && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="rounded-2xl p-5 mb-6"
               style={{
-                background: isCorrect
-                  ? "rgba(209,250,229,0.65)"
-                  : "rgba(254,226,226,0.65)",
-                border: isCorrect
-                  ? "1px solid rgba(110,231,183,0.55)"
-                  : "1px solid rgba(252,165,165,0.55)",
+                background: isCorrect ? "rgba(209,250,229,0.65)" : "rgba(254,226,226,0.65)",
+                border: isCorrect ? "1px solid rgba(110,231,183,0.55)" : "1px solid rgba(252,165,165,0.55)",
               }}
             >
-              <p
-                className={`text-sm font-bold mb-1.5 ${
-                  isCorrect ? "text-emerald-700" : "text-red-600"
-                }`}
-              >
-                {isCorrect ? "Correct! Masha’Allah!" : "Not quite — the correct answer is:"}
+              <p className={`text-sm font-bold mb-1.5 ${isCorrect ? "text-emerald-700" : "text-red-600"}`}>
+                {isCorrect ? "Correct! Masha'Allah!" : "Not quite — the correct answer is:"}
               </p>
               <p className="text-sm text-slate-600 leading-relaxed">{q.explanation}</p>
             </motion.div>
@@ -476,9 +448,7 @@ function QuizView({
               onClick={next}
               className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-colors text-sm"
             >
-              {qIndex + 1 < SAMPLE_QUESTIONS.length
-                ? "Next question"
-                : `Finish · +${xpEarned} XP earned`}
+              {qIndex + 1 < SAMPLE_QUESTIONS.length ? "Next question" : `Finish · +${xpEarned} XP earned`}
             </motion.button>
           )}
         </motion.div>
@@ -487,16 +457,45 @@ function QuizView({
   );
 }
 
-// Main component
+// --- Main page ---
 export default function LearnPage() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [activeLesson, setActiveLesson] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const learnProgress: Record<string, number> = (profile as any)?.learnProgress ?? {};
   const streak = profile?.streak ?? 0;
   const xp = profile?.xp ?? 0;
 
+  const units = buildUnits(learnProgress);
+
+  async function handleLessonComplete(topicId: string, xpEarned: number) {
+    if (!user?.uid || saving) return;
+    setSaving(true);
+    try {
+      const currentProgress = learnProgress[topicId] ?? 0;
+      const topicMeta = UNIT_CONFIG.flatMap((u) => u.topics).find((t) => t.id === topicId);
+      const max = topicMeta?.lessons ?? 1;
+      const newProgress = Math.min(currentProgress + 1, max);
+
+      await updateDoc(doc(db, "users", user.uid), {
+        [`learnProgress.${topicId}`]: newProgress,
+        xp: (profile?.xp ?? 0) + xpEarned,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (activeLesson) {
-    return <QuizView topicId={activeLesson} onClose={() => setActiveLesson(null)} />;
+    return (
+      <QuizView
+        topicId={activeLesson}
+        onClose={() => setActiveLesson(null)}
+        onComplete={handleLessonComplete}
+      />
+    );
   }
 
   return (
@@ -510,7 +509,7 @@ export default function LearnPage() {
           </p>
         </div>
 
-        {/* Stats row — plain icons, no boxes */}
+        {/* Stats row */}
         <div className="flex items-center gap-6 mb-8 px-1">
           <div className="flex items-center gap-2">
             <Flame size={18} className="text-amber-400" />
@@ -531,7 +530,7 @@ export default function LearnPage() {
 
         {/* Units */}
         <div className="space-y-5">
-          {UNITS.map((unit, unitIdx) => {
+          {units.map((unit, unitIdx) => {
             const totalLessons = unit.topics.reduce((s, t) => s + t.lessons, 0);
             const completedLessons = unit.topics.reduce((s, t) => s + t.completed, 0);
             const firstIncomplete = unit.topics.find((t) => t.completed < t.lessons);
@@ -547,11 +546,7 @@ export default function LearnPage() {
                 style={
                   unit.unlocked
                     ? glassCard
-                    : {
-                        ...glassCard,
-                        background: "rgba(248,250,252,0.55)",
-                        border: "1px solid rgba(226,232,240,0.55)",
-                      }
+                    : { ...glassCard, background: "rgba(248,250,252,0.55)", border: "1px solid rgba(226,232,240,0.55)" }
                 }
               >
                 {/* Unit header */}
@@ -560,26 +555,16 @@ export default function LearnPage() {
                     <div className="flex items-center gap-2.5">
                       <span
                         className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg ${
-                          unit.unlocked
-                            ? "bg-slate-100 text-slate-500"
-                            : "bg-slate-100 text-slate-300"
+                          unit.unlocked ? "bg-slate-100 text-slate-500" : "bg-slate-100 text-slate-300"
                         }`}
                       >
                         {unit.label}
                       </span>
                       <div>
-                        <h3
-                          className={`font-bold text-base leading-none ${
-                            unit.unlocked ? "text-slate-900" : "text-slate-400"
-                          }`}
-                        >
+                        <h3 className={`font-bold text-base leading-none ${unit.unlocked ? "text-slate-900" : "text-slate-400"}`}>
                           {unit.name}
                         </h3>
-                        <p
-                          className={`text-xs mt-0.5 ${
-                            unit.unlocked ? "text-slate-500" : "text-slate-300"
-                          }`}
-                        >
+                        <p className={`text-xs mt-0.5 ${unit.unlocked ? "text-slate-500" : "text-slate-300"}`}>
                           {unit.description}
                         </p>
                       </div>
@@ -597,30 +582,31 @@ export default function LearnPage() {
                   </div>
                 </div>
 
-                {/* Topic path — nodes connected by dashed line */}
-                <div className="px-6 pb-4">
-                  <div className="flex items-center gap-1 overflow-x-auto pb-1">
-                    {unit.topics.map((topic, topicIdx) => {
-                      const isCurrent =
-                        unit.unlocked && topic.id === firstIncomplete?.id;
-                      const isLocked = !unit.unlocked;
-                      return (
-                        <div
-                          key={topic.id}
-                          className="flex items-center gap-1 flex-shrink-0"
-                        >
-                          <TopicNode
-                            topic={topic}
-                            isCurrent={isCurrent}
-                            isLocked={isLocked}
-                            onStart={setActiveLesson}
-                          />
-                          {topicIdx < unit.topics.length - 1 && (
-                            <div className="w-8 h-0 border-t-2 border-dashed border-slate-200 mb-8 flex-shrink-0" />
-                          )}
-                        </div>
-                      );
-                    })}
+                {/* Topic path
+                    overflow-hidden is removed from the unit card so the pulse/hover
+                    can breathe. The outer div clips scroll, the inner adds padding. */}
+                <div className="px-3 pb-2">
+                  <div className="overflow-x-auto">
+                    {/* py-3 px-1 gives headroom for scale/translate animations */}
+                    <div className="flex items-center min-w-max py-1">
+                      {unit.topics.map((topic, topicIdx) => {
+                        const isCurrent = unit.unlocked && topic.id === firstIncomplete?.id;
+                        const isLocked = !unit.unlocked;
+                        return (
+                          <div key={topic.id} className="flex items-center">
+                            <TopicNode
+                              topic={topic}
+                              isCurrent={isCurrent}
+                              isLocked={isLocked}
+                              onStart={setActiveLesson}
+                            />
+                            {topicIdx < unit.topics.length - 1 && (
+                              <div className="w-8 h-0 border-t-2 border-dashed border-slate-200 mb-10 flex-shrink-0" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
@@ -634,15 +620,16 @@ export default function LearnPage() {
                       className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-sm transition-colors flex items-center justify-center gap-2"
                     >
                       <Play size={15} fill="white" />
-                      {completedLessons === 0 ? "Start" : "Continue"} ·{" "}
-                      {firstIncomplete.name}
+                      {completedLessons === 0 ? "Start" : "Continue"} · {firstIncomplete.name}
                     </motion.button>
                   </div>
                 )}
                 {unit.unlocked && unitDone && (
                   <div className="px-6 pb-6">
-                    <div className="w-full py-3 rounded-2xl text-sm font-bold text-emerald-700 text-center flex items-center justify-center gap-2 border border-emerald-100"
-                      style={{ background: "rgba(209,250,229,0.50)" }}>
+                    <div
+                      className="w-full py-3 rounded-2xl text-sm font-bold text-emerald-700 text-center flex items-center justify-center gap-2 border border-emerald-100"
+                      style={{ background: "rgba(209,250,229,0.50)" }}
+                    >
                       <Check size={15} /> Unit complete! Masha&apos;Allah
                     </div>
                   </div>
@@ -662,12 +649,10 @@ export default function LearnPage() {
         >
           <BookOpen size={18} className="text-blue-500 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-slate-800 text-sm mb-0.5">
-              Scholar-verified content
-            </p>
+            <p className="font-semibold text-slate-800 text-sm mb-0.5">Scholar-verified content</p>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Every lesson cites its source — Quran surah and verse or hadith
-              collection and number. Content reviewed by qualified Sunni scholars.
+              Every lesson cites its source — Quran surah and verse or hadith collection and number.
+              Content reviewed by qualified Sunni scholars.
             </p>
           </div>
         </motion.div>
