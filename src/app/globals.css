@@ -17,8 +17,15 @@
   }
 
   body {
-    @apply bg-white text-[#0A0A0A] antialiased;
+    background:
+      radial-gradient(ellipse 80% 60% at 10% -5%, rgba(147, 197, 253, 0.40) 0%, transparent 55%),
+      radial-gradient(ellipse 60% 50% at 92% 108%, rgba(196, 181, 253, 0.28) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 40% at 55% 90%, rgba(110, 231, 183, 0.12) 0%, transparent 50%),
+      #eef2ff;
+    background-attachment: fixed;
+    color: #0f172a;
     font-family: var(--font-inter);
+    -webkit-font-smoothing: antialiased;
   }
 
   * {
@@ -27,6 +34,30 @@
 }
 
 @layer components {
+  .glass {
+    background: rgba(255, 255, 255, 0.62);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.80);
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.07);
+  }
+
+  .glass-sm {
+    background: rgba(255, 255, 255, 0.50);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.70);
+    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.05);
+  }
+
+  .glass-modal {
+    background: rgba(255, 255, 255, 0.90);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.14);
+  }
+
   .arabic {
     font-family: var(--font-noto-naskh-arabic);
     direction: rtl;

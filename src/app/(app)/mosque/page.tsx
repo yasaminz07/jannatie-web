@@ -1,24 +1,26 @@
 "use client";
 
 import { useAuth } from "@/lib/auth-context";
-import Card from "@/components/ui/Card";
-import Button from "@/components/ui/Button";
-import { Building2, Users, Calendar, TrendingUp, Plus } from "lucide-react";
+import { Building2, Users, Calendar, TrendingUp, Plus, ChevronRight, Check } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
-const STATS = [
-  { label: "Total members", value: "234", icon: Users, color: "text-primary-500" },
-  { label: "Active this week", value: "189", icon: TrendingUp, color: "text-accent" },
-  { label: "Events this month", value: "8", icon: Calendar, color: "text-primary-500" },
-  { label: "Total XP earned", value: "12,450", icon: TrendingUp, color: "text-accent" },
+const FEATURES = [
+  "Unlimited congregation accounts",
+  "Event management and RSVPs",
+  "Congregation-wide analytics",
+  "Collective leaderboard",
+  "Custom mosque branding",
+  "Dedicated support line",
 ];
 
-const RECENT_EVENTS = [
-  { title: "Friday Jumu'ah", date: "Fri 17 Jan", attendees: 145 },
-  { title: "Sisters' Quran Circle", date: "Wed 15 Jan", attendees: 23 },
-  { title: "Youth Halaqa", date: "Sun 12 Jan", attendees: 38 },
-];
+const glassCard = {
+  background: "rgba(255, 255, 255, 0.65)",
+  border: "1px solid rgba(255, 255, 255, 0.80)",
+  backdropFilter: "blur(20px)",
+  WebkitBackdropFilter: "blur(20px)",
+  boxShadow: "0 4px 24px rgba(15, 23, 42, 0.07)",
+} as const;
 
 export default function MosquePage() {
   const { profile } = useAuth();
@@ -26,111 +28,103 @@ export default function MosquePage() {
 
   if (!hasMosquePlan) {
     return (
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-        <div className="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Building2 size={36} className="text-primary-500" />
+      <div className="min-h-screen">
+        <div className="max-w-2xl mx-auto px-5 py-16 text-center">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="flex justify-center mb-6">
+              <Building2 size={44} className="text-slate-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900 mb-3">Mosque Admin Dashboard</h1>
+            <p className="text-slate-500 mb-8 leading-relaxed max-w-md mx-auto">
+              The Mosque plan gives your community a powerful dashboard with event management,
+              congregation analytics, collective XP tracking and more.
+            </p>
+
+            <div className="rounded-2xl p-8 mb-6 text-left" style={glassCard}>
+              <h2 className="font-semibold text-slate-800 mb-5">What is included</h2>
+              <ul className="space-y-3">
+                {FEATURES.map((f) => (
+                  <li key={f} className="flex items-center gap-3 text-sm text-slate-600">
+                    <Check size={15} className="text-emerald-500 flex-shrink-0" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <Link
+              href="/pricing#mosque"
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-3.5 rounded-xl transition-colors text-sm"
+            >
+              Get Mosque plan <ChevronRight size={16} />
+            </Link>
+            <p className="text-xs text-slate-400 mt-3">From £29 per month</p>
+          </motion.div>
         </div>
-        <h1 className="text-2xl font-bold text-foreground mb-3">Mosque Admin Dashboard</h1>
-        <p className="text-muted mb-8 leading-relaxed">
-          The Mosque plan gives your community a powerful dashboard — event management,
-          congregation analytics, collective XP tracking, and more.
-        </p>
-        <div className="bg-card border border-border rounded-2xl p-8 mb-6 text-left">
-          <h2 className="font-semibold text-foreground mb-4">What&apos;s included:</h2>
-          <ul className="space-y-2 text-sm text-muted">
-            {[
-              "Unlimited congregation accounts",
-              "Event management and RSVPs",
-              "Congregation-wide analytics",
-              "Collective leaderboard",
-              "Custom mosque branding",
-              "Dedicated support line",
-            ].map((f) => (
-              <li key={f} className="flex items-center gap-2">
-                <span className="text-primary-500">✓</span> {f}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <Link href="/pricing#mosque">
-          <Button size="lg">Get Mosque plan — £29/month</Button>
-        </Link>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Mosque Dashboard</h1>
-          <p className="text-sm text-muted mt-0.5">Manage your community and track collective growth.</p>
+    <div className="min-h-screen">
+      <div className="max-w-5xl mx-auto px-5 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Mosque Dashboard</h1>
+            <p className="text-sm text-slate-400 mt-0.5">Manage your community and track collective growth.</p>
+          </div>
+          <button className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+            <Plus size={14} /> Add event
+          </button>
         </div>
-        <Button size="sm" className="gap-1">
-          <Plus size={14} /> Add event
-        </Button>
-      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {STATS.map(({ label, value, icon: Icon, color }, i) => (
-          <motion.div
-            key={label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-          >
-            <Card className="p-5">
-              <Icon size={18} className={`${color} mb-3`} />
-              <p className="mono text-2xl font-bold text-foreground">{value}</p>
-              <p className="text-xs text-muted mt-1">{label}</p>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent events */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-foreground">Recent Events</h2>
-            <Link href="/calendar" className="text-xs text-primary-500 hover:underline">Manage →</Link>
-          </div>
-          <div className="space-y-3">
-            {RECENT_EVENTS.map((ev) => (
-              <div key={ev.title} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{ev.title}</p>
-                  <p className="text-xs text-muted">{ev.date}</p>
-                </div>
-                <div className="flex items-center gap-1 text-muted">
-                  <Users size={12} />
-                  <span className="text-xs">{ev.attendees}</span>
-                </div>
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {[
+            { label: "Total members", value: "0", Icon: Users },
+            { label: "Active this week", value: "0", Icon: TrendingUp },
+            { label: "Events this month", value: "0", Icon: Calendar },
+            { label: "Total XP earned", value: "0", Icon: TrendingUp },
+          ].map(({ label, value, Icon }, i) => (
+            <motion.div
+              key={label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.08 }}
+            >
+              <div className="rounded-2xl p-5" style={glassCard}>
+                <Icon size={18} className="text-slate-400 mb-3" />
+                <p className="text-2xl font-bold text-slate-900">{value}</p>
+                <p className="text-xs text-slate-400 mt-1">{label}</p>
               </div>
-            ))}
-          </div>
-        </Card>
+            </motion.div>
+          ))}
+        </div>
 
-        {/* Community XP */}
-        <Card className="p-6">
-          <h2 className="font-semibold text-foreground mb-4">Community Growth</h2>
-          <div className="space-y-3">
-            {[
-              { week: "This week", xp: 1240, change: "+12%" },
-              { week: "Last week", xp: 1107, change: null },
-              { week: "2 weeks ago", xp: 980, change: null },
-            ].map(({ week, xp, change }) => (
-              <div key={week} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                <span className="text-sm text-foreground">{week}</span>
-                <div className="flex items-center gap-2">
-                  <span className="mono text-sm font-bold text-foreground">{xp} XP</span>
-                  {change && <span className="text-xs text-green-600 font-semibold">{change}</span>}
-                </div>
-              </div>
-            ))}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Recent events */}
+          <div className="rounded-2xl p-6" style={glassCard}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-slate-800">Recent Events</h2>
+              <Link href="/calendar" className="text-xs text-slate-400 hover:text-blue-600 transition-colors">
+                Manage
+              </Link>
+            </div>
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Calendar size={28} className="text-slate-200 mb-3" />
+              <p className="text-sm text-slate-400">No events yet. Add your first event to get started.</p>
+            </div>
           </div>
-        </Card>
+
+          {/* Community XP */}
+          <div className="rounded-2xl p-6" style={glassCard}>
+            <h2 className="font-semibold text-slate-800 mb-4">Community Growth</h2>
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <TrendingUp size={28} className="text-slate-200 mb-3" />
+              <p className="text-sm text-slate-400">XP data will appear here as members complete habits and lessons.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

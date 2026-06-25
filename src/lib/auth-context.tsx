@@ -17,19 +17,32 @@ import {
   signOut,
   updateProfile,
 } from "firebase/auth";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import {
+  doc, setDoc, serverTimestamp, collection, query, where,
+  getDocs, onSnapshot,
+} from "firebase/firestore";
 import { auth, db } from "./firebase";
 
 interface UserProfile {
   uid: string;
   email: string | null;
   displayName: string | null;
+  username: string;
   photoURL: string | null;
   plan: "free" | "premium" | "family" | "mosque" | "school";
   xp: number;
   level: number;
   streak: number;
   joinedAt: Date | null;
+  habits?: string[];
+  hifzPlan?: {
+    preset: string;
+    amount?: number;
+    unit?: string;
+    days?: number[];              // 0=Mon … 6=Sun
+    time?: string;                // "HH:MM" 24-hour
+    log?: Record<string, boolean>; // { "2026-06-25": true }
+  };
 }
 
 interface AuthContextValue {
@@ -37,7 +50,7 @@ interface AuthContextValue {
   profile: UserProfile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string, username: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   logOut: () => Promise<void>;
 }
@@ -52,27 +65,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    let unsubscribeDoc: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      if (unsubscribeDoc) {
+        unsubscribeDoc();
+        unsubscribeDoc = null;
+      }
+
       setUser(firebaseUser);
+
       if (firebaseUser) {
         const ref = doc(db, "users", firebaseUser.uid);
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          setProfile(snap.data() as UserProfile);
-        }
+        unsubscribeDoc = onSnapshot(ref, (snap) => {
+          if (snap.exists()) {
+            setProfile(snap.data() as UserProfile);
+          }
+          setLoading(false);
+        });
       } else {
         setProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
-    return unsubscribe;
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeDoc) unsubscribeDoc();
+    };
   }, []);
 
   async function signIn(email: string, password: string) {
     await signInWithEmailAndPassword(auth, email, password);
   }
 
-  async function signUp(email: string, password: string, name: string) {
+  async function signUp(email: string, password: string, name: string, username: string) {
+    const taken = await getDocs(query(collection(db, "users"), where("username", "==", username.toLowerCase())));
+    if (!taken.empty) throw new Error("That username is already taken. Please choose a different one.");
+
     const { user: newUser } = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(newUser, { displayName: name });
     const ref = doc(db, "users", newUser.uid);
@@ -80,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       uid: newUser.uid,
       email: newUser.email,
       displayName: name,
+      username: username.toLowerCase(),
       photoURL: null,
       plan: "free",
       xp: 0,
@@ -92,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signInWithGoogle() {
     const { user: googleUser } = await signInWithPopup(auth, googleProvider);
     const ref = doc(db, "users", googleUser.uid);
+    const { getDoc } = await import("firebase/firestore");
     const snap = await getDoc(ref);
     if (!snap.exists()) {
       await setDoc(ref, {

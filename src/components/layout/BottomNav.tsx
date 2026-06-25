@@ -23,7 +23,16 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-sidebar border-t border-white/10 safe-area-inset-bottom">
+    <nav
+      className="md:hidden fixed bottom-0 left-0 right-0 z-30 safe-area-inset-bottom"
+      style={{
+        background: "rgba(255, 255, 255, 0.82)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        borderTop: "1px solid rgba(255, 255, 255, 0.90)",
+        boxShadow: "0 -4px 24px rgba(15, 23, 42, 0.06)",
+      }}
+    >
       <div className="flex items-center justify-around px-2 py-2">
         {items.map(({ label, href, icon: Icon }) => {
           const active = pathname === href;
@@ -37,13 +46,13 @@ export default function BottomNav() {
                 size={22}
                 className={cn(
                   "transition-colors",
-                  active ? "text-primary-500" : "text-gray-500"
+                  active ? "text-blue-600" : "text-slate-400"
                 )}
               />
               <span
                 className={cn(
                   "text-[10px] font-medium transition-colors",
-                  active ? "text-primary-500" : "text-gray-500"
+                  active ? "text-blue-600" : "text-slate-400"
                 )}
               >
                 {label}
