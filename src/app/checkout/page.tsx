@@ -11,8 +11,8 @@ const PLANS: Record<string, { name: string; monthly: number; annual: number; ann
   premium: {
     name: "Premium",
     monthly: 4.99,
-    annual: 3.33,
-    annualTotal: 39.99,
+    annual: 4.17,
+    annualTotal: 49.99,
     features: [
       "Unlimited AI Buddy messages",
       "Unlimited lessons & topics",

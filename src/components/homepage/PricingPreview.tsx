@@ -19,7 +19,7 @@ const plans = [
   {
     name: "Premium",
     monthly: 4.99,
-    annualTotal: 39.99,
+    annualTotal: 49.99,
     description: "Unlimited growth for committed Muslims.",
     features: ["Everything in Free", "Unlimited AI messages", "Unlimited lessons", "Full analytics dashboard", "Offline mode", "Priority support"],
     cta: "Start Premium",
@@ -67,7 +67,7 @@ export default function PricingPreview() {
               className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-2 ${annual ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-700"}`}
             >
               Annual
-              <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Save 33%</span>
+              <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Save 17%</span>
             </button>
           </div>
         </motion.div>

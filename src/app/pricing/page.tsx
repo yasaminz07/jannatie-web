@@ -5,6 +5,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Check, Building2, GraduationCap } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/lib/auth-context";
 
 const individualPlans = [
   {
@@ -28,7 +29,7 @@ const individualPlans = [
   {
     name: "Premium",
     monthly: 4.99,
-    annual: 39.99,
+    annual: 49.99,
     description: "Unlimited growth for serious learners.",
     popular: true,
     features: [
@@ -99,11 +100,12 @@ const institutionPlans = [
 
 export default function PricingPage() {
   const [annual, setAnnual] = useState(false);
+  const { user } = useAuth();
 
   return (
     <>
       <Navbar />
-      <main className="pt-24 pb-20">
+      <main className="pt-24 pb-20 bg-[#fafafa]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="text-center py-16">
@@ -123,7 +125,7 @@ export default function PricingPage() {
                 className={`px-5 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${annual ? "bg-foreground text-white" : "text-muted"}`}
               >
                 Annual
-                <span className="bg-accent text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Save 33%</span>
+                <span className="bg-accent text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Save 17%</span>
               </button>
             </div>
           </div>
@@ -170,13 +172,17 @@ export default function PricingPage() {
                 </ul>
 
                 <Link
-                  href={href}
+                  href={
+                    user && (name === "Premium" || name === "Family")
+                      ? `/checkout?plan=${name.toLowerCase()}&interval=${annual ? "annual" : "monthly"}`
+                      : href
+                  }
                   className={`block text-center font-semibold py-3 rounded-xl transition-all duration-150 ${
                     variant === "primary"
-                      ? "bg-primary-500 text-white hover:bg-primary-600"
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
                       : variant === "accent"
-                      ? "border-2 border-accent text-accent hover:bg-accent hover:text-white"
-                      : "border border-foreground text-foreground hover:bg-foreground hover:text-white"
+                      ? "border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
+                      : "border border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white"
                   }`}
                 >
                   {cta}
