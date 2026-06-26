@@ -416,6 +416,8 @@ const duasQuestions: Question[] = [
 const mannersQuestions: Question[] = [
   {
     question: "The Prophet ﷺ said: 'Your smile at your brother is…' What?",
+    arabic: "تَبَسُّمُكَ فِي وَجْهِ أَخِيكَ صَدَقَةٌ",
+    phonetic: "Tabassumuqa fi wajhi akhika sadaqah",
     options: ["A sunnah", "A sadaqah (charity)", "An obligation", "A form of dhikr"],
     correct: 1,
     explanation: "'Your smile at your brother is sadaqah.' (Tirmidhi 1956). This shows that acts of kindness, even as small as smiling, carry the spiritual reward of charity in Islam.",
@@ -447,6 +449,8 @@ const mannersQuestions: Question[] = [
   },
   {
     question: "What is 'gheebah' (backbiting) in Islamic ethics?",
+    arabic: "الْغِيبَةُ",
+    phonetic: "Al-Gheebah — mentioning your brother in a way he would dislike",
     options: ["Lying about someone", "Speaking about someone in their absence in a way they would dislike — even if true", "Insulting someone to their face", "Spreading false rumours"],
     correct: 1,
     explanation: "The Prophet ﷺ defined backbiting: 'To mention your brother in a way he would dislike.' If it is false, it becomes buhtaan (slander). Allah ﷻ compares it to eating the flesh of a dead brother. (Quran 49:12)",
@@ -454,6 +458,8 @@ const mannersQuestions: Question[] = [
   },
   {
     question: "The Prophet ﷺ repeatedly advised: 'Do not…' — three times when asked for advice. What was it?",
+    arabic: "لَا تَغْضَبْ",
+    phonetic: "La taghdab — Do not get angry",
     options: ["Do not lie, do not be lazy, do not be wasteful", "Do not get angry", "Do not miss Fajr", "Do not eat too much"],
     correct: 1,
     explanation: "A man asked the Prophet ﷺ for advice. He said 'Do not get angry' — three times. (Bukhari 6116). Controlling anger is among the greatest acts of worship and a sign of strong character.",
@@ -500,6 +506,8 @@ const mannersQuestions: Question[] = [
   },
   {
     question: "What does Islam say about 'hasad' (envy)?",
+    arabic: "الْحَسَدُ يَأْكُلُ الْحَسَنَاتِ كَمَا تَأْكُلُ النَّارُ الْحَطَبَ",
+    phonetic: "Al-hasadu ya'kulul hasanati kama ta'kulun-narul hatab — Envy consumes good deeds as fire consumes wood",
     options: ["It is permissible if kept to oneself", "It is disliked but not sinful", "'Beware of envy, for it consumes good deeds as fire consumes wood'", "Envy is only sinful if acted upon"],
     correct: 2,
     explanation: "The Prophet ﷺ said: 'Beware of envy, for it consumes (destroys) good deeds just as fire consumes wood (or grass).' (Abu Dawud 4903). One exception: envying someone for knowledge or wealth used in Allah's cause.",
@@ -537,6 +545,8 @@ const mannersQuestions: Question[] = [
   },
   {
     question: "What does the Prophet ﷺ say about keeping ties of kinship (silat al-rahim)?",
+    arabic: "صِلَةُ الرَّحِمِ",
+    phonetic: "Silat al-Rahim — maintaining ties of kinship",
     options: ["It is recommended but optional", "It extends one's lifespan and increases rizq (provision)", "It is only for immediate family", "It earns 10 good deeds per visit"],
     correct: 1,
     explanation: "The Prophet ﷺ said: 'Whoever wishes to have his provision expanded and his lifespan extended, should maintain ties of kinship.' (Bukhari 5986). Cutting ties is among the major sins.",

@@ -1000,13 +1000,13 @@ function QuizView({
           <button
             onClick={() => setShowPhonetics((p) => !p)}
             title={showPhonetics ? "Hide pronunciation guide" : "Show pronunciation guide"}
-            className={`text-xs font-semibold px-2 py-1 rounded-lg border transition-all ${
+            className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
               showPhonetics
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white/70 text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600"
+                ? "bg-slate-800 text-white border-slate-800"
+                : "bg-white text-slate-400 border-slate-200 hover:border-slate-400 hover:text-slate-600"
             }`}
           >
-            🔤 Phonetics
+            Phonetics
           </button>
           <div className="flex gap-0.5">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -1031,13 +1031,13 @@ function QuizView({
         >
           <div className="mb-8">
             <p className="text-xl font-bold text-slate-900 leading-relaxed">{q.question}</p>
-            {q.arabic && (
-              <div className="mt-3 rounded-xl p-3" style={{ background: "rgba(240,245,255,0.70)", border: "1px solid rgba(147,197,253,0.40)" }}>
-                <p className="text-2xl text-right text-slate-800 leading-loose" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif" }}>
+            {q.arabic && selected !== null && (
+              <div className="mt-3 rounded-xl p-4" style={{ background: "rgba(240,245,255,0.80)", border: "1px solid rgba(147,197,253,0.50)" }}>
+                <p className="text-xl text-right text-slate-800 leading-loose" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif" }}>
                   {q.arabic}
                 </p>
-                {showPhonetics && q.phonetic && (
-                  <p className="text-xs text-blue-600 italic text-center mt-1.5 leading-relaxed">
+                {q.phonetic && (
+                  <p className="text-xs text-slate-500 italic text-center mt-2 leading-relaxed border-t border-blue-100 pt-2">
                     {q.phonetic}
                   </p>
                 )}
@@ -1372,13 +1372,13 @@ function ExamView({
         <motion.div key={qIndex} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.22 }}>
           <div className="mb-8">
             <p className="text-xl font-bold text-slate-900 leading-relaxed">{q.question}</p>
-            {q.arabic && (
-              <div className="mt-3 rounded-xl p-3" style={{ background: "rgba(240,245,255,0.70)", border: "1px solid rgba(147,197,253,0.40)" }}>
-                <p className="text-2xl text-right text-slate-800 leading-loose" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif" }}>
+            {q.arabic && selected !== null && (
+              <div className="mt-3 rounded-xl p-4" style={{ background: "rgba(240,245,255,0.80)", border: "1px solid rgba(147,197,253,0.50)" }}>
+                <p className="text-xl text-right text-slate-800 leading-loose" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif" }}>
                   {q.arabic}
                 </p>
-                {showPhonetics && q.phonetic && (
-                  <p className="text-xs text-blue-600 italic text-center mt-1.5 leading-relaxed">
+                {q.phonetic && (
+                  <p className="text-xs text-slate-500 italic text-center mt-2 leading-relaxed border-t border-blue-100 pt-2">
                     {q.phonetic}
                   </p>
                 )}
