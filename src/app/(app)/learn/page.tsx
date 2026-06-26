@@ -1126,6 +1126,11 @@ function QuizView({
                         {q.optionsPhonetic[i]}
                       </span>
                     )}
+                    {q.optionsMeaning?.[i] && (
+                      <span className="block text-xs text-slate-500 mt-0.5 text-left">
+                        — {q.optionsMeaning[i]}
+                      </span>
+                    )}
                   </span>
                 </motion.button>
               );
@@ -1457,6 +1462,11 @@ function ExamView({
                     {showPhonetics && q.optionsPhonetic?.[i] && (
                       <span className="block text-xs italic text-slate-400 mt-0.5 text-right">
                         {q.optionsPhonetic[i]}
+                      </span>
+                    )}
+                    {q.optionsMeaning?.[i] && (
+                      <span className="block text-xs text-slate-500 mt-0.5 text-left">
+                        — {q.optionsMeaning[i]}
                       </span>
                     )}
                   </span>
