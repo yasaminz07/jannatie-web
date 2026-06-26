@@ -1116,7 +1116,7 @@ function QuizView({
                   )}
                   <span className="flex-1">
                     {opt}
-                    {showPhonetics && q.optionsArabic?.[i] && (
+                    {q.optionsArabic?.[i] && (
                       <span className="block text-right mt-1 leading-relaxed opacity-80" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif", fontSize: "1.3rem" }}>
                         {q.optionsArabic[i]}
                       </span>
@@ -1444,7 +1444,7 @@ function ExamView({
                   {showResult && isThisSelected && !isThisCorrect && <X size={17} className="text-red-400 flex-shrink-0" />}
                   <span className="flex-1">
                     {opt}
-                    {showPhonetics && q.optionsArabic?.[i] && (
+                    {q.optionsArabic?.[i] && (
                       <span className="block text-right mt-1 leading-relaxed opacity-80" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif", fontSize: "1.3rem" }}>
                         {q.optionsArabic[i]}
                       </span>
