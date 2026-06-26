@@ -46,6 +46,8 @@ interface UserProfile {
   habitLog?: Record<string, Record<string, boolean>>; // { "2026-06-26": { "Pray all 5 Salah on time": true } }
   adhkarLog?: Record<string, { morning?: boolean; evening?: boolean }>; // { "2026-06-26": { morning: true } }
   onboarded?: boolean;
+  following?: string[];
+  followers?: string[];
 }
 
 interface AuthContextValue {
@@ -119,6 +121,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       xp: 0,
       level: 1,
       streak: 0,
+      following: [],
+      followers: [],
       joinedAt: serverTimestamp(),
     });
   }
@@ -138,6 +142,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         xp: 0,
         level: 1,
         streak: 0,
+        following: [],
+        followers: [],
         joinedAt: serverTimestamp(),
       });
     }

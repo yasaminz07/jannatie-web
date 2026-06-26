@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users collection
+    match /users/{userId} {
+      // Any logged-in user can read any profile (for leaderboard, search, profile pages)
+      allow read: if request.auth != null;
+
+      // Only the owner can write to their own document
+      allow create, update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Notifications — subcollection per user
+    match /notifications/{userId}/items/{itemId} {
+      // Owner can read, update (mark as read), and delete their own notifications
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+
+      // Any logged-in user can CREATE a notification for another user (for reminders)
+      allow create: if request.auth != null;
+    }
+  }
+}
