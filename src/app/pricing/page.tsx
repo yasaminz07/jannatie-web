@@ -69,7 +69,7 @@ const institutionPlans = [
   {
     icon: Building2,
     name: "Mosque",
-    monthly: 29,
+    monthly: 49,
     description: "For mosques and Islamic centres.",
     features: [
       "Unlimited congregation accounts",
@@ -84,7 +84,7 @@ const institutionPlans = [
   {
     icon: GraduationCap,
     name: "School",
-    monthly: 49,
+    monthly: 59,
     description: "For Islamic schools and academies.",
     features: [
       "Class management tools",
