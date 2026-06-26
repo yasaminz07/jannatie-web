@@ -49,7 +49,7 @@ const individualPlans = [
   {
     name: "Family",
     monthly: 9.99,
-    annual: null,
+    annual: 79.99,
     description: "Up to 5 accounts. Grow together.",
     features: [
       "5 separate family accounts",
@@ -125,7 +125,7 @@ export default function PricingPage() {
                 className={`px-5 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${annual ? "bg-foreground text-white" : "text-muted"}`}
               >
                 Annual
-                <span className="bg-accent text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Save 17%</span>
+                <span className="bg-accent text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Save up to 33%</span>
               </button>
             </div>
           </div>
