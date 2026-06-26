@@ -100,9 +100,9 @@ export default function AIPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] md:h-screen max-w-3xl mx-auto w-full">
+    <div className="flex flex-col h-[calc(100vh-72px)] md:h-screen w-full">
       {/* Header */}
-      <div className="px-5 py-4" style={headerStyle}>
+      <div className="px-5 py-4 flex-shrink-0" style={headerStyle}>
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 ring-1 ring-blue-200">
             <span className="text-white text-sm font-bold">J</span>
@@ -123,7 +123,7 @@ export default function AIPage() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-5 py-6 space-y-4">
+      <div className="flex-1 overflow-y-auto px-5 py-6 space-y-4 max-w-3xl mx-auto w-full">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-6 text-center">
             <div>
@@ -161,7 +161,7 @@ export default function AIPage() {
                   </div>
                 )}
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                  className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed break-words overflow-hidden ${
                     msg.role === "user"
                       ? "bg-blue-600 text-white rounded-br-sm"
                       : "text-slate-700 rounded-bl-sm"
@@ -223,13 +223,14 @@ export default function AIPage() {
 
       {/* Input */}
       <div
-        className="px-5 py-4"
+        className="px-5 py-4 flex-shrink-0"
         style={{
           ...headerStyle,
           borderBottom: "none",
           borderTop: "1px solid rgba(255, 255, 255, 0.90)",
         }}
       >
+        <div className="max-w-3xl mx-auto w-full">
         {!canSend ? (
           <div className="text-center py-3">
             <p className="text-sm text-slate-500 mb-2">You have used your 5 free messages today.</p>
@@ -259,6 +260,7 @@ export default function AIPage() {
         <p className="text-[10px] text-slate-400 text-center mt-2">
           AI responses are for guidance only. Not a fatwa. Always consult a qualified scholar for personal rulings.
         </p>
+        </div>
       </div>
 
       <AnimatePresence />
