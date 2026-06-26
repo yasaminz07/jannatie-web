@@ -120,7 +120,7 @@ export default function Footer() {
             © {new Date().getFullYear()} Jannatie Ltd. All rights reserved. Registered in England & Wales.
           </p>
           <p className="text-xs text-slate-500">
-            ICO Registration No. XXXXXXX · Built with ♥ for the Ummah
+            Built with ♥ for the Ummah
           </p>
         </div>
       </div>
