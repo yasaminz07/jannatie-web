@@ -1033,7 +1033,7 @@ function QuizView({
             <p className="text-xl font-bold text-slate-900 leading-relaxed">{q.question}</p>
             {q.arabic && selected !== null && (
               <div className="mt-3 rounded-xl p-4" style={{ background: "rgba(240,245,255,0.80)", border: "1px solid rgba(147,197,253,0.50)" }}>
-                <p className="text-xl text-right text-slate-800 leading-loose" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif" }}>
+                <p className="text-4xl text-right text-slate-800 leading-loose" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif" }}>
                   {q.arabic}
                 </p>
                 {q.phonetic && (
@@ -1117,7 +1117,7 @@ function QuizView({
                   <span className="flex-1">
                     {opt}
                     {q.optionsArabic?.[i] && (
-                      <span className="block text-right mt-1 leading-relaxed opacity-80" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif", fontSize: "1.05rem" }}>
+                      <span className="block text-right mt-1 leading-relaxed opacity-80" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif", fontSize: "1.3rem" }}>
                         {q.optionsArabic[i]}
                       </span>
                     )}
@@ -1374,7 +1374,7 @@ function ExamView({
             <p className="text-xl font-bold text-slate-900 leading-relaxed">{q.question}</p>
             {q.arabic && selected !== null && (
               <div className="mt-3 rounded-xl p-4" style={{ background: "rgba(240,245,255,0.80)", border: "1px solid rgba(147,197,253,0.50)" }}>
-                <p className="text-xl text-right text-slate-800 leading-loose" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif" }}>
+                <p className="text-4xl text-right text-slate-800 leading-loose" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif" }}>
                   {q.arabic}
                 </p>
                 {q.phonetic && (
@@ -1445,7 +1445,7 @@ function ExamView({
                   <span className="flex-1">
                     {opt}
                     {q.optionsArabic?.[i] && (
-                      <span className="block text-right mt-1 leading-relaxed opacity-80" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif", fontSize: "1.05rem" }}>
+                      <span className="block text-right mt-1 leading-relaxed opacity-80" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif", fontSize: "1.3rem" }}>
                         {q.optionsArabic[i]}
                       </span>
                     )}
@@ -1599,9 +1599,12 @@ export default function LearnPage() {
       const newProgress = Math.min(currentProgress + 1, max);
       const todayStr = new Date().toISOString().split("T")[0];
 
+      const newXp = (profile?.xp ?? 0) + xpEarned;
+      const newLevel = Math.floor(newXp / 100) + 1;
       const updates: Record<string, unknown> = {
         [`learnProgress.${topicId}`]: newProgress,
-        xp: (profile?.xp ?? 0) + xpEarned,
+        xp: newXp,
+        level: newLevel,
       };
 
       const userHabits = profile?.habits as string[] | undefined;
@@ -1619,8 +1622,11 @@ export default function LearnPage() {
     if (!user?.uid || saving) return;
     setSaving(true);
     try {
+      const newXp = (profile?.xp ?? 0) + xpEarned;
+      const newLevel = Math.floor(newXp / 100) + 1;
       await updateDoc(doc(db, "users", user.uid), {
-        xp: (profile?.xp ?? 0) + xpEarned,
+        xp: newXp,
+        level: newLevel,
       });
     } finally {
       setSaving(false);
