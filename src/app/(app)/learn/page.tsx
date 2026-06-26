@@ -1036,7 +1036,7 @@ function QuizView({
                 <p className="text-4xl text-right text-slate-800 leading-loose" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif" }}>
                   {q.arabic}
                 </p>
-                {q.phonetic && (
+                {showPhonetics && q.phonetic && (
                   <p className="text-xs text-slate-500 italic text-center mt-2 leading-relaxed border-t border-blue-100 pt-2">
                     {q.phonetic}
                   </p>
@@ -1116,7 +1116,7 @@ function QuizView({
                   )}
                   <span className="flex-1">
                     {opt}
-                    {q.optionsArabic?.[i] && (
+                    {showPhonetics && q.optionsArabic?.[i] && (
                       <span className="block text-right mt-1 leading-relaxed opacity-80" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif", fontSize: "1.3rem" }}>
                         {q.optionsArabic[i]}
                       </span>
@@ -1377,7 +1377,7 @@ function ExamView({
                 <p className="text-4xl text-right text-slate-800 leading-loose" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif" }}>
                   {q.arabic}
                 </p>
-                {q.phonetic && (
+                {showPhonetics && q.phonetic && (
                   <p className="text-xs text-slate-500 italic text-center mt-2 leading-relaxed border-t border-blue-100 pt-2">
                     {q.phonetic}
                   </p>
@@ -1444,7 +1444,7 @@ function ExamView({
                   {showResult && isThisSelected && !isThisCorrect && <X size={17} className="text-red-400 flex-shrink-0" />}
                   <span className="flex-1">
                     {opt}
-                    {q.optionsArabic?.[i] && (
+                    {showPhonetics && q.optionsArabic?.[i] && (
                       <span className="block text-right mt-1 leading-relaxed opacity-80" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif", fontSize: "1.3rem" }}>
                         {q.optionsArabic[i]}
                       </span>
