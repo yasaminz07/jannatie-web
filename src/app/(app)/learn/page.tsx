@@ -1121,6 +1121,11 @@ function QuizView({
                         {q.optionsArabic[i]}
                       </span>
                     )}
+                    {showPhonetics && q.optionsPhonetic?.[i] && (
+                      <span className="block text-xs italic text-slate-400 mt-0.5 text-right">
+                        {q.optionsPhonetic[i]}
+                      </span>
+                    )}
                   </span>
                 </motion.button>
               );
@@ -1447,6 +1452,11 @@ function ExamView({
                     {q.optionsArabic?.[i] && (
                       <span className="block text-right mt-1 leading-relaxed opacity-80" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif", fontSize: "1.3rem" }}>
                         {q.optionsArabic[i]}
+                      </span>
+                    )}
+                    {showPhonetics && q.optionsPhonetic?.[i] && (
+                      <span className="block text-xs italic text-slate-400 mt-0.5 text-right">
+                        {q.optionsPhonetic[i]}
                       </span>
                     )}
                   </span>
