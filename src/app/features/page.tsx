@@ -99,7 +99,7 @@ export default function FeaturesPage() {
   return (
     <>
       <Navbar />
-      <main className="pt-24 pb-20">
+      <main className="pt-24 pb-20 bg-[#fafafa]">
         {/* Hero */}
         <div className="max-w-4xl mx-auto px-4 text-center py-16">
           <h1 className="text-5xl font-bold text-foreground mb-5">

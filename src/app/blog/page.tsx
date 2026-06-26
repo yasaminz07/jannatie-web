@@ -1,8 +1,7 @@
 import { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import Link from "next/link";
-import { Calendar } from "lucide-react";
+import BlogContent from "./BlogContent";
 
 export const metadata: Metadata = {
   title: "Blog — Islamic Guidance & Growth",
@@ -72,13 +71,11 @@ const posts = [
   },
 ];
 
-const categories = ["All", "Salah", "Quran", "Dhikr", "Habits", "Duas", "Seerah", "Fiqh"];
-
 export default function BlogPage() {
   return (
     <>
       <Navbar />
-      <main className="pt-24 pb-20">
+      <main className="pt-24 pb-20 bg-[#fafafa]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center py-16">
             <h1 className="text-5xl font-bold text-foreground mb-5">
@@ -89,59 +86,7 @@ export default function BlogPage() {
             </p>
           </div>
 
-          {/* Category filter */}
-          <div className="flex gap-2 flex-wrap mb-10">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                  cat === "All"
-                    ? "bg-foreground text-white border-foreground"
-                    : "border-border text-muted hover:border-primary-500 hover:text-primary-500"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          {/* Posts grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {posts.map(({ slug, title, excerpt, category, date, readTime, hadith }) => (
-              <Link
-                key={slug}
-                href={`/blog/${slug}`}
-                className="bg-card border border-border rounded-2xl overflow-hidden hover:border-primary-500 hover:shadow-card-hover transition-all duration-200 group"
-              >
-                {/* Image placeholder */}
-                <div className="h-44 bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center">
-                  <span className="arabic text-primary-500 text-4xl opacity-30">جنتي</span>
-                </div>
-                <div className="p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs font-semibold bg-accent/10 text-accent px-2 py-0.5 rounded-full">
-                      {category}
-                    </span>
-                    {hadith && (
-                      <span className="text-xs text-muted">· {hadith}</span>
-                    )}
-                  </div>
-                  <h2 className="font-bold text-foreground text-base leading-tight mb-3 group-hover:text-primary-500 transition-colors">
-                    {title}
-                  </h2>
-                  <p className="text-sm text-muted leading-relaxed line-clamp-3 mb-4">
-                    {excerpt}
-                  </p>
-                  <div className="flex items-center gap-3 text-xs text-muted">
-                    <Calendar size={12} />
-                    <span>{new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</span>
-                    <span>·</span>
-                    <span>{readTime} read</span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <BlogContent posts={posts} />
         </div>
       </main>
       <Footer />

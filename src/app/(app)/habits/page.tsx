@@ -16,7 +16,6 @@ interface Habit {
   name: string;
   category: string;
   streak: number;
-  done: boolean;
 }
 
 interface HifzPlan {
@@ -125,13 +124,19 @@ export default function HabitsPage() {
             name,
             category: inferCategory(name),
             streak: 0,
-            done: false,
           }))
         );
       }
       setProfileLoaded(true);
     }
   }, [profile, profileLoaded]);
+
+  // Derive today's completion state from Firestore (real-time via onSnapshot)
+  const todayHabitLog = profile?.habitLog?.[todayStr] ?? {};
+  const todayAdhkarLog = profile?.adhkarLog?.[todayStr] ?? {};
+  const isDone = (name: string) => todayHabitLog[name] === true;
+  const morningDone = todayAdhkarLog.morning === true;
+  const eveningDone = todayAdhkarLog.evening === true;
 
   const hifzPlan = profile?.hifzPlan as HifzPlan | undefined;
   const isTodayHifzScheduled = hifzPlan
@@ -145,27 +150,42 @@ export default function HabitsPage() {
     return HIFZ_PRESETS.find(p => p.id === hifzPlan.preset)?.subtitle ?? "";
   })();
 
-  const doneCount = habits.filter((h) => h.done).length;
+  const doneCount = habits.filter((h) => isDone(h.name)).length;
   const total = habits.length;
   const allDone = total > 0 && doneCount === total;
   const progress = total > 0 ? Math.round((doneCount / total) * 100) : 0;
   const hasHifz = selectedPresets.includes("Memorise Quran (Hifz)");
 
-  function toggle(id: string) {
-    setHabits((prev) =>
-      prev.map((h) =>
-        h.id !== id
-          ? h
-          : { ...h, done: !h.done, streak: !h.done ? h.streak + 1 : Math.max(0, h.streak - 1) }
-      )
-    );
+  async function toggle(id: string) {
+    const habit = habits.find((h) => h.id === id);
+    if (!habit || !user?.uid) return;
+    await updateDoc(doc(db, "users", user.uid), {
+      [`habitLog.${todayStr}.${habit.name}`]: !isDone(habit.name),
+    });
+  }
+
+  async function markAdhkar(session: "morning" | "evening") {
+    if (!user?.uid) return;
+    const current = session === "morning" ? morningDone : eveningDone;
+    const newVal = !current;
+    const bothDone = session === "morning" ? (newVal && eveningDone) : (morningDone && newVal);
+    const adhkarHabit = habits.find((h) => h.name === "Morning and evening Adhkar");
+    await updateDoc(doc(db, "users", user.uid), {
+      [`adhkarLog.${todayStr}.${session}`]: newVal,
+      ...(adhkarHabit ? { [`habitLog.${todayStr}.${adhkarHabit.name}`]: bothDone } : {}),
+    });
   }
 
   async function markHifzDone() {
     if (!user?.uid) return;
-    await updateDoc(doc(db, "users", user.uid), {
+    const updates: Record<string, unknown> = {
       [`hifzPlan.log.${todayStr}`]: true,
-    });
+    };
+    // Auto-mark "Read Quran daily" if user tracks it
+    if (habits.some((h) => h.name === "Read Quran daily")) {
+      updates[`habitLog.${todayStr}.Read Quran daily`] = true;
+    }
+    await updateDoc(doc(db, "users", user.uid), updates);
   }
 
   async function saveFinal() {
@@ -177,7 +197,6 @@ export default function HabitsPage() {
         name,
         category: inferCategory(name),
         streak: 0,
-        done: false,
       })),
     ];
     setHabits(newHabits);
@@ -428,7 +447,7 @@ export default function HabitsPage() {
                   <div
                     className="rounded-2xl px-4 py-4 transition-all"
                     style={
-                      habit.done
+                      isDone(habit.name)
                         ? {
                             background: "rgba(219, 234, 254, 0.70)",
                             border: "1px solid rgba(147, 197, 253, 0.60)",
@@ -439,36 +458,74 @@ export default function HabitsPage() {
                     }
                   >
                     <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => toggle(habit.id)}
-                        className={`w-6 h-6 rounded-lg border-2 flex-shrink-0 flex items-center justify-center transition-all ${
-                          habit.done ? "bg-blue-600 border-blue-600" : "border-slate-300 hover:border-blue-400"
-                        }`}
-                      >
-                        {habit.done && (
-                          <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
-                            <path d="M1 4.5l3 3 6-7" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        )}
-                      </button>
+                      {habit.name === "Morning and evening Adhkar" ? (
+                        // Read-only indicator — completion set by morning/evening buttons below
+                        <div className={`w-6 h-6 rounded-lg border-2 flex-shrink-0 flex items-center justify-center ${
+                          isDone(habit.name) ? "bg-blue-600 border-blue-600" : "border-slate-300"
+                        }`}>
+                          {isDone(habit.name) && (
+                            <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                              <path d="M1 4.5l3 3 6-7" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => toggle(habit.id)}
+                          className={`w-6 h-6 rounded-lg border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                            isDone(habit.name) ? "bg-blue-600 border-blue-600" : "border-slate-300 hover:border-blue-400"
+                          }`}
+                        >
+                          {isDone(habit.name) && (
+                            <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                              <path d="M1 4.5l3 3 6-7" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </button>
+                      )}
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-sm font-medium ${habit.done ? "line-through text-slate-400" : "text-slate-800"}`}>
+                          <span className={`text-sm font-medium ${isDone(habit.name) ? "line-through text-slate-400" : "text-slate-800"}`}>
                             {habit.name}
                           </span>
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${categoryBadge(habit.category)}`}>
                             {habit.category}
                           </span>
                         </div>
+                        {habit.name === "Morning and evening Adhkar" ? (
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              onClick={() => markAdhkar("morning")}
+                              className={`flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+                                morningDone
+                                  ? "bg-blue-600 border-blue-600 text-white"
+                                  : "border-slate-200 text-slate-500 hover:border-blue-400 hover:text-blue-600"
+                              }`}
+                            >
+                              <Sun size={11} /> Morning
+                            </button>
+                            <button
+                              onClick={() => markAdhkar("evening")}
+                              className={`flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+                                eveningDone
+                                  ? "bg-blue-600 border-blue-600 text-white"
+                                  : "border-slate-200 text-slate-500 hover:border-blue-400 hover:text-blue-600"
+                              }`}
+                            >
+                              <Moon size={11} /> Evening
+                            </button>
+                          </div>
+                        ) : (
                         <div className="flex gap-1 mt-2">
                           {DAYS.map((day, i) => (
                             <div key={day + i} className="flex flex-col items-center gap-0.5">
-                              <div className={`w-3.5 h-3.5 rounded-sm ${i === 6 && habit.done ? "bg-blue-500" : "bg-slate-200"}`} />
+                              <div className={`w-3.5 h-3.5 rounded-sm ${i === 6 && isDone(habit.name) ? "bg-blue-500" : "bg-slate-200"}`} />
                               <span className="text-[8px] text-slate-400">{day}</span>
                             </div>
                           ))}
                         </div>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-2 flex-shrink-0">

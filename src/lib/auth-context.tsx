@@ -43,6 +43,9 @@ interface UserProfile {
     time?: string;                // "HH:MM" 24-hour
     log?: Record<string, boolean>; // { "2026-06-25": true }
   };
+  habitLog?: Record<string, Record<string, boolean>>; // { "2026-06-26": { "Pray all 5 Salah on time": true } }
+  adhkarLog?: Record<string, { morning?: boolean; evening?: boolean }>; // { "2026-06-26": { morning: true } }
+  onboarded?: boolean;
 }
 
 interface AuthContextValue {

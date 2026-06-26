@@ -157,14 +157,20 @@ export default function DashboardPage() {
   const isDoneHifzToday = hifzDoneLocal || !!(hifzPlan?.log?.[todayStr]);
   const showHifzReminder = !!hifzPlan && isTodayHifzScheduled;
 
-  // Onboarding
+  // Onboarding — show only once, tracked in Firestore so it persists across devices
   useEffect(() => {
-    const done = localStorage.getItem("jannatie_onboarded");
-    if (!done) {
-      const timer = setTimeout(() => setShowOnboarding(true), 600);
-      return () => clearTimeout(timer);
+    if (!profile || !user?.uid) return;
+    if (profile.onboarded) return;
+    // Existing user who predates this field: they already have xp/habits/streak data.
+    // Silently mark them as onboarded without showing the tutorial.
+    const hasExistingData = (profile.xp ?? 0) > 0 || (profile.habits?.length ?? 0) > 0 || (profile.streak ?? 0) > 0;
+    if (hasExistingData) {
+      updateDoc(doc(db, "users", user.uid), { onboarded: true });
+      return;
     }
-  }, []);
+    const timer = setTimeout(() => setShowOnboarding(true), 600);
+    return () => clearTimeout(timer);
+  }, [profile, user]);
 
   // Schedule browser notification at the user's chosen time
   useEffect(() => {
@@ -194,6 +200,8 @@ export default function DashboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.hifzPlan?.time]);
 
+  const todayHabitLog = profile?.habitLog?.[todayStr] ?? {};
+
   async function markHifzDone() {
     setHifzDoneLocal(true);
     if (!user?.uid) return;
@@ -202,9 +210,19 @@ export default function DashboardPage() {
     });
   }
 
-  function closeOnboarding() {
-    localStorage.setItem("jannatie_onboarded", "1");
+  async function toggleHabit(name: string) {
+    if (!user?.uid) return;
+    const current = todayHabitLog[name] === true;
+    await updateDoc(doc(db, "users", user.uid), {
+      [`habitLog.${todayStr}.${name}`]: !current,
+    });
+  }
+
+  async function closeOnboarding() {
     setShowOnboarding(false);
+    if (user?.uid) {
+      await updateDoc(doc(db, "users", user.uid), { onboarded: true });
+    }
   }
 
   return (
@@ -336,15 +354,29 @@ export default function DashboardPage() {
 
               {hasHabits ? (
                 <div className="space-y-2">
-                  {(habits as string[]).map((h) => (
-                    <div
+                  {(habits as string[]).map((h) => {
+                    const done = todayHabitLog[h] === true;
+                    return (
+                    <button
                       key={h}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer border border-slate-100"
+                      onClick={() => toggleHabit(h)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors border text-left ${
+                        done ? "bg-blue-50 border-blue-100" : "bg-slate-50 hover:bg-slate-100 border-slate-100"
+                      }`}
                     >
-                      <div className="w-5 h-5 rounded-md border-2 border-slate-300 flex-shrink-0" />
-                      <span className="text-sm text-slate-700">{h}</span>
-                    </div>
-                  ))}
+                      <div className={`w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center ${
+                        done ? "bg-blue-600 border-blue-600" : "border-slate-300"
+                      }`}>
+                        {done && (
+                          <svg width="10" height="8" viewBox="0 0 11 9" fill="none">
+                            <path d="M1 4.5l3 3 6-7" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </div>
+                      <span className={`text-sm ${done ? "line-through text-slate-400" : "text-slate-700"}`}>{h}</span>
+                    </button>
+                    );
+                  })}
                   <Link
                     href="/habits"
                     className="flex items-center justify-center gap-1.5 mt-2 py-2.5 rounded-xl border border-dashed border-slate-300 text-xs text-slate-400 hover:border-blue-400 hover:text-blue-600 transition-colors"
