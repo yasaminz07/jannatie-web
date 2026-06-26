@@ -238,7 +238,7 @@ export default function PricingPage() {
               {[
                 { q: "Can I cancel anytime?", a: "Yes. Cancel from your settings page at any time. No questions asked." },
                 { q: "Is my data private?", a: "Absolutely. We are UK GDPR compliant and never sell your data." },
-                { q: "Are the Islamic rulings accurate?", a: "All content is scholar-reviewed, with hadith references cited for verification." },
+                { q: "Are the Islamic rulings accurate?", a: "All content is scholar-reviewed and follows the Sunni tradition (Ahl as-Sunnah wal-Jama'ah). Every hadith is cited with its source collection and number (e.g. Sahih al-Bukhari, Sahih Muslim, Abu Dawud, Tirmidhi) so you can verify it directly." },
                 { q: "Does it work offline?", a: "Premium and above includes full PWA offline mode on any device." },
               ].map(({ q, a }) => (
                 <div key={q}>
