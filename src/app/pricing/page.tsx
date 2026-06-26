@@ -135,7 +135,7 @@ export default function PricingPage() {
             {individualPlans.map(({ name, monthly, annual: annualPrice, description, features, notIncluded, cta, href, variant, popular }) => (
               <div
                 key={name}
-                className={`relative bg-card rounded-2xl p-8 border ${popular ? "border-primary-500 shadow-blue-glow" : "border-border"}`}
+                className={`relative bg-card rounded-2xl p-8 border flex flex-col ${popular ? "border-primary-500 shadow-blue-glow" : "border-border"}`}
               >
                 {popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary-500 text-white text-xs font-bold px-4 py-1 rounded-full">
@@ -156,7 +156,7 @@ export default function PricingPage() {
                   )}
                 </div>
 
-                <ul className="space-y-3 mb-6">
+                <ul className="space-y-3 mb-6 flex-1">
                   {features.map((f) => (
                     <li key={f} className="flex items-start gap-2 text-sm text-foreground">
                       <Check size={15} className="text-primary-500 flex-shrink-0 mt-0.5" strokeWidth={2.5} />
