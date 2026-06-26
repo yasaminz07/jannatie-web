@@ -98,7 +98,7 @@ export default function PrivacyPage() {
                   <li>Lodge a complaint with the ICO (ico.org.uk)</li>
                 </ul>
                 <p className="text-muted text-sm mt-3">
-                  To exercise any of these rights, email us at <strong className="text-foreground">privacy@jannatie.com</strong>.
+                  To exercise any of these rights, email us at <strong className="text-foreground">jannatieteam@gmail.com</strong>.
                   We will respond within 30 days.
                 </p>
               </section>
@@ -118,7 +118,7 @@ export default function PrivacyPage() {
               <section>
                 <h2 className="text-xl font-bold mb-3">9. Contact</h2>
                 <p className="text-muted text-sm">
-                  Jannatie Ltd · privacy@jannatie.com · [Registered Address], England
+                  Jannatie Ltd · jannatieteam@gmail.com · [Registered Address], England
                 </p>
               </section>
             </div>

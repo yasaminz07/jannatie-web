@@ -943,6 +943,7 @@ function QuizView({
   const [hearts, setHearts] = useState(5);
   const [showXpPop, setShowXpPop] = useState(false);
   const [shake, setShake] = useState(false);
+  const [showPhonetics, setShowPhonetics] = useState(false);
 
   const lesson = TOPIC_LESSONS[topicId]?.[lessonIndex];
   const topicCfg = UNIT_CONFIG.flatMap((u) => u.topics).find((t) => t.id === topicId);
@@ -996,6 +997,17 @@ function QuizView({
           <div className="flex items-center gap-1 text-xs font-bold text-blue-600">
             <Zap size={13} /> {xpEarned}
           </div>
+          <button
+            onClick={() => setShowPhonetics((p) => !p)}
+            title={showPhonetics ? "Hide pronunciation guide" : "Show pronunciation guide"}
+            className={`text-xs font-semibold px-2 py-1 rounded-lg border transition-all ${
+              showPhonetics
+                ? "bg-blue-600 text-white border-blue-600"
+                : "bg-white/70 text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600"
+            }`}
+          >
+            🔤 Phonetics
+          </button>
           <div className="flex gap-0.5">
             {Array.from({ length: 5 }).map((_, i) => (
               <Heart
@@ -1020,9 +1032,16 @@ function QuizView({
           <div className="mb-8">
             <p className="text-xl font-bold text-slate-900 leading-relaxed">{q.question}</p>
             {q.arabic && (
-              <p className="text-2xl text-right text-slate-800 mt-3 leading-loose" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif" }}>
-                {q.arabic}
-              </p>
+              <div className="mt-3 rounded-xl p-3" style={{ background: "rgba(240,245,255,0.70)", border: "1px solid rgba(147,197,253,0.40)" }}>
+                <p className="text-2xl text-right text-slate-800 leading-loose" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif" }}>
+                  {q.arabic}
+                </p>
+                {showPhonetics && q.phonetic && (
+                  <p className="text-xs text-blue-600 italic text-center mt-1.5 leading-relaxed">
+                    {q.phonetic}
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
@@ -1276,6 +1295,7 @@ function ExamView({
   const [xpEarned, setXpEarned] = useState(0);
   const [showXpPop, setShowXpPop] = useState(false);
   const [shake, setShake] = useState(false);
+  const [showPhonetics, setShowPhonetics] = useState(false);
 
   const unitCfg = UNIT_CONFIG.find((u) => u.id === unitId)!;
   const q = questions[qIndex];
@@ -1327,6 +1347,17 @@ function ExamView({
           <div className="flex items-center gap-1 text-xs font-bold text-amber-600">
             <Award size={13} /> {score}/{qIndex}
           </div>
+          <button
+            onClick={() => setShowPhonetics((p) => !p)}
+            title={showPhonetics ? "Hide pronunciation guide" : "Show pronunciation guide"}
+            className={`text-xs font-semibold px-2 py-1 rounded-lg border transition-all ${
+              showPhonetics
+                ? "bg-amber-500 text-white border-amber-500"
+                : "bg-white/70 text-slate-500 border-slate-200 hover:border-amber-400 hover:text-amber-600"
+            }`}
+          >
+            🔤 Phonetics
+          </button>
         </div>
 
         <div className="flex items-center gap-2 mb-6 pl-8">
@@ -1342,9 +1373,16 @@ function ExamView({
           <div className="mb-8">
             <p className="text-xl font-bold text-slate-900 leading-relaxed">{q.question}</p>
             {q.arabic && (
-              <p className="text-2xl text-right text-slate-800 mt-3 leading-loose" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif" }}>
-                {q.arabic}
-              </p>
+              <div className="mt-3 rounded-xl p-3" style={{ background: "rgba(240,245,255,0.70)", border: "1px solid rgba(147,197,253,0.40)" }}>
+                <p className="text-2xl text-right text-slate-800 leading-loose" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', 'Arial Unicode MS', serif" }}>
+                  {q.arabic}
+                </p>
+                {showPhonetics && q.phonetic && (
+                  <p className="text-xs text-blue-600 italic text-center mt-1.5 leading-relaxed">
+                    {q.phonetic}
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
