@@ -49,6 +49,7 @@ interface UserProfile {
   phone?: string;
   nameLastChanged?: string;
   usernameLastChanged?: string;
+  prayerMethod?: number;
   onboarded?: boolean;
   following?: string[];
   followers?: string[];

@@ -189,11 +189,11 @@ function FriendsProgress({ following, senderPhone, senderName }: { following: st
 
   async function sendReminder(friend: FriendProfile) {
     if (!senderPhone) {
-      toast("Add your phone number in Settings to send SMS reminders.", { icon: "📱" });
+      toast("Add your phone number in Settings to send SMS reminders.");
       return;
     }
     if (!friend.phone) {
-      toast(`${friend.displayName ?? friend.username} hasn't added their phone number yet.`, { icon: "📵" });
+      toast(`${friend.displayName ?? friend.username} hasn't added their phone number yet.`);
       return;
     }
     setReminding((prev) => ({ ...prev, [friend.uid]: true }));
@@ -273,7 +273,7 @@ function FriendsProgress({ following, senderPhone, senderName }: { following: st
                     <span className="text-[11px] text-slate-500 flex-shrink-0 tabular-nums">{done}/{total}</span>
                   </div>
                   {lacking && (
-                    <p className="text-[11px] text-slate-400 mt-0.5">Needs some motivation today 💪</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Needs some motivation today</p>
                   )}
                 </>
               ) : (

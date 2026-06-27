@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { Building2, MapPin, Lock, RefreshCw, Crown, Clock, Newspaper } from "lucide-react";
-import { motion } from "framer-motion";
+import { Building2, MapPin, Lock, RefreshCw, Crown, Clock, Newspaper, ChevronDown, Check } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 interface PrayerTimings {
   Fajr: string;
@@ -26,6 +28,21 @@ const glassCard = {
 const PRAYERS = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"] as const;
 type PrayerName = (typeof PRAYERS)[number];
 
+const PRAYER_METHODS = [
+  { id: 3,  name: "Muslim World League",            short: "MWL",      region: "UK / Europe / West Africa" },
+  { id: 15, name: "Moonsighting Committee Worldwide", short: "MCW",     region: "UK (popular choice)" },
+  { id: 1,  name: "University of Islamic Sciences", short: "Karachi",  region: "Pakistan / South Asia" },
+  { id: 2,  name: "Islamic Society of North America", short: "ISNA",   region: "North America" },
+  { id: 4,  name: "Umm al-Qura University",          short: "UmmAlQura", region: "Saudi Arabia / Gulf" },
+  { id: 9,  name: "Kuwait",                          short: "Kuwait",  region: "Kuwait" },
+  { id: 10, name: "Qatar",                           short: "Qatar",   region: "Qatar" },
+  { id: 5,  name: "Egyptian General Authority",      short: "Egypt",   region: "Egypt / North Africa" },
+  { id: 13, name: "Diyanet (Turkey)",                short: "Diyanet", region: "Turkey" },
+  { id: 12, name: "Union of Islamic Organisations of France", short: "UOIF", region: "France / Europe" },
+];
+
+const DEFAULT_METHOD = 3;
+
 function fmt(time: string) {
   const [h, m] = time.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
@@ -44,15 +61,21 @@ function nextPrayer(timings: PrayerTimings): PrayerName | null {
 }
 
 export default function MosquePage() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const isPremium = profile?.plan && profile.plan !== "free";
+
   const [timings, setTimings] = useState<PrayerTimings | null>(null);
   const [dateStr, setDateStr] = useState("");
   const [city, setCity] = useState<string | null>(null);
+  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [methodId, setMethodId] = useState<number>(profile?.prayerMethod ?? DEFAULT_METHOD);
+  const [showMethodPicker, setShowMethodPicker] = useState(false);
 
-  async function fetchPrayerTimes(lat: number, lon: number) {
+  const selectedMethod = PRAYER_METHODS.find((m) => m.id === methodId) ?? PRAYER_METHODS[0];
+
+  async function fetchPrayerTimes(lat: number, lon: number, mid: number) {
     setLoading(true);
     setError(null);
     try {
@@ -61,7 +84,7 @@ export default function MosquePage() {
       const mo = today.getMonth() + 1;
       const y = today.getFullYear();
       const [prayerRes, geoRes] = await Promise.all([
-        fetch(`https://api.aladhan.com/v1/timings/${d}-${mo}-${y}?latitude=${lat}&longitude=${lon}&method=2`),
+        fetch(`https://api.aladhan.com/v1/timings/${d}-${mo}-${y}?latitude=${lat}&longitude=${lon}&method=${mid}`),
         fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`),
       ]);
       const prayerJson = await prayerRes.json();
@@ -85,7 +108,7 @@ export default function MosquePage() {
     }
   }
 
-  function getLocation() {
+  function getLocation(mid?: number) {
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser.");
       return;
@@ -93,7 +116,12 @@ export default function MosquePage() {
     setLoading(true);
     setError(null);
     navigator.geolocation.getCurrentPosition(
-      (pos) => fetchPrayerTimes(pos.coords.latitude, pos.coords.longitude),
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        setCoords({ lat, lon });
+        fetchPrayerTimes(lat, lon, mid ?? methodId);
+      },
       () => {
         setError("Location access was denied. Please allow location access to see your local prayer times.");
         setLoading(false);
@@ -102,8 +130,23 @@ export default function MosquePage() {
     );
   }
 
+  async function selectMethod(mid: number) {
+    setMethodId(mid);
+    setShowMethodPicker(false);
+    if (coords) {
+      fetchPrayerTimes(coords.lat, coords.lon, mid);
+    } else {
+      getLocation(mid);
+    }
+    if (user) {
+      await updateDoc(doc(db, "users", user.uid), { prayerMethod: mid });
+    }
+  }
+
   useEffect(() => {
-    getLocation();
+    const mid = profile?.prayerMethod ?? DEFAULT_METHOD;
+    setMethodId(mid);
+    getLocation(mid);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -123,7 +166,7 @@ export default function MosquePage() {
             <span>{city ?? (loading ? "Detecting your location…" : "Location not set")}</span>
             {timings && !loading && (
               <button
-                onClick={getLocation}
+                onClick={() => getLocation()}
                 className="ml-1 text-slate-300 hover:text-blue-600 transition-colors"
                 title="Refresh prayer times"
               >
@@ -155,10 +198,7 @@ export default function MosquePage() {
               <div className="flex flex-col items-center py-8 gap-3 text-center">
                 <MapPin size={28} className="text-slate-300" />
                 <p className="text-sm text-slate-500 max-w-[260px] leading-relaxed">{error}</p>
-                <button
-                  onClick={getLocation}
-                  className="text-sm font-semibold text-blue-600 hover:underline"
-                >
+                <button onClick={() => getLocation()} className="text-sm font-semibold text-blue-600 hover:underline">
                   Try again
                 </button>
               </div>
@@ -173,11 +213,7 @@ export default function MosquePage() {
                     <div
                       key={prayer}
                       className={`flex items-center justify-between px-4 py-3 rounded-xl transition-colors ${
-                        isNext
-                          ? "bg-blue-600"
-                          : isSunrise
-                          ? "bg-slate-50"
-                          : "bg-slate-50"
+                        isNext ? "bg-blue-600" : "bg-slate-50"
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
@@ -186,39 +222,89 @@ export default function MosquePage() {
                             Next
                           </span>
                         )}
-                        <span
-                          className={`text-sm font-semibold ${
-                            isNext ? "text-white" : isSunrise ? "text-slate-400" : "text-slate-700"
-                          }`}
-                        >
+                        <span className={`text-sm font-semibold ${isNext ? "text-white" : isSunrise ? "text-slate-400" : "text-slate-700"}`}>
                           {prayer}
                         </span>
                       </div>
-                      <span
-                        className={`text-sm font-bold tabular-nums ${
-                          isNext ? "text-white" : isSunrise ? "text-slate-400" : "text-slate-800"
-                        }`}
-                      >
+                      <span className={`text-sm font-bold tabular-nums ${isNext ? "text-white" : isSunrise ? "text-slate-400" : "text-slate-800"}`}>
                         {fmt(timings[prayer])}
                       </span>
                     </div>
                   );
                 })}
                 <p className="text-center text-[11px] text-slate-400 pt-2">
-                  Times based on your current location · Method: ISNA
+                  Based on your location · {selectedMethod.name}
                 </p>
               </div>
             )}
           </div>
         </motion.div>
 
+        {/* Calculation method selector */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.09 }} className="mb-5">
+          <div className="rounded-2xl overflow-hidden" style={glassCard}>
+            <button
+              onClick={() => setShowMethodPicker((v) => !v)}
+              className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50/60 transition-colors"
+            >
+              <div>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Calculation Method</p>
+                <p className="text-sm font-medium text-slate-800">{selectedMethod.name}</p>
+                <p className="text-xs text-slate-400">{selectedMethod.region}</p>
+              </div>
+              <ChevronDown
+                size={16}
+                className={`text-slate-400 transition-transform ${showMethodPicker ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            <AnimatePresence>
+              {showMethodPicker && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden border-t border-slate-100"
+                >
+                  <div className="px-3 py-3 space-y-0.5 max-h-72 overflow-y-auto">
+                    {PRAYER_METHODS.map((method) => {
+                      const active = method.id === methodId;
+                      return (
+                        <button
+                          key={method.id}
+                          onClick={() => selectMethod(method.id)}
+                          className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-left transition-colors ${
+                            active ? "bg-blue-50 border border-blue-100" : "hover:bg-slate-50"
+                          }`}
+                        >
+                          <div>
+                            <p className={`text-sm font-medium ${active ? "text-blue-700" : "text-slate-700"}`}>
+                              {method.name}
+                            </p>
+                            <p className="text-xs text-slate-400 mt-0.5">{method.region}</p>
+                          </div>
+                          {active && <Check size={14} className="text-blue-600 flex-shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-center text-[11px] text-slate-400 pb-3">
+                    Your preference is saved automatically
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+
         {/* Mosque & Islamic News — premium only */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}>
           <div className="rounded-2xl p-6" style={glassCard}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Newspaper size={16} className="text-slate-600" />
-                <h2 className="font-semibold text-slate-800">Mosque & Islamic News</h2>
+                <h2 className="font-semibold text-slate-800">Mosque &amp; Islamic News</h2>
               </div>
               {!isPremium && (
                 <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
@@ -232,12 +318,9 @@ export default function MosquePage() {
                 {[
                   { title: "Community iftar event this weekend — all welcome", source: "Community", time: "2h ago" },
                   { title: "New Quran class for beginners starting next week", source: "Community", time: "5h ago" },
-                  { title: "Jumu\'ah khutbah: the importance of gratitude in Islam", source: "Community", time: "1d ago" },
+                  { title: "Jumu'ah khutbah: the importance of gratitude in Islam", source: "Community", time: "1d ago" },
                 ].map((item, i) => (
-                  <div
-                    key={i}
-                    className="flex flex-col gap-0.5 px-4 py-3 rounded-xl bg-slate-50 border border-slate-100"
-                  >
+                  <div key={i} className="flex flex-col gap-0.5 px-4 py-3 rounded-xl bg-slate-50 border border-slate-100">
                     <p className="text-sm font-medium text-slate-800 leading-snug">{item.title}</p>
                     <div className="flex items-center gap-2 text-[11px] text-slate-400">
                       <span>{item.source}</span>
@@ -246,9 +329,7 @@ export default function MosquePage() {
                     </div>
                   </div>
                 ))}
-                <p className="text-xs text-slate-400 text-center pt-1">
-                  Live news integration coming soon
-                </p>
+                <p className="text-xs text-slate-400 text-center pt-1">Live news integration coming soon</p>
               </div>
             ) : (
               <div className="flex flex-col items-center py-8 gap-3 text-center">
