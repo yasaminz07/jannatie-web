@@ -4,12 +4,12 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, MapPin, Clock, X, Plus,
-  Info, Droplets, BookOpen,
+  Droplets,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import {
   collection, addDoc, getDocs, query, orderBy,
-  serverTimestamp, deleteDoc, doc,
+  serverTimestamp, deleteDoc, doc, getDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import toast from "react-hot-toast";
@@ -97,7 +97,6 @@ export default function CalendarPage() {
   const [displayMonth, setDisplayMonth] = useState(today.getMonth());
   const [displayYear, setDisplayYear] = useState(today.getFullYear());
   const [view, setView] = useState<"month" | "list">("month");
-  const [showHijriInfo, setShowHijriInfo] = useState(false);
 
   // Prayer times
   const [jumuahTime, setJumuahTime] = useState<string | null>(null);
@@ -127,20 +126,25 @@ export default function CalendarPage() {
   const [addingPeriod, setAddingPeriod] = useState(false);
   const [periodOpen, setPeriodOpen] = useState(false);
 
-  // Fetch prayer times for nearest Friday (for Jumu'ah)
+  // Fetch Jumu'ah time — use the chosen mosque's coords if saved, else user's own location
   useEffect(() => {
-    if (!navigator.geolocation) { setPrayerLoading(false); return; }
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
+    if (!user) return;
+    async function loadJumuah() {
+      try {
+        // Check if user has a chosen mosque saved in Firestore
+        const userSnap = await getDoc(doc(db, "users", user!.uid));
+        const chosenMosque = userSnap.exists()
+          ? (userSnap.data() as { chosenMosque?: { lat: number; lon: number; name: string } | null }).chosenMosque
+          : null;
+
+        const fetchWithCoords = async (lat: number, lon: number, city?: string) => {
           const friday = getNextFriday();
           const d = friday.getDate();
           const mo = friday.getMonth() + 1;
           const y = friday.getFullYear();
-          const [pRes, gRes] = await Promise.all([
-            fetch(`https://api.aladhan.com/v1/timings/${d}-${mo}-${y}?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&method=2`),
-            fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&zoom=10`),
-          ]);
+          const pRes = await fetch(
+            `https://api.aladhan.com/v1/timings/${d}-${mo}-${y}?latitude=${lat}&longitude=${lon}&method=3`
+          );
           const pJson = await pRes.json();
           if (pJson.code === 200) {
             setJumuahTime(pJson.data.timings.Dhuhr as string);
@@ -149,35 +153,79 @@ export default function CalendarPage() {
             setHijriYear(h.year as string);
             setHijriDay(h.day as string);
           }
-          const geo = await gRes.json();
-          setPrayerCity(
-            (geo.address?.city as string | undefined) ??
-            (geo.address?.town as string | undefined) ??
-            null
-          );
-        } catch { /* silently fail */ } finally {
+          if (city) setPrayerCity(city);
+        };
+
+        if (chosenMosque) {
+          await fetchWithCoords(chosenMosque.lat, chosenMosque.lon, chosenMosque.name);
           setPrayerLoading(false);
+          return;
         }
-      },
-      () => setPrayerLoading(false),
-      { timeout: 8000 }
-    );
-  }, []);
+
+        // Fall back to geolocation
+        if (!navigator.geolocation) { setPrayerLoading(false); return; }
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            try {
+              const gRes = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&zoom=10`
+              );
+              const geo = await gRes.json();
+              const city =
+                (geo.address?.city as string | undefined) ??
+                (geo.address?.town as string | undefined) ??
+                undefined;
+              await fetchWithCoords(pos.coords.latitude, pos.coords.longitude, city);
+            } catch { /* silently fail */ } finally {
+              setPrayerLoading(false);
+            }
+          },
+          () => setPrayerLoading(false),
+          { timeout: 8000 }
+        );
+      } catch {
+        setPrayerLoading(false);
+      }
+    }
+    loadJumuah();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   // Load user events
   useEffect(() => {
     if (!user) return;
-    getDocs(query(collection(db, "users", user.uid, "events"), orderBy("date"))).then((snap) => {
-      setEvents(snap.docs.map((d) => ({ id: d.id, ...d.data() } as UserEvent)));
-    });
+    getDocs(query(collection(db, "users", user.uid, "events"), orderBy("date")))
+      .then((snap) => {
+        setEvents(snap.docs.map((d) => ({ id: d.id, ...d.data() } as UserEvent)));
+      })
+      .catch(() => {
+        // Fallback without orderBy if index not yet created
+        getDocs(collection(db, "users", user.uid, "events")).then((snap) => {
+          setEvents(
+            snap.docs
+              .map((d) => ({ id: d.id, ...d.data() } as UserEvent))
+              .sort((a, b) => a.date.localeCompare(b.date))
+          );
+        }).catch(() => {});
+      });
   }, [user]);
 
   // Load period data (females only)
   useEffect(() => {
     if (!user || !isFemale) return;
-    getDocs(query(collection(db, "users", user.uid, "periods"), orderBy("start", "desc"))).then((snap) => {
-      setPeriods(snap.docs.map((d) => ({ id: d.id, ...d.data() } as PeriodEntry)));
-    });
+    getDocs(query(collection(db, "users", user.uid, "periods"), orderBy("start", "desc")))
+      .then((snap) => {
+        setPeriods(snap.docs.map((d) => ({ id: d.id, ...d.data() } as PeriodEntry)));
+      })
+      .catch(() => {
+        getDocs(collection(db, "users", user.uid, "periods")).then((snap) => {
+          setPeriods(
+            snap.docs
+              .map((d) => ({ id: d.id, ...d.data() } as PeriodEntry))
+              .sort((a, b) => b.start.localeCompare(a.start))
+          );
+        }).catch(() => {});
+      });
   }, [user, isFemale]);
 
   async function addEvent() {
@@ -257,8 +305,6 @@ export default function CalendarPage() {
   const nextFridayStr = nextFriday.toISOString().split("T")[0];
   const nextFridayDisplay = nextFriday.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 
-  const hijriDesc = HIJRI_MONTH_MEANINGS[hijriMonth];
-
   return (
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-5 py-8">
@@ -273,15 +319,6 @@ export default function CalendarPage() {
                   <> · {hijriDay} {hijriMonth} {hijriYear} AH</>
                 )}
               </p>
-              {hijriMonth && (
-                <button
-                  onClick={() => setShowHijriInfo(!showHijriInfo)}
-                  className="text-slate-400 hover:text-blue-600 transition-colors"
-                  title="What is this Islamic month?"
-                >
-                  <Info size={14} />
-                </button>
-              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -310,27 +347,6 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        {/* Hijri month explanation */}
-        <AnimatePresence>
-          {showHijriInfo && hijriDesc && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="mb-4 rounded-2xl p-4 flex gap-3 items-start"
-              style={{ ...glassCard, background: "rgba(239,246,255,0.80)", border: "1px solid rgba(147,197,253,0.40)" }}
-            >
-              <BookOpen size={16} className="text-blue-500 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-blue-800">{hijriMonth}</p>
-                <p className="text-xs text-blue-700 mt-0.5 leading-relaxed">{hijriDesc}</p>
-              </div>
-              <button onClick={() => setShowHijriInfo(false)} className="ml-auto text-blue-400 hover:text-blue-600 flex-shrink-0">
-                <X size={14} />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Calendar grid */}

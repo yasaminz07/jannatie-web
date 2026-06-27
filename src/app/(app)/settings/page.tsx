@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import toast from "react-hot-toast";
 import {
   User, Bell, CreditCard, Shield, Trash2, ChevronRight,
-  Phone, Check, X, Crown, Zap, Users2,
+  Check, X, Crown, Zap, Users2, ChevronDown,
 } from "lucide-react";
 import {
   collection, query, where, getDocs, doc, updateDoc, limit,
@@ -227,6 +227,16 @@ function UpgradeModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+async function sendSecurityEmail(to: string, changeType: string, newValue: string, displayName?: string) {
+  try {
+    await fetch("/api/security-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to, changeType, newValue, displayName }),
+    });
+  } catch { /* non-critical — don't block the save */ }
+}
+
 type EditField = "name" | "username" | "phone" | "email" | null;
 
 export default function SettingsPage() {
@@ -256,6 +266,7 @@ export default function SettingsPage() {
   const [phoneCountry, setPhoneCountry] = useState(existingCountry);
   const [phoneNumber, setPhoneNumber] = useState(existingNumber);
   const [savingPhone, setSavingPhone] = useState(false);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
 
   // Email edit
   const [newEmail, setNewEmail] = useState(user?.email ?? "");
@@ -271,7 +282,7 @@ export default function SettingsPage() {
   }
 
   const handleUsernameInput = useCallback((val: string) => {
-    const v = val.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 18);
+    const v = val.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 14);
     setNewUsername(v);
     setUsernameStatus("idle");
     if (usernameTimer.current) clearTimeout(usernameTimer.current);
@@ -291,6 +302,9 @@ export default function SettingsPage() {
         displayName: newName.trim(),
         nameLastChanged: new Date().toISOString(),
       });
+      if (user.email) {
+        await sendSecurityEmail(user.email, "name", newName.trim(), newName.trim());
+      }
       toast.success("Name updated!");
       setExpandedField(null);
     } catch {
@@ -311,6 +325,9 @@ export default function SettingsPage() {
         username: newUsername,
         usernameLastChanged: new Date().toISOString(),
       });
+      if (user.email) {
+        await sendSecurityEmail(user.email, "username", newUsername, profile?.displayName ?? undefined);
+      }
       toast.success("Username updated!");
       setExpandedField(null);
     } catch {
@@ -326,6 +343,9 @@ export default function SettingsPage() {
     try {
       const phone = phoneNumber.trim() ? `${phoneCountry}${phoneNumber.trim()}` : null;
       await updateDoc(doc(db, "users", user.uid), { phone });
+      if (user.email && phone) {
+        await sendSecurityEmail(user.email, "phone", phone, profile?.displayName ?? undefined);
+      }
       toast.success(phone ? "Phone number saved!" : "Phone number removed.");
       setExpandedField(null);
     } catch {
@@ -339,13 +359,15 @@ export default function SettingsPage() {
     if (!user || !newEmail.trim() || newEmail === user.email) return;
     setSavingEmail(true);
     try {
-      await updateEmail(auth.currentUser!, newEmail.trim());
+      const trimmedEmail = newEmail.trim();
+      await updateEmail(auth.currentUser!, trimmedEmail);
+      await sendSecurityEmail(trimmedEmail, "email", trimmedEmail, profile?.displayName ?? undefined);
       toast.success("Email updated!");
       setExpandedField(null);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
       if (code === "auth/requires-recent-login") {
-        toast.error("Please sign out and sign back in, then try again.");
+        toast.error("Session expired — please sign out and sign back in, then try again.");
       } else {
         toast.error("Failed to update email.");
       }
@@ -485,7 +507,7 @@ export default function SettingsPage() {
                       {usernameStatus === "available" && (
                         <div className="flex items-center gap-1"><Check size={10} className="text-emerald-500" /><p className="text-xs text-emerald-600">Available</p></div>
                       )}
-                      {usernameStatus === "idle" && <p className="text-xs text-slate-400">5–18 characters · letters, numbers, underscores</p>}
+                      {usernameStatus === "idle" && <p className="text-xs text-slate-400">5–14 characters · letters, numbers, underscores</p>}
                     </div>
                     <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                       After changing your username you will need to wait 14 days before you can change it again.
@@ -531,16 +553,45 @@ export default function SettingsPage() {
                 >
                   <div className="px-6 pb-5 pt-1 space-y-3 bg-slate-50/50">
                     <p className="text-xs text-slate-400">Used for SMS habit reminders from friends. Optional.</p>
-                    <div className="flex gap-2">
-                      <select
-                        value={phoneCountry}
-                        onChange={(e) => setPhoneCountry(e.target.value)}
-                        className="border border-slate-200 rounded-xl px-2 py-2.5 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0 max-w-[140px]"
-                      >
-                        {COUNTRY_CODES.map(({ code, name }) => (
-                          <option key={code} value={code}>{name}</option>
-                        ))}
-                      </select>
+                    <div className="flex gap-2 relative">
+                      {/* Custom country picker */}
+                      <div className="relative flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setShowCountryPicker((v) => !v)}
+                          className="flex items-center gap-1.5 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 h-full whitespace-nowrap"
+                        >
+                          {COUNTRY_CODES.find((c) => c.code === phoneCountry)?.name.split(" (")[0] ?? phoneCountry}
+                          <span className="text-slate-400 text-xs">{phoneCountry}</span>
+                          <ChevronDown size={13} className={`text-slate-400 transition-transform ${showCountryPicker ? "rotate-180" : ""}`} />
+                        </button>
+                        <AnimatePresence>
+                          {showCountryPicker && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 4, scale: 0.97 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: 4, scale: 0.97 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute top-full left-0 mt-1 z-50 rounded-2xl overflow-hidden shadow-xl border border-slate-200 bg-white"
+                              style={{ width: 220, maxHeight: 260, overflowY: "auto" }}
+                            >
+                              {COUNTRY_CODES.map(({ code, name }) => (
+                                <button
+                                  key={code}
+                                  type="button"
+                                  onClick={() => { setPhoneCountry(code); setShowCountryPicker(false); }}
+                                  className={`w-full text-left flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
+                                    code === phoneCountry ? "bg-blue-50 text-blue-700 font-medium" : "text-slate-700 hover:bg-slate-50"
+                                  }`}
+                                >
+                                  <span>{name.split(" (")[0]}</span>
+                                  <span className="text-xs text-slate-400 ml-2">{code}</span>
+                                </button>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
                       <input
                         type="tel"
                         placeholder="7911 123456"
@@ -598,7 +649,7 @@ export default function SettingsPage() {
                       autoFocus
                     />
                     <p className="text-xs text-slate-400">
-                      For security, you may need to sign out and sign back in before changing your email.
+                      A security notification will be sent to your current email after this change.
                     </p>
                     <div className="flex gap-2">
                       <button onClick={() => { setExpandedField(null); setNewEmail(user?.email ?? ""); }} className="flex-1 py-2 text-sm text-slate-500 font-medium border border-slate-200 rounded-xl hover:bg-white transition-colors">

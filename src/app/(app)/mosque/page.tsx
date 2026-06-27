@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { Building2, MapPin, Lock, RefreshCw, Crown, Clock, Newspaper, ChevronDown, Check } from "lucide-react";
+import { Building2, MapPin, Lock, RefreshCw, Crown, Clock, Newspaper, ChevronDown, Check, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { doc, updateDoc } from "firebase/firestore";
@@ -17,6 +17,21 @@ interface PrayerTimings {
   Isha: string;
 }
 
+interface NearbyMosque {
+  id: number;
+  name: string;
+  lat: number;
+  lon: number;
+  distanceKm: number;
+}
+
+interface SavedMosque {
+  id: number;
+  name: string;
+  lat: number;
+  lon: number;
+}
+
 const glassCard = {
   background: "rgba(255, 255, 255, 0.65)",
   border: "1px solid rgba(255, 255, 255, 0.80)",
@@ -28,20 +43,18 @@ const glassCard = {
 const PRAYERS = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"] as const;
 type PrayerName = (typeof PRAYERS)[number];
 
-const PRAYER_METHODS = [
-  { id: 3,  name: "Muslim World League",            short: "MWL",      region: "UK / Europe / West Africa" },
-  { id: 15, name: "Moonsighting Committee Worldwide", short: "MCW",     region: "UK (popular choice)" },
-  { id: 1,  name: "University of Islamic Sciences", short: "Karachi",  region: "Pakistan / South Asia" },
-  { id: 2,  name: "Islamic Society of North America", short: "ISNA",   region: "North America" },
-  { id: 4,  name: "Umm al-Qura University",          short: "UmmAlQura", region: "Saudi Arabia / Gulf" },
-  { id: 9,  name: "Kuwait",                          short: "Kuwait",  region: "Kuwait" },
-  { id: 10, name: "Qatar",                           short: "Qatar",   region: "Qatar" },
-  { id: 5,  name: "Egyptian General Authority",      short: "Egypt",   region: "Egypt / North Africa" },
-  { id: 13, name: "Diyanet (Turkey)",                short: "Diyanet", region: "Turkey" },
-  { id: 12, name: "Union of Islamic Organisations of France", short: "UOIF", region: "France / Europe" },
-];
-
+// Method 3 (MWL) is a reliable default for UK/global
 const DEFAULT_METHOD = 3;
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 function fmt(time: string) {
   const [h, m] = time.split(":").map(Number);
@@ -60,6 +73,43 @@ function nextPrayer(timings: PrayerTimings): PrayerName | null {
   return null;
 }
 
+async function fetchMosquesNearby(lat: number, lon: number): Promise<NearbyMosque[]> {
+  const query = `
+    [out:json][timeout:10];
+    node["amenity"="place_of_worship"]["religion"="muslim"](around:5000,${lat},${lon});
+    out 20;
+  `.trim();
+  const res = await fetch("https://overpass-api.de/api/interpreter", {
+    method: "POST",
+    body: query,
+  });
+  const json = await res.json() as { elements: { id: number; lat: number; lon: number; tags?: Record<string, string> }[] };
+  return json.elements
+    .filter((el) => el.tags?.name)
+    .map((el) => ({
+      id: el.id,
+      name: el.tags!.name!,
+      lat: el.lat,
+      lon: el.lon,
+      distanceKm: haversineKm(lat, lon, el.lat, el.lon),
+    }))
+    .sort((a, b) => a.distanceKm - b.distanceKm)
+    .slice(0, 12);
+}
+
+async function fetchTimingsForCoords(lat: number, lon: number): Promise<PrayerTimings | null> {
+  const today = new Date();
+  const d = today.getDate();
+  const mo = today.getMonth() + 1;
+  const y = today.getFullYear();
+  const res = await fetch(
+    `https://api.aladhan.com/v1/timings/${d}-${mo}-${y}?latitude=${lat}&longitude=${lon}&method=${DEFAULT_METHOD}`
+  );
+  const json = await res.json();
+  if (json.code === 200) return json.data.timings as PrayerTimings;
+  return null;
+}
+
 export default function MosquePage() {
   const { profile, user } = useAuth();
   const isPremium = profile?.plan && profile.plan !== "free";
@@ -67,30 +117,36 @@ export default function MosquePage() {
   const [timings, setTimings] = useState<PrayerTimings | null>(null);
   const [dateStr, setDateStr] = useState("");
   const [city, setCity] = useState<string | null>(null);
-  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [methodId, setMethodId] = useState<number>(profile?.prayerMethod ?? DEFAULT_METHOD);
-  const [showMethodPicker, setShowMethodPicker] = useState(false);
 
-  const selectedMethod = PRAYER_METHODS.find((m) => m.id === methodId) ?? PRAYER_METHODS[0];
+  // Mosque picker
+  const [selectedMosque, setSelectedMosque] = useState<SavedMosque | null>(
+    (profile as { chosenMosque?: SavedMosque })?.chosenMosque ?? null
+  );
+  const [nearbyMosques, setNearbyMosques] = useState<NearbyMosque[]>([]);
+  const [showPicker, setShowPicker] = useState(false);
+  const [mosqueSearch, setMosqueSearch] = useState("");
+  const [loadingMosques, setLoadingMosques] = useState(false);
 
-  async function fetchPrayerTimes(lat: number, lon: number, mid: number) {
+  const filteredMosques = nearbyMosques.filter((m) =>
+    m.name.toLowerCase().includes(mosqueSearch.toLowerCase())
+  );
+
+  async function loadPrayerTimes(lat: number, lon: number, mosque?: SavedMosque | null) {
     setLoading(true);
     setError(null);
     try {
-      const today = new Date();
-      const d = today.getDate();
-      const mo = today.getMonth() + 1;
-      const y = today.getFullYear();
-      const [prayerRes, geoRes] = await Promise.all([
-        fetch(`https://api.aladhan.com/v1/timings/${d}-${mo}-${y}?latitude=${lat}&longitude=${lon}&method=${mid}`),
+      const target = mosque ?? null;
+      const [timingsResult, geoRes] = await Promise.all([
+        fetchTimingsForCoords(target ? target.lat : lat, target ? target.lon : lon),
         fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`),
       ]);
-      const prayerJson = await prayerRes.json();
-      if (prayerJson.code === 200) {
-        setTimings(prayerJson.data.timings as PrayerTimings);
-        setDateStr(prayerJson.data.date.readable as string);
+      if (timingsResult) {
+        setTimings(timingsResult);
+        const today = new Date();
+        setDateStr(today.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }));
       } else {
         setError("Could not load prayer times. Please try again.");
       }
@@ -108,7 +164,7 @@ export default function MosquePage() {
     }
   }
 
-  function getLocation(mid?: number) {
+  function getLocation() {
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser.");
       return;
@@ -116,37 +172,64 @@ export default function MosquePage() {
     setLoading(true);
     setError(null);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
-        setCoords({ lat, lon });
-        fetchPrayerTimes(lat, lon, mid ?? methodId);
+        setUserCoords({ lat, lon });
+        // Use already-chosen mosque from Firestore if set, otherwise load by user coords
+        const mosque = (profile as { chosenMosque?: SavedMosque })?.chosenMosque ?? selectedMosque ?? null;
+        await loadPrayerTimes(lat, lon, mosque);
       },
       () => {
-        setError("Location access was denied. Please allow location access to see your local prayer times.");
+        setError("Location access was denied. Please allow location access to see prayer times.");
         setLoading(false);
       },
       { timeout: 10000 }
     );
   }
 
-  async function selectMethod(mid: number) {
-    setMethodId(mid);
-    setShowMethodPicker(false);
-    if (coords) {
-      fetchPrayerTimes(coords.lat, coords.lon, mid);
-    } else {
-      getLocation(mid);
+  async function openMosquePicker() {
+    setShowPicker(true);
+    if (nearbyMosques.length > 0 || !userCoords) return;
+    setLoadingMosques(true);
+    try {
+      const mosques = await fetchMosquesNearby(userCoords.lat, userCoords.lon);
+      setNearbyMosques(mosques);
+    } catch {
+      // silently fail — user can still see picker with empty list
+    } finally {
+      setLoadingMosques(false);
+    }
+  }
+
+  async function chooseMosque(mosque: NearbyMosque) {
+    const saved: SavedMosque = { id: mosque.id, name: mosque.name, lat: mosque.lat, lon: mosque.lon };
+    setSelectedMosque(saved);
+    setShowPicker(false);
+    setMosqueSearch("");
+    if (userCoords) {
+      await loadPrayerTimes(userCoords.lat, userCoords.lon, saved);
     }
     if (user) {
-      await updateDoc(doc(db, "users", user.uid), { prayerMethod: mid });
+      await updateDoc(doc(db, "users", user.uid), { chosenMosque: saved });
+    }
+  }
+
+  async function clearMosque() {
+    setSelectedMosque(null);
+    setShowPicker(false);
+    if (userCoords) {
+      await loadPrayerTimes(userCoords.lat, userCoords.lon, null);
+    }
+    if (user) {
+      await updateDoc(doc(db, "users", user.uid), { chosenMosque: null });
     }
   }
 
   useEffect(() => {
-    const mid = profile?.prayerMethod ?? DEFAULT_METHOD;
-    setMethodId(mid);
-    getLocation(mid);
+    const saved = (profile as { chosenMosque?: SavedMosque })?.chosenMosque;
+    if (saved) setSelectedMosque(saved);
+    getLocation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -164,9 +247,9 @@ export default function MosquePage() {
           <div className="flex items-center gap-1.5 text-sm text-slate-400">
             <MapPin size={13} />
             <span>{city ?? (loading ? "Detecting your location…" : "Location not set")}</span>
-            {timings && !loading && (
+            {!loading && (
               <button
-                onClick={() => getLocation()}
+                onClick={getLocation}
                 className="ml-1 text-slate-300 hover:text-blue-600 transition-colors"
                 title="Refresh prayer times"
               >
@@ -176,13 +259,126 @@ export default function MosquePage() {
           </div>
         </motion.div>
 
+        {/* Mosque selector */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }} className="mb-5">
+          <div className="rounded-2xl overflow-hidden" style={glassCard}>
+            <div className="px-6 py-4 flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Following mosque</p>
+                {selectedMosque ? (
+                  <p className="text-sm font-semibold text-slate-800 truncate">{selectedMosque.name}</p>
+                ) : (
+                  <p className="text-sm text-slate-400">No mosque selected — using your location</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {selectedMosque && (
+                  <button
+                    onClick={clearMosque}
+                    className="text-xs text-slate-400 hover:text-red-500 transition-colors font-medium"
+                  >
+                    Clear
+                  </button>
+                )}
+                <button
+                  onClick={openMosquePicker}
+                  className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  {selectedMosque ? "Change" : "Choose mosque"}
+                  <ChevronDown size={14} className={`transition-transform ${showPicker ? "rotate-180" : ""}`} />
+                </button>
+              </div>
+            </div>
+
+            <AnimatePresence>
+              {showPicker && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden border-t border-slate-100"
+                >
+                  {/* Search */}
+                  <div className="px-4 py-3 border-b border-slate-100">
+                    <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2 border border-slate-200">
+                      <Search size={13} className="text-slate-400 flex-shrink-0" />
+                      <input
+                        type="text"
+                        placeholder="Search mosques near you…"
+                        value={mosqueSearch}
+                        onChange={(e) => setMosqueSearch(e.target.value)}
+                        className="flex-1 bg-transparent text-sm text-slate-700 placeholder-slate-400 focus:outline-none"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  <div className="max-h-64 overflow-y-auto">
+                    {loadingMosques ? (
+                      <div className="flex items-center justify-center py-8 gap-2">
+                        <div className="w-5 h-5 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+                        <p className="text-sm text-slate-400">Finding mosques near you…</p>
+                      </div>
+                    ) : filteredMosques.length === 0 ? (
+                      <div className="py-8 text-center">
+                        <p className="text-sm text-slate-400">
+                          {nearbyMosques.length === 0
+                            ? !userCoords
+                              ? "Allow location access to find local mosques."
+                              : "No mosques found within 5km."
+                            : "No matches for your search."}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="p-2 space-y-0.5">
+                        {filteredMosques.map((mosque) => {
+                          const active = selectedMosque?.id === mosque.id;
+                          return (
+                            <button
+                              key={mosque.id}
+                              onClick={() => chooseMosque(mosque)}
+                              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-left transition-colors ${
+                                active ? "bg-blue-50 border border-blue-100" : "hover:bg-slate-50"
+                              }`}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm font-medium truncate ${active ? "text-blue-700" : "text-slate-700"}`}>
+                                  {mosque.name}
+                                </p>
+                                <p className="text-xs text-slate-400 mt-0.5">
+                                  {mosque.distanceKm < 1
+                                    ? `${Math.round(mosque.distanceKm * 1000)}m away`
+                                    : `${mosque.distanceKm.toFixed(1)}km away`}
+                                </p>
+                              </div>
+                              {active && <Check size={14} className="text-blue-600 flex-shrink-0 ml-2" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <div className="px-4 py-2 border-t border-slate-100">
+                    <p className="text-[11px] text-slate-400 text-center">
+                      Mosques sourced from OpenStreetMap within 5km of your location
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+
         {/* Prayer times card */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="mb-5">
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="mb-5">
           <div className="rounded-2xl p-6" style={glassCard}>
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h2 className="font-semibold text-slate-800">Today&apos;s Prayer Times</h2>
-                {dateStr && <p className="text-xs text-slate-400 mt-0.5">{dateStr}</p>}
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {selectedMosque ? selectedMosque.name : dateStr || "Your location"}
+                </p>
               </div>
               <Clock size={16} className="text-slate-400" />
             </div>
@@ -198,7 +394,7 @@ export default function MosquePage() {
               <div className="flex flex-col items-center py-8 gap-3 text-center">
                 <MapPin size={28} className="text-slate-300" />
                 <p className="text-sm text-slate-500 max-w-[260px] leading-relaxed">{error}</p>
-                <button onClick={() => getLocation()} className="text-sm font-semibold text-blue-600 hover:underline">
+                <button onClick={getLocation} className="text-sm font-semibold text-blue-600 hover:underline">
                   Try again
                 </button>
               </div>
@@ -233,68 +429,12 @@ export default function MosquePage() {
                   );
                 })}
                 <p className="text-center text-[11px] text-slate-400 pt-2">
-                  Based on your location · {selectedMethod.name}
+                  {selectedMosque
+                    ? `Times based on ${selectedMosque.name} location`
+                    : "Times based on your current location"}
                 </p>
               </div>
             )}
-          </div>
-        </motion.div>
-
-        {/* Calculation method selector */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.09 }} className="mb-5">
-          <div className="rounded-2xl overflow-hidden" style={glassCard}>
-            <button
-              onClick={() => setShowMethodPicker((v) => !v)}
-              className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50/60 transition-colors"
-            >
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Calculation Method</p>
-                <p className="text-sm font-medium text-slate-800">{selectedMethod.name}</p>
-                <p className="text-xs text-slate-400">{selectedMethod.region}</p>
-              </div>
-              <ChevronDown
-                size={16}
-                className={`text-slate-400 transition-transform ${showMethodPicker ? "rotate-180" : ""}`}
-              />
-            </button>
-
-            <AnimatePresence>
-              {showMethodPicker && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden border-t border-slate-100"
-                >
-                  <div className="px-3 py-3 space-y-0.5 max-h-72 overflow-y-auto">
-                    {PRAYER_METHODS.map((method) => {
-                      const active = method.id === methodId;
-                      return (
-                        <button
-                          key={method.id}
-                          onClick={() => selectMethod(method.id)}
-                          className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-left transition-colors ${
-                            active ? "bg-blue-50 border border-blue-100" : "hover:bg-slate-50"
-                          }`}
-                        >
-                          <div>
-                            <p className={`text-sm font-medium ${active ? "text-blue-700" : "text-slate-700"}`}>
-                              {method.name}
-                            </p>
-                            <p className="text-xs text-slate-400 mt-0.5">{method.region}</p>
-                          </div>
-                          {active && <Check size={14} className="text-blue-600 flex-shrink-0" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="text-center text-[11px] text-slate-400 pb-3">
-                    Your preference is saved automatically
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         </motion.div>
 

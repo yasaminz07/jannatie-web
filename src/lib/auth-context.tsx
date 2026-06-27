@@ -50,6 +50,7 @@ interface UserProfile {
   nameLastChanged?: string;
   usernameLastChanged?: string;
   prayerMethod?: number;
+  chosenMosque?: { id: number; name: string; lat: number; lon: number } | null;
   onboarded?: boolean;
   following?: string[];
   followers?: string[];
