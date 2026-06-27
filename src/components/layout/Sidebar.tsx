@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
+import { levelProgress } from "@/lib/xpAndStreak";
 import {
   collection, query, getDocs, doc, updateDoc,
   arrayUnion, arrayRemove, orderBy, startAt, endAt,
@@ -258,7 +259,7 @@ export default function Sidebar() {
           </div>
           <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
             <div className="h-full bg-blue-500 rounded-full transition-all duration-500"
-              style={{ width: `${profile.xp % 100}%` }} />
+              style={{ width: `${levelProgress(profile.xp)}%` }} />
           </div>
         </div>
       )}

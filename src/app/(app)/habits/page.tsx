@@ -10,6 +10,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { awardXP } from "@/lib/xpAndStreak";
 
 interface Habit {
   id: string;
@@ -159,9 +160,11 @@ export default function HabitsPage() {
   async function toggle(id: string) {
     const habit = habits.find((h) => h.id === id);
     if (!habit || !user?.uid) return;
+    const wasNotDone = !isDone(habit.name);
     await updateDoc(doc(db, "users", user.uid), {
-      [`habitLog.${todayStr}.${habit.name}`]: !isDone(habit.name),
+      [`habitLog.${todayStr}.${habit.name}`]: wasNotDone,
     });
+    if (wasNotDone) awardXP(user.uid, 10);
   }
 
   async function markAdhkar(session: "morning" | "evening") {
@@ -174,6 +177,7 @@ export default function HabitsPage() {
       [`adhkarLog.${todayStr}.${session}`]: newVal,
       ...(adhkarHabit ? { [`habitLog.${todayStr}.${adhkarHabit.name}`]: bothDone } : {}),
     });
+    if (newVal) awardXP(user.uid, 5);
   }
 
   async function markHifzDone() {
@@ -181,11 +185,11 @@ export default function HabitsPage() {
     const updates: Record<string, unknown> = {
       [`hifzPlan.log.${todayStr}`]: true,
     };
-    // Auto-mark "Read Quran daily" if user tracks it
     if (habits.some((h) => h.name === "Read Quran daily")) {
       updates[`habitLog.${todayStr}.Read Quran daily`] = true;
     }
     await updateDoc(doc(db, "users", user.uid), updates);
+    awardXP(user.uid, 15);
   }
 
   async function saveFinal() {

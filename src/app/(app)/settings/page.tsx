@@ -72,9 +72,16 @@ export default function SettingsPage() {
         <SectionCard>
           <SectionHeader icon={User} title="Profile" />
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0 ring-2 ring-blue-200">
-              {initials}
-            </div>
+            {profile?.photoURL ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={profile.photoURL} alt={name} width={56} height={56}
+                className="w-14 h-14 rounded-full object-cover flex-shrink-0 ring-2 ring-blue-200"
+                style={{ width: 56, height: 56 }} />
+            ) : (
+              <div className="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0 ring-2 ring-blue-200">
+                {initials}
+              </div>
+            )}
             <div>
               <p className="font-semibold text-slate-800">{name || "Your name"}</p>
               <p className="text-sm text-slate-400">{user?.email}</p>

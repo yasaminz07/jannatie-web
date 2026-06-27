@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import {
   collection, query, where, getDocs, doc, getDoc,
@@ -156,6 +157,7 @@ function MiniUserRow({ uid }: { uid: string }) {
 
 export default function ProfilePage({ params }: { params: { username: string } }) {
   const { username } = params;
+  const router = useRouter();
   const { user, profile: myProfile } = useAuth();
 
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
@@ -305,10 +307,11 @@ export default function ProfilePage({ params }: { params: { username: string } }
       <div className="max-w-xl mx-auto px-5 py-8">
         {/* Back */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6">
-          <Link href="/leaderboard"
+          <button
+            onClick={() => router.back()}
             className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors">
-            <ArrowLeft size={14} /> Leaderboard
-          </Link>
+            <ArrowLeft size={14} /> Back
+          </button>
         </motion.div>
 
         {/* Profile card */}
@@ -335,7 +338,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xl font-bold text-slate-900 leading-tight truncate">{profileData.displayName ?? profileData.username}</p>
-              <p className="text-sm text-slate-400 mt-0.5">@{profileData.username}</p>
+              <p className="text-sm text-slate-400 mt-0.5 truncate">@{profileData.username.slice(0, 14)}{profileData.username.length > 14 ? "…" : ""}</p>
               {profileData.plan !== "free" && (
                 <span className="inline-flex items-center gap-1 mt-2 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
                   <Star size={10} /> Premium

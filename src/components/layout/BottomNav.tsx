@@ -40,7 +40,10 @@ interface SearchResult {
 }
 
 function SmallAvatar({ name, photoURL }: { name: string; photoURL?: string | null }) {
-  if (photoURL) return <Image src={photoURL} alt={name} width={28} height={28} className="rounded-full object-cover flex-shrink-0" />;
+  if (photoURL) return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={photoURL} alt={name} width={28} height={28} className="rounded-full object-cover flex-shrink-0" style={{ width: 28, height: 28 }} />
+  );
   const initials = (name || "?").split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
   return (
     <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
@@ -229,13 +232,14 @@ export default function BottomNav() {
                 {/* Account section */}
                 <div className="border-t border-slate-100 pt-4 space-y-1">
                   {profile && (
-                    <div className="flex items-center gap-3 px-2 pb-3">
+                    <Link href={`/profile/${profile.username}`} onClick={() => setMoreOpen(false)}
+                      className="flex items-center gap-3 px-2 pb-3 hover:opacity-80 transition-opacity">
                       <SmallAvatar name={profile.displayName ?? profile.username} photoURL={profile.photoURL} />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-slate-800 truncate">{profile.displayName ?? profile.username}</p>
-                        <p className="text-xs text-slate-400">@{profile.username}</p>
+                        <p className="text-xs text-slate-400 truncate">@{profile.username}</p>
                       </div>
-                    </div>
+                    </Link>
                   )}
                   <Link href="/" onClick={() => setMoreOpen(false)}
                     className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-500 hover:bg-slate-100 transition-colors">
