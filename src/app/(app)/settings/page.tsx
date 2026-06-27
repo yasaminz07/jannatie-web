@@ -381,7 +381,12 @@ export default function SettingsPage() {
       const res = await fetch("/api/verify-phone/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid: user.uid, phone: fullPhone }),
+        body: JSON.stringify({
+          uid: user.uid,
+          phone: fullPhone,
+          email: user.email,
+          displayName: profile?.displayName ?? undefined,
+        }),
       });
       const data = await res.json() as { token?: string; ts?: number; expiresAt?: number; error?: string };
       if (!res.ok || !data.token) {
@@ -730,9 +735,12 @@ export default function SettingsPage() {
                         <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
                           <span className="text-2xl font-bold text-blue-600">#</span>
                         </div>
-                        <p className="text-sm font-semibold text-slate-800">Enter your verification code</p>
+                        <p className="text-sm font-semibold text-slate-800">Check your email</p>
                         <p className="text-xs text-slate-400 mt-1">
-                          We sent a 6-digit code to <span className="font-medium text-slate-600">{phoneCountry} {phoneNumber}</span>
+                          We sent a 6-digit code to <span className="font-medium text-slate-600">{user?.email}</span>
+                        </p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Verifying number: <span className="font-medium text-slate-600">{phoneCountry} {phoneNumber}</span>
                         </p>
                       </div>
 
