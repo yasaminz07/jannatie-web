@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "@/lib/auth-context";
 import toast from "react-hot-toast";
 import {
@@ -266,6 +267,8 @@ export default function SettingsPage() {
   const [phoneCountry, setPhoneCountry] = useState(existingCountry);
   const [phoneNumber, setPhoneNumber] = useState(existingNumber);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const countryBtnRef = useRef<HTMLButtonElement>(null);
+  const [pickerRect, setPickerRect] = useState<{ top: number; left: number } | null>(null);
   const [phoneStep, setPhoneStep] = useState<"enter" | "verify">("enter");
   const [sendingOtp, setSendingOtp] = useState(false);
   const [confirmingOtp, setConfirmingOtp] = useState(false);
@@ -283,6 +286,18 @@ export default function SettingsPage() {
   const [savingEmail, setSavingEmail] = useState(false);
 
   const initials = (profile?.displayName ?? "J").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+
+  // Close country picker on outside click
+  useEffect(() => {
+    if (!showCountryPicker) return;
+    function handleClick(e: MouseEvent) {
+      if (countryBtnRef.current && !countryBtnRef.current.contains(e.target as Node)) {
+        setShowCountryPicker(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showCountryPicker]);
 
   function toggle(field: EditField) {
     setExpandedField((prev) => (prev === field ? null : field));
@@ -637,43 +652,24 @@ export default function SettingsPage() {
                         {profile?.phone ? "Enter a new phone number to replace the current one." : "Used for SMS habit reminders from friends. Optional."}
                       </p>
                       <div className="flex gap-2 relative">
-                        {/* Custom country picker */}
-                        <div className="relative flex-shrink-0">
+                        {/* Custom country picker — portal so it escapes overflow:hidden */}
+                        <div className="flex-shrink-0">
                           <button
+                            ref={countryBtnRef}
                             type="button"
-                            onClick={() => setShowCountryPicker((v) => !v)}
+                            onClick={() => {
+                              if (!showCountryPicker && countryBtnRef.current) {
+                                const r = countryBtnRef.current.getBoundingClientRect();
+                                setPickerRect({ top: r.bottom + 4, left: r.left });
+                              }
+                              setShowCountryPicker((v) => !v);
+                            }}
                             className="flex items-center gap-1.5 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 h-full whitespace-nowrap"
                           >
                             {COUNTRY_CODES.find((c) => c.code === phoneCountry)?.name.split(" (")[0] ?? phoneCountry}
                             <span className="text-slate-400 text-xs">{phoneCountry}</span>
                             <ChevronDown size={13} className={`text-slate-400 transition-transform ${showCountryPicker ? "rotate-180" : ""}`} />
                           </button>
-                          <AnimatePresence>
-                            {showCountryPicker && (
-                              <motion.div
-                                initial={{ opacity: 0, y: 4, scale: 0.97 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, y: 4, scale: 0.97 }}
-                                transition={{ duration: 0.15 }}
-                                className="absolute top-full left-0 mt-1 z-50 rounded-2xl overflow-hidden shadow-xl border border-slate-200 bg-white"
-                                style={{ width: 220, maxHeight: 260, overflowY: "auto" }}
-                              >
-                                {COUNTRY_CODES.map(({ code, name }) => (
-                                  <button
-                                    key={code}
-                                    type="button"
-                                    onClick={() => { setPhoneCountry(code); setShowCountryPicker(false); }}
-                                    className={`w-full text-left flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
-                                      code === phoneCountry ? "bg-blue-50 text-blue-700 font-medium" : "text-slate-700 hover:bg-slate-50"
-                                    }`}
-                                  >
-                                    <span>{name.split(" (")[0]}</span>
-                                    <span className="text-xs text-slate-400 ml-2">{code}</span>
-                                  </button>
-                                ))}
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
                         </div>
                         <input
                           type="tel"
@@ -950,6 +946,47 @@ export default function SettingsPage() {
       <AnimatePresence>
         {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
       </AnimatePresence>
+
+      {/* Country picker portal — renders outside overflow:hidden accordion */}
+      {showCountryPicker && pickerRect && typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.97 }}
+            transition={{ duration: 0.15 }}
+            style={{
+              position: "fixed",
+              top: pickerRect.top,
+              left: pickerRect.left,
+              width: 230,
+              maxHeight: 280,
+              overflowY: "auto",
+              zIndex: 9999,
+            }}
+            className="rounded-2xl shadow-xl border border-slate-200 bg-white py-1"
+          >
+            {COUNTRY_CODES.map(({ code, name }) => (
+              <button
+                key={code}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault(); // prevent blur firing before click
+                  setPhoneCountry(code);
+                  setShowCountryPicker(false);
+                }}
+                className={`w-full text-left flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
+                  code === phoneCountry ? "bg-blue-50 text-blue-700 font-medium" : "text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <span>{name.split(" (")[0]}</span>
+                <span className="text-xs text-slate-400 ml-2">{code}</span>
+              </button>
+            ))}
+          </motion.div>
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }
