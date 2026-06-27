@@ -259,14 +259,24 @@ export default function SettingsPage() {
   const [savingUsername, setSavingUsername] = useState(false);
   const usernameDaysLeft = daysUntilAllowed(profile?.usernameLastChanged, 14);
 
-  // Phone edit
+  // Phone edit — multi-step OTP verification
   const existingPhone = profile?.phone ?? "";
   const existingCountry = COUNTRY_CODES.find((c) => existingPhone.startsWith(c.code))?.code ?? "+44";
   const existingNumber = existingPhone.startsWith(existingCountry) ? existingPhone.slice(existingCountry.length) : existingPhone;
   const [phoneCountry, setPhoneCountry] = useState(existingCountry);
   const [phoneNumber, setPhoneNumber] = useState(existingNumber);
-  const [savingPhone, setSavingPhone] = useState(false);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [phoneStep, setPhoneStep] = useState<"enter" | "verify">("enter");
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [confirmingOtp, setConfirmingOtp] = useState(false);
+  const [otpInput, setOtpInput] = useState("");
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpToken, setOtpToken] = useState("");
+  const [otpTs, setOtpTs] = useState(0);
+  const [otpExpiry, setOtpExpiry] = useState(0);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [confirmRemovePhone, setConfirmRemovePhone] = useState(false);
+  const [removingPhone, setRemovingPhone] = useState(false);
 
   // Email edit
   const [newEmail, setNewEmail] = useState(user?.email ?? "");
@@ -337,21 +347,90 @@ export default function SettingsPage() {
     }
   }
 
-  async function savePhone() {
-    if (!user) return;
-    setSavingPhone(true);
+  function startResendCooldown() {
+    setResendCooldown(60);
+    const t = setInterval(() => {
+      setResendCooldown((v) => {
+        if (v <= 1) { clearInterval(t); return 0; }
+        return v - 1;
+      });
+    }, 1000);
+  }
+
+  async function sendOtp() {
+    if (!user || !phoneNumber.trim()) return;
+    const fullPhone = `${phoneCountry}${phoneNumber.trim()}`;
+    setSendingOtp(true);
+    setOtpError(null);
     try {
-      const phone = phoneNumber.trim() ? `${phoneCountry}${phoneNumber.trim()}` : null;
-      await updateDoc(doc(db, "users", user.uid), { phone });
-      if (user.email && phone) {
-        await sendSecurityEmail(user.email, "phone", phone, profile?.displayName ?? undefined);
+      const res = await fetch("/api/verify-phone/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid: user.uid, phone: fullPhone }),
+      });
+      const data = await res.json() as { token?: string; ts?: number; expiresAt?: number; error?: string };
+      if (!res.ok || !data.token) {
+        toast.error(data.error ?? "Failed to send code.");
+        return;
       }
-      toast.success(phone ? "Phone number saved!" : "Phone number removed.");
-      setExpandedField(null);
+      setOtpToken(data.token);
+      setOtpTs(data.ts!);
+      setOtpExpiry(data.expiresAt!);
+      setPhoneStep("verify");
+      setOtpInput("");
+      startResendCooldown();
+      toast.success("Verification code sent!");
     } catch {
-      toast.error("Failed to save phone number.");
+      toast.error("Failed to send verification code.");
     } finally {
-      setSavingPhone(false);
+      setSendingOtp(false);
+    }
+  }
+
+  async function confirmOtp() {
+    if (!user || otpInput.length !== 6) return;
+    const fullPhone = `${phoneCountry}${phoneNumber.trim()}`;
+    setConfirmingOtp(true);
+    setOtpError(null);
+    try {
+      const res = await fetch("/api/verify-phone/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid: user.uid, phone: fullPhone, code: otpInput, token: otpToken, ts: otpTs, expiresAt: otpExpiry }),
+      });
+      const data = await res.json() as { success?: boolean; error?: string };
+      if (!res.ok || !data.success) {
+        setOtpError(data.error ?? "Incorrect code.");
+        return;
+      }
+      await updateDoc(doc(db, "users", user.uid), { phone: fullPhone });
+      if (user.email) {
+        await sendSecurityEmail(user.email, "phone", fullPhone, profile?.displayName ?? undefined);
+      }
+      toast.success("Phone number verified and saved!");
+      setExpandedField(null);
+      setPhoneStep("enter");
+      setOtpInput("");
+    } catch {
+      setOtpError("Something went wrong. Please try again.");
+    } finally {
+      setConfirmingOtp(false);
+    }
+  }
+
+  async function removePhone() {
+    if (!user) return;
+    setRemovingPhone(true);
+    try {
+      await updateDoc(doc(db, "users", user.uid), { phone: null });
+      setConfirmRemovePhone(false);
+      setPhoneNumber("");
+      setExpandedField(null);
+      toast.success("Phone number removed.");
+    } catch {
+      toast.error("Failed to remove phone number.");
+    } finally {
+      setRemovingPhone(false);
     }
   }
 
@@ -533,7 +612,7 @@ export default function SettingsPage() {
           {/* Phone */}
           <div className="border-t border-slate-100">
             <button
-              onClick={() => toggle("phone")}
+              onClick={() => { toggle("phone"); setPhoneStep("enter"); setOtpInput(""); setOtpError(null); setConfirmRemovePhone(false); }}
               className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50/60 transition-colors text-left"
             >
               <div className="flex-1 min-w-0">
@@ -551,68 +630,161 @@ export default function SettingsPage() {
                   transition={{ duration: 0.2 }}
                   className="overflow-hidden"
                 >
-                  <div className="px-6 pb-5 pt-1 space-y-3 bg-slate-50/50">
-                    <p className="text-xs text-slate-400">Used for SMS habit reminders from friends. Optional.</p>
-                    <div className="flex gap-2 relative">
-                      {/* Custom country picker */}
-                      <div className="relative flex-shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => setShowCountryPicker((v) => !v)}
-                          className="flex items-center gap-1.5 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 h-full whitespace-nowrap"
-                        >
-                          {COUNTRY_CODES.find((c) => c.code === phoneCountry)?.name.split(" (")[0] ?? phoneCountry}
-                          <span className="text-slate-400 text-xs">{phoneCountry}</span>
-                          <ChevronDown size={13} className={`text-slate-400 transition-transform ${showCountryPicker ? "rotate-180" : ""}`} />
-                        </button>
-                        <AnimatePresence>
-                          {showCountryPicker && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 4, scale: 0.97 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, y: 4, scale: 0.97 }}
-                              transition={{ duration: 0.15 }}
-                              className="absolute top-full left-0 mt-1 z-50 rounded-2xl overflow-hidden shadow-xl border border-slate-200 bg-white"
-                              style={{ width: 220, maxHeight: 260, overflowY: "auto" }}
-                            >
-                              {COUNTRY_CODES.map(({ code, name }) => (
-                                <button
-                                  key={code}
-                                  type="button"
-                                  onClick={() => { setPhoneCountry(code); setShowCountryPicker(false); }}
-                                  className={`w-full text-left flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
-                                    code === phoneCountry ? "bg-blue-50 text-blue-700 font-medium" : "text-slate-700 hover:bg-slate-50"
-                                  }`}
-                                >
-                                  <span>{name.split(" (")[0]}</span>
-                                  <span className="text-xs text-slate-400 ml-2">{code}</span>
-                                </button>
-                              ))}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                  {/* Step 1: Enter phone number */}
+                  {phoneStep === "enter" && (
+                    <div className="px-6 pb-5 pt-1 space-y-3 bg-slate-50/50">
+                      <p className="text-xs text-slate-400">
+                        {profile?.phone ? "Enter a new phone number to replace the current one." : "Used for SMS habit reminders from friends. Optional."}
+                      </p>
+                      <div className="flex gap-2 relative">
+                        {/* Custom country picker */}
+                        <div className="relative flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setShowCountryPicker((v) => !v)}
+                            className="flex items-center gap-1.5 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 h-full whitespace-nowrap"
+                          >
+                            {COUNTRY_CODES.find((c) => c.code === phoneCountry)?.name.split(" (")[0] ?? phoneCountry}
+                            <span className="text-slate-400 text-xs">{phoneCountry}</span>
+                            <ChevronDown size={13} className={`text-slate-400 transition-transform ${showCountryPicker ? "rotate-180" : ""}`} />
+                          </button>
+                          <AnimatePresence>
+                            {showCountryPicker && (
+                              <motion.div
+                                initial={{ opacity: 0, y: 4, scale: 0.97 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 4, scale: 0.97 }}
+                                transition={{ duration: 0.15 }}
+                                className="absolute top-full left-0 mt-1 z-50 rounded-2xl overflow-hidden shadow-xl border border-slate-200 bg-white"
+                                style={{ width: 220, maxHeight: 260, overflowY: "auto" }}
+                              >
+                                {COUNTRY_CODES.map(({ code, name }) => (
+                                  <button
+                                    key={code}
+                                    type="button"
+                                    onClick={() => { setPhoneCountry(code); setShowCountryPicker(false); }}
+                                    className={`w-full text-left flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
+                                      code === phoneCountry ? "bg-blue-50 text-blue-700 font-medium" : "text-slate-700 hover:bg-slate-50"
+                                    }`}
+                                  >
+                                    <span>{name.split(" (")[0]}</span>
+                                    <span className="text-xs text-slate-400 ml-2">{code}</span>
+                                  </button>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                        <input
+                          type="tel"
+                          placeholder="7911 123456"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9\s\-]/g, ""))}
+                          className={inputCls + " flex-1"}
+                          autoFocus
+                        />
                       </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { setExpandedField(null); setConfirmRemovePhone(false); }}
+                          className="flex-1 py-2 text-sm text-slate-500 font-medium border border-slate-200 rounded-xl hover:bg-white transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={sendOtp}
+                          disabled={sendingOtp || !phoneNumber.trim()}
+                          className="flex-[2] py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
+                        >
+                          {sendingOtp ? "Sending…" : "Send verification code"}
+                        </button>
+                      </div>
+                      {/* Remove phone option */}
+                      {profile?.phone && (
+                        <div className="pt-1 border-t border-slate-100">
+                          {confirmRemovePhone ? (
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs text-slate-500 flex-1">Remove your phone number?</p>
+                              <button onClick={() => setConfirmRemovePhone(false)} className="text-xs text-slate-400 font-medium px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors">No</button>
+                              <button
+                                onClick={removePhone}
+                                disabled={removingPhone}
+                                className="text-xs text-red-600 font-semibold px-2 py-1 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                              >
+                                {removingPhone ? "Removing…" : "Yes, remove"}
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmRemovePhone(true)}
+                              className="text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
+                            >
+                              Remove phone number
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Step 2: Enter OTP */}
+                  {phoneStep === "verify" && (
+                    <div className="px-6 pb-5 pt-3 space-y-4 bg-slate-50/50">
+                      <div className="text-center pb-1">
+                        <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                          <span className="text-2xl font-bold text-blue-600">#</span>
+                        </div>
+                        <p className="text-sm font-semibold text-slate-800">Enter your verification code</p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          We sent a 6-digit code to <span className="font-medium text-slate-600">{phoneCountry} {phoneNumber}</span>
+                        </p>
+                      </div>
+
                       <input
-                        type="tel"
-                        placeholder="7911 123456"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9\s\-]/g, ""))}
-                        className={inputCls + " flex-1"}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="000000"
+                        value={otpInput}
+                        onChange={(e) => {
+                          setOtpInput(e.target.value.replace(/\D/g, "").slice(0, 6));
+                          setOtpError(null);
+                        }}
+                        className="w-full border border-slate-200 rounded-xl px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-slate-800 placeholder-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-white"
+                        autoFocus
                       />
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => setExpandedField(null)} className="flex-1 py-2 text-sm text-slate-500 font-medium border border-slate-200 rounded-xl hover:bg-white transition-colors">
-                        Cancel
-                      </button>
+
+                      {otpError && (
+                        <p className="text-xs text-red-500 text-center flex items-center justify-center gap-1">
+                          <X size={11} /> {otpError}
+                        </p>
+                      )}
+
                       <button
-                        onClick={savePhone}
-                        disabled={savingPhone}
-                        className="flex-[2] py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
+                        onClick={confirmOtp}
+                        disabled={confirmingOtp || otpInput.length !== 6}
+                        className="w-full py-2.5 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
                       >
-                        {savingPhone ? "Saving…" : "Save number"}
+                        {confirmingOtp ? "Verifying…" : "Verify number"}
                       </button>
+
+                      <div className="flex items-center justify-between text-xs">
+                        <button
+                          onClick={() => { setPhoneStep("enter"); setOtpInput(""); setOtpError(null); }}
+                          className="text-slate-400 hover:text-slate-700 transition-colors font-medium"
+                        >
+                          Change number
+                        </button>
+                        <button
+                          onClick={resendCooldown === 0 ? sendOtp : undefined}
+                          disabled={resendCooldown > 0 || sendingOtp}
+                          className="text-blue-600 hover:text-blue-700 transition-colors font-medium disabled:text-slate-300"
+                        >
+                          {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : sendingOtp ? "Sending…" : "Resend code"}
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
