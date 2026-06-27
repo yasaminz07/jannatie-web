@@ -25,6 +25,7 @@ interface ProfileData {
   following: string[];
   followerUids: string[]; // computed via query — who has this uid in their following
   habits?: string[];
+  phone?: string;
 }
 
 interface FriendProgress {
@@ -196,6 +197,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
         following: d.following ?? [],
         followerUids,
         habits: d.habits ?? [],
+        phone: d.phone as string | undefined,
       });
 
       // Load today's progress
@@ -270,6 +272,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
   function remind(type: "prayer" | "adhkar" | "habit" | "hifz", label: string) {
     return async () => {
       if (!user || !profileData || !myProfile) return;
+      // Always send in-app notification
       await sendReminder({
         fromUid: user.uid,
         fromName: myProfile.displayName ?? myProfile.username,
@@ -278,6 +281,18 @@ export default function ProfilePage({ params }: { params: { username: string } }
         type,
         label,
       });
+      // Also send SMS if both users have phone numbers
+      if (myProfile.phone && profileData.phone) {
+        await fetch("/api/sms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: profileData.phone,
+            senderName: myProfile.displayName ?? myProfile.username,
+            friendName: profileData.displayName ?? profileData.username,
+          }),
+        });
+      }
     };
   }
 
@@ -458,6 +473,16 @@ export default function ProfilePage({ params }: { params: { username: string } }
               {!isFollowing && (
                 <p className="text-[11px] text-slate-400 text-center pt-1">
                   Follow this user to send them daily reminders
+                </p>
+              )}
+              {isFollowing && !myProfile?.phone && (
+                <p className="text-[11px] text-slate-400 text-center pt-1">
+                  <Link href="/settings" className="underline hover:text-blue-600">Add your phone number</Link> to also send SMS reminders.
+                </p>
+              )}
+              {isFollowing && myProfile?.phone && !profileData.phone && (
+                <p className="text-[11px] text-slate-400 text-center pt-1">
+                  This user hasn&apos;t added a phone number yet — only in-app reminders will be sent.
                 </p>
               )}
             </div>

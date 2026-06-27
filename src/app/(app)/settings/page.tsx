@@ -3,7 +3,47 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import toast from "react-hot-toast";
-import { User, Bell, CreditCard, Shield, Trash2, ChevronRight } from "lucide-react";
+import { User, Bell, CreditCard, Shield, Trash2, ChevronRight, Phone } from "lucide-react";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
+const COUNTRY_CODES = [
+  { code: "+44", name: "🇬🇧 UK (+44)" },
+  { code: "+1", name: "🇺🇸 US/Canada (+1)" },
+  { code: "+92", name: "🇵🇰 Pakistan (+92)" },
+  { code: "+880", name: "🇧🇩 Bangladesh (+880)" },
+  { code: "+91", name: "🇮🇳 India (+91)" },
+  { code: "+20", name: "🇪🇬 Egypt (+20)" },
+  { code: "+966", name: "🇸🇦 Saudi Arabia (+966)" },
+  { code: "+971", name: "🇦🇪 UAE (+971)" },
+  { code: "+49", name: "🇩🇪 Germany (+49)" },
+  { code: "+33", name: "🇫🇷 France (+33)" },
+  { code: "+31", name: "🇳🇱 Netherlands (+31)" },
+  { code: "+90", name: "🇹🇷 Turkey (+90)" },
+  { code: "+60", name: "🇲🇾 Malaysia (+60)" },
+  { code: "+62", name: "🇮🇩 Indonesia (+62)" },
+  { code: "+234", name: "🇳🇬 Nigeria (+234)" },
+  { code: "+212", name: "🇲🇦 Morocco (+212)" },
+  { code: "+216", name: "🇹🇳 Tunisia (+216)" },
+  { code: "+213", name: "🇩🇿 Algeria (+213)" },
+  { code: "+249", name: "🇸🇩 Sudan (+249)" },
+  { code: "+252", name: "🇸🇴 Somalia (+252)" },
+  { code: "+964", name: "🇮🇶 Iraq (+964)" },
+  { code: "+962", name: "🇯🇴 Jordan (+962)" },
+  { code: "+968", name: "🇴🇲 Oman (+968)" },
+  { code: "+974", name: "🇶🇦 Qatar (+974)" },
+  { code: "+965", name: "🇰🇼 Kuwait (+965)" },
+  { code: "+973", name: "🇧🇭 Bahrain (+973)" },
+  { code: "+967", name: "🇾🇪 Yemen (+967)" },
+  { code: "+93", name: "🇦🇫 Afghanistan (+93)" },
+  { code: "+94", name: "🇱🇰 Sri Lanka (+94)" },
+  { code: "+61", name: "🇦🇺 Australia (+61)" },
+  { code: "+27", name: "🇿🇦 South Africa (+27)" },
+  { code: "+254", name: "🇰🇪 Kenya (+254)" },
+  { code: "+233", name: "🇬🇭 Ghana (+233)" },
+  { code: "+55", name: "🇧🇷 Brazil (+55)" },
+  { code: "+65", name: "🇸🇬 Singapore (+65)" },
+];
 
 const glassCard = {
   background: "rgba(255, 255, 255, 0.65)",
@@ -51,6 +91,16 @@ export default function SettingsPage() {
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [prayerReminders, setPrayerReminders] = useState(true);
   const [habitReminders, setHabitReminders] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Phone number — parse existing value if set
+  const existingPhone = profile?.phone ?? "";
+  const existingCountry = COUNTRY_CODES.find((c) => existingPhone.startsWith(c.code))?.code ?? "+44";
+  const existingNumber = existingPhone.startsWith(existingCountry)
+    ? existingPhone.slice(existingCountry.length)
+    : existingPhone;
+  const [phoneCountry, setPhoneCountry] = useState(existingCountry);
+  const [phoneNumber, setPhoneNumber] = useState(existingNumber);
 
   const initials = (profile?.displayName ?? "J")
     .split(" ")
@@ -59,8 +109,24 @@ export default function SettingsPage() {
     .join("")
     .toUpperCase();
 
-  function saveProfile() {
-    toast.success("Profile updated.");
+  async function saveProfile() {
+    if (!user) return;
+    setSaving(true);
+    try {
+      const updates: Record<string, unknown> = {};
+      if (name.trim()) updates.displayName = name.trim();
+      if (phoneNumber.trim()) {
+        updates.phone = `${phoneCountry}${phoneNumber.trim()}`;
+      } else {
+        updates.phone = null;
+      }
+      await updateDoc(doc(db, "users", user.uid), updates);
+      toast.success("Profile updated.");
+    } catch {
+      toast.error("Failed to save changes.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -71,6 +137,7 @@ export default function SettingsPage() {
         {/* Profile */}
         <SectionCard>
           <SectionHeader icon={User} title="Profile" />
+
           <div className="flex items-center gap-4 mb-6">
             {profile?.photoURL ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -110,13 +177,40 @@ export default function SettingsPage() {
                 className="w-full rounded-xl px-4 py-3 text-sm text-slate-400 cursor-not-allowed border border-slate-200 bg-slate-50"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-1.5 flex items-center gap-1.5">
+                <Phone size={13} /> Phone number <span className="text-slate-400 font-normal">(optional — for SMS reminders)</span>
+              </label>
+              <div className="flex gap-2">
+                <select
+                  value={phoneCountry}
+                  onChange={(e) => setPhoneCountry(e.target.value)}
+                  className="border border-slate-200 rounded-xl px-2 py-3 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0 max-w-[140px]"
+                >
+                  {COUNTRY_CODES.map(({ code, name: cname }) => (
+                    <option key={code} value={code}>{cname}</option>
+                  ))}
+                </select>
+                <input
+                  type="tel"
+                  placeholder="7911 123456"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9\s\-]/g, ""))}
+                  className="w-full rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 border border-slate-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all flex-1"
+                />
+              </div>
+              {profile?.phone && (
+                <p className="text-xs text-emerald-600 mt-1">✓ Phone saved: {profile.phone}</p>
+              )}
+            </div>
           </div>
 
           <button
             onClick={saveProfile}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors"
+            disabled={saving}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors disabled:opacity-60"
           >
-            Save changes
+            {saving ? "Saving…" : "Save changes"}
           </button>
         </SectionCard>
 

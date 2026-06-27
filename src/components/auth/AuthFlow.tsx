@@ -12,6 +12,68 @@ import { sendPasswordResetEmail } from "firebase/auth";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, Check, X, ChevronRight, ArrowLeft } from "lucide-react";
 
+const COUNTRY_CODES = [
+  { code: "+44", name: "🇬🇧 UK (+44)" },
+  { code: "+1", name: "🇺🇸 US/Canada (+1)" },
+  { code: "+92", name: "🇵🇰 Pakistan (+92)" },
+  { code: "+880", name: "🇧🇩 Bangladesh (+880)" },
+  { code: "+91", name: "🇮🇳 India (+91)" },
+  { code: "+20", name: "🇪🇬 Egypt (+20)" },
+  { code: "+966", name: "🇸🇦 Saudi Arabia (+966)" },
+  { code: "+971", name: "🇦🇪 UAE (+971)" },
+  { code: "+49", name: "🇩🇪 Germany (+49)" },
+  { code: "+33", name: "🇫🇷 France (+33)" },
+  { code: "+31", name: "🇳🇱 Netherlands (+31)" },
+  { code: "+32", name: "🇧🇪 Belgium (+32)" },
+  { code: "+46", name: "🇸🇪 Sweden (+46)" },
+  { code: "+47", name: "🇳🇴 Norway (+47)" },
+  { code: "+45", name: "🇩🇰 Denmark (+45)" },
+  { code: "+353", name: "🇮🇪 Ireland (+353)" },
+  { code: "+90", name: "🇹🇷 Turkey (+90)" },
+  { code: "+60", name: "🇲🇾 Malaysia (+60)" },
+  { code: "+62", name: "🇮🇩 Indonesia (+62)" },
+  { code: "+234", name: "🇳🇬 Nigeria (+234)" },
+  { code: "+212", name: "🇲🇦 Morocco (+212)" },
+  { code: "+216", name: "🇹🇳 Tunisia (+216)" },
+  { code: "+213", name: "🇩🇿 Algeria (+213)" },
+  { code: "+249", name: "🇸🇩 Sudan (+249)" },
+  { code: "+252", name: "🇸🇴 Somalia (+252)" },
+  { code: "+964", name: "🇮🇶 Iraq (+964)" },
+  { code: "+962", name: "🇯🇴 Jordan (+962)" },
+  { code: "+961", name: "🇱🇧 Lebanon (+961)" },
+  { code: "+968", name: "🇴🇲 Oman (+968)" },
+  { code: "+974", name: "🇶🇦 Qatar (+974)" },
+  { code: "+965", name: "🇰🇼 Kuwait (+965)" },
+  { code: "+973", name: "🇧🇭 Bahrain (+973)" },
+  { code: "+967", name: "🇾🇪 Yemen (+967)" },
+  { code: "+98", name: "🇮🇷 Iran (+98)" },
+  { code: "+93", name: "🇦🇫 Afghanistan (+93)" },
+  { code: "+94", name: "🇱🇰 Sri Lanka (+94)" },
+  { code: "+977", name: "🇳🇵 Nepal (+977)" },
+  { code: "+61", name: "🇦🇺 Australia (+61)" },
+  { code: "+64", name: "🇳🇿 New Zealand (+64)" },
+  { code: "+27", name: "🇿🇦 South Africa (+27)" },
+  { code: "+254", name: "🇰🇪 Kenya (+254)" },
+  { code: "+255", name: "🇹🇿 Tanzania (+255)" },
+  { code: "+256", name: "🇺🇬 Uganda (+256)" },
+  { code: "+233", name: "🇬🇭 Ghana (+233)" },
+  { code: "+221", name: "🇸🇳 Senegal (+221)" },
+  { code: "+243", name: "🇨🇩 DR Congo (+243)" },
+  { code: "+86", name: "🇨🇳 China (+86)" },
+  { code: "+81", name: "🇯🇵 Japan (+81)" },
+  { code: "+82", name: "🇰🇷 South Korea (+82)" },
+  { code: "+65", name: "🇸🇬 Singapore (+65)" },
+  { code: "+63", name: "🇵🇭 Philippines (+63)" },
+  { code: "+66", name: "🇹🇭 Thailand (+66)" },
+  { code: "+55", name: "🇧🇷 Brazil (+55)" },
+  { code: "+7", name: "🇷🇺 Russia (+7)" },
+  { code: "+380", name: "🇺🇦 Ukraine (+380)" },
+  { code: "+48", name: "🇵🇱 Poland (+48)" },
+  { code: "+34", name: "🇪🇸 Spain (+34)" },
+  { code: "+39", name: "🇮🇹 Italy (+39)" },
+  { code: "+41", name: "🇨🇭 Switzerland (+41)" },
+];
+
 const HABITS = [
   "5 Daily Prayers (Salah)",
   "Memorise Quran (Hifz)",
@@ -172,6 +234,11 @@ export default function AuthFlow({
   >("idle");
   const usernameTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Gender & phone (signup)
+  const [gender, setGender] = useState<"" | "male" | "female">("");
+  const [phoneCountry, setPhoneCountry] = useState("+44");
+  const [phoneNumber, setPhoneNumber] = useState("");
+
   // Hifz plan
   const [hifzPreset, setHifzPreset] = useState("");
   const [hifzAmount, setHifzAmount] = useState("");
@@ -293,6 +360,10 @@ export default function AuthFlow({
 
   function handleStep1(e: React.FormEvent) {
     e.preventDefault();
+    if (!gender) {
+      toast.error("Please select your gender to continue.");
+      return;
+    }
     if (suUsername.length < 5) {
       toast.error("Username must be at least 5 characters.");
       return;
@@ -322,7 +393,13 @@ export default function AuthFlow({
       await signUp(email, pw, fullName, suUsername);
       const uid = auth.currentUser?.uid;
       if (uid) {
-        const extra: Record<string, unknown> = { habits: selectedHabits };
+        const extra: Record<string, unknown> = {
+          habits: selectedHabits,
+          gender,
+        };
+        if (phoneNumber.trim()) {
+          extra.phone = `${phoneCountry}${phoneNumber.trim()}`;
+        }
         if (selectedHabits.includes("Memorise Quran (Hifz)") && hifzPreset) {
           extra.hifzPlan = {
             preset: hifzPreset,
@@ -559,6 +636,28 @@ export default function AuthFlow({
                         onChange={(e) => setFullName(e.target.value)}
                         required
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        What&apos;s your gender? <span className="text-red-400">*</span>
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(["male", "female"] as const).map((g) => (
+                          <button
+                            key={g}
+                            type="button"
+                            onClick={() => setGender(g)}
+                            className={`py-2.5 rounded-xl border text-sm font-medium transition-all capitalize ${
+                              gender === g
+                                ? "border-blue-600 bg-blue-50 text-blue-700"
+                                : "border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                            }`}
+                          >
+                            {g === "male" ? "♂ Male" : "♀ Female"}
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
                     <div>
@@ -925,13 +1024,41 @@ export default function AuthFlow({
                       </strong>
                       .
                     </p>
-                    <p className="text-slate-400 text-sm mb-8">
+                    <p className="text-slate-400 text-sm mb-6">
                       {selectedHabits.length > 0
                         ? `${selectedHabits.length} habit${
                             selectedHabits.length > 1 ? "s" : ""
                           } ready to build.`
                         : "You can add habits from your dashboard anytime."}
                     </p>
+
+                    {/* Phone number — optional */}
+                    <div className="text-left mb-6 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Phone number <span className="text-slate-400 font-normal">(optional)</span>
+                      </label>
+                      <p className="text-xs text-slate-400 mb-2.5">
+                        Add your number so friends can send you habit reminders via SMS.
+                      </p>
+                      <div className="flex gap-2">
+                        <select
+                          value={phoneCountry}
+                          onChange={(e) => setPhoneCountry(e.target.value)}
+                          className="border border-slate-200 rounded-xl px-2 py-2.5 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0 max-w-[140px]"
+                        >
+                          {COUNTRY_CODES.map(({ code, name }) => (
+                            <option key={code} value={code}>{name}</option>
+                          ))}
+                        </select>
+                        <input
+                          type="tel"
+                          placeholder="7911 123456"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9\s\-]/g, ""))}
+                          className={inputCls + " flex-1"}
+                        />
+                      </div>
+                    </div>
 
                     <button
                       type="button"

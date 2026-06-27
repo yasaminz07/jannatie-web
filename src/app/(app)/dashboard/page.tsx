@@ -8,9 +8,11 @@ import {
   CheckSquare, BookOpen, MessageCircle, Flame, Zap,
   Plus, ArrowRight, ChevronRight, Calendar,
   Sparkles, CheckCircle2, TrendingUp, BookMarked, Bell, Check,
+  Users, Send, UserPlus, PhoneOff,
 } from "lucide-react";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import toast from "react-hot-toast";
 
 interface HifzPlan {
   preset: string;
@@ -123,6 +125,178 @@ function OnboardingModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       </motion.div>
+    </div>
+  );
+}
+
+interface FriendProfile {
+  uid: string;
+  displayName: string | null;
+  username: string;
+  photoURL: string | null;
+  streak: number;
+  habits?: string[];
+  habitLog?: Record<string, Record<string, boolean>>;
+  phone?: string;
+}
+
+function FriendAvatar({ name, photoURL }: { name: string; photoURL?: string | null }) {
+  if (photoURL) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={photoURL} alt={name} width={36} height={36} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+    );
+  }
+  const initials = (name || "?").split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase();
+  return (
+    <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+      {initials}
+    </div>
+  );
+}
+
+function FriendsProgress({ following, senderPhone, senderName }: { following: string[]; senderPhone?: string; senderName: string }) {
+  const [friends, setFriends] = useState<FriendProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [reminding, setReminding] = useState<Record<string, boolean>>({});
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  useEffect(() => {
+    if (!following.length) { setLoading(false); return; }
+    const load = async () => {
+      const results = await Promise.all(
+        following.slice(0, 5).map(async (uid) => {
+          const snap = await getDoc(doc(db, "users", uid));
+          if (!snap.exists()) return null;
+          const d = snap.data();
+          return {
+            uid,
+            displayName: (d.displayName as string | null) ?? null,
+            username: (d.username as string) ?? uid,
+            photoURL: (d.photoURL as string | null) ?? null,
+            streak: (d.streak as number) ?? 0,
+            habits: d.habits as string[] | undefined,
+            habitLog: d.habitLog as Record<string, Record<string, boolean>> | undefined,
+            phone: d.phone as string | undefined,
+          } satisfies FriendProfile;
+        })
+      );
+      setFriends(results.filter(Boolean) as FriendProfile[]);
+      setLoading(false);
+    };
+    load();
+  }, [following]);
+
+  async function sendReminder(friend: FriendProfile) {
+    if (!senderPhone) {
+      toast("Add your phone number in Settings to send SMS reminders.", { icon: "📱" });
+      return;
+    }
+    if (!friend.phone) {
+      toast(`${friend.displayName ?? friend.username} hasn't added their phone number yet.`, { icon: "📵" });
+      return;
+    }
+    setReminding((prev) => ({ ...prev, [friend.uid]: true }));
+    try {
+      const res = await fetch("/api/sms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: friend.phone, senderName, friendName: friend.displayName ?? friend.username }),
+      });
+      if (res.ok) {
+        toast.success(`Reminder sent to ${friend.displayName ?? friend.username}!`);
+      } else {
+        const err = await res.json();
+        toast.error(err.error ?? "Failed to send reminder.");
+      }
+    } catch {
+      toast.error("Failed to send reminder. Please try again.");
+    } finally {
+      setReminding((prev) => ({ ...prev, [friend.uid]: false }));
+    }
+  }
+
+  if (loading) return (
+    <div className="flex justify-center py-8">
+      <div className="w-6 h-6 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+    </div>
+  );
+
+  if (!following.length) return (
+    <div className="flex flex-col items-center py-8 gap-3 text-center">
+      <Users size={28} className="text-slate-300" />
+      <p className="text-sm text-slate-400">You haven&apos;t added any friends yet.</p>
+      <p className="text-xs text-slate-400">Search for friends in the sidebar to see their progress here.</p>
+    </div>
+  );
+
+  if (!friends.length) return (
+    <div className="flex flex-col items-center py-8 gap-3 text-center">
+      <Users size={28} className="text-slate-300" />
+      <p className="text-sm text-slate-400">No friend data found.</p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-3">
+      {friends.map((friend) => {
+        const habits = friend.habits ?? [];
+        const todayLog = friend.habitLog?.[todayStr] ?? {};
+        const done = habits.filter((h) => todayLog[h] === true).length;
+        const total = habits.length;
+        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+        const lacking = pct < 50 && total > 0;
+
+        return (
+          <div key={friend.uid} className="flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-slate-50 border border-slate-100">
+            <Link href={`/profile/${friend.username}`}>
+              <FriendAvatar name={friend.displayName ?? friend.username} photoURL={friend.photoURL} />
+            </Link>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <Link href={`/profile/${friend.username}`} className="text-sm font-semibold text-slate-800 truncate hover:text-blue-600 transition-colors">
+                  {friend.displayName ?? friend.username}
+                </Link>
+                <span className="flex items-center gap-0.5 text-[11px] text-amber-500 flex-shrink-0">
+                  <Flame size={11} /> {friend.streak}
+                </span>
+              </div>
+              {total > 0 ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${pct >= 80 ? "bg-emerald-500" : pct >= 40 ? "bg-blue-500" : "bg-red-400"}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="text-[11px] text-slate-500 flex-shrink-0 tabular-nums">{done}/{total}</span>
+                  </div>
+                  {lacking && (
+                    <p className="text-[11px] text-slate-400 mt-0.5">Needs some motivation today 💪</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-[11px] text-slate-400">No habits set up</p>
+              )}
+            </div>
+            <button
+              onClick={() => sendReminder(friend)}
+              disabled={!!reminding[friend.uid]}
+              title={!friend.phone ? "Friend has no phone number" : !senderPhone ? "Add your number to send reminders" : "Send a reminder"}
+              className="flex-shrink-0 flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-xl border transition-all disabled:opacity-50 border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white"
+            >
+              {!friend.phone || !senderPhone ? <PhoneOff size={11} /> : <Send size={11} />}
+              {reminding[friend.uid] ? "Sending…" : "Remind"}
+            </button>
+          </div>
+        );
+      })}
+      {!senderPhone && (
+        <p className="text-[11px] text-slate-400 text-center pt-1">
+          <Link href="/settings" className="underline hover:text-blue-600">Add your phone number</Link> to send SMS reminders to friends.
+        </p>
+      )}
     </div>
   );
 }
@@ -479,6 +653,43 @@ export default function DashboardPage() {
             </motion.div>
           </div>
         </div>
+
+        {/* Friends progress */}
+        {(profile?.following?.length ?? 0) > 0 && (
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mt-5">
+            <div className="rounded-2xl p-6" style={glassCard}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Users size={16} className="text-blue-600" />
+                  <h2 className="font-semibold text-slate-800">Friends&apos; Progress</h2>
+                </div>
+                <Link href="/leaderboard" className="flex items-center gap-0.5 text-xs text-slate-400 hover:text-blue-600 transition-colors">
+                  Leaderboard <ChevronRight size={12} />
+                </Link>
+              </div>
+              <FriendsProgress
+                following={profile?.following ?? []}
+                senderPhone={profile?.phone}
+                senderName={profile?.displayName ?? "A friend"}
+              />
+            </div>
+          </motion.div>
+        )}
+
+        {/* Add friends nudge when no following */}
+        {(profile?.following?.length ?? 0) === 0 && (
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mt-5">
+            <div className="rounded-2xl p-5 flex items-center gap-4" style={glassCard}>
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                <UserPlus size={18} className="text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-800">Follow friends to see their progress</p>
+                <p className="text-xs text-slate-400 mt-0.5">Search for friends in the sidebar and follow them.</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
       </div>
     </div>
   );

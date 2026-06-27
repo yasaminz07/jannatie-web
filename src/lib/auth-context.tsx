@@ -45,6 +45,8 @@ interface UserProfile {
   };
   habitLog?: Record<string, Record<string, boolean>>; // { "2026-06-26": { "Pray all 5 Salah on time": true } }
   adhkarLog?: Record<string, { morning?: boolean; evening?: boolean }>; // { "2026-06-26": { morning: true } }
+  gender?: "male" | "female";
+  phone?: string;
   onboarded?: boolean;
   following?: string[];
   followers?: string[];
