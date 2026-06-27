@@ -47,6 +47,8 @@ interface UserProfile {
   adhkarLog?: Record<string, { morning?: boolean; evening?: boolean }>; // { "2026-06-26": { morning: true } }
   gender?: "male" | "female";
   phone?: string;
+  nameLastChanged?: string;
+  usernameLastChanged?: string;
   onboarded?: boolean;
   following?: string[];
   followers?: string[];

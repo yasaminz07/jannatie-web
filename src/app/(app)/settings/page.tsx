@@ -1,11 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
 import toast from "react-hot-toast";
-import { User, Bell, CreditCard, Shield, Trash2, ChevronRight, Phone } from "lucide-react";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import {
+  User, Bell, CreditCard, Shield, Trash2, ChevronRight,
+  Phone, Check, X, Crown, Zap, Users2,
+} from "lucide-react";
+import {
+  collection, query, where, getDocs, doc, updateDoc, limit,
+} from "firebase/firestore";
+import { updateEmail } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { motion, AnimatePresence } from "framer-motion";
 
 const COUNTRY_CODES = [
   { code: "+44", name: "🇬🇧 UK (+44)" },
@@ -53,21 +60,13 @@ const glassCard = {
   boxShadow: "0 4px 24px rgba(15, 23, 42, 0.07)",
 } as const;
 
-function SectionCard({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-2xl p-6 mb-4" style={glassCard}>
-      {children}
-    </div>
-  );
-}
+const inputCls = "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-white";
 
-function SectionHeader({ icon: Icon, title }: { icon: React.ElementType; title: string }) {
-  return (
-    <div className="flex items-center gap-2 mb-5">
-      <Icon size={17} className="text-blue-600" />
-      <h2 className="font-semibold text-slate-800">{title}</h2>
-    </div>
-  );
+function daysUntilAllowed(lastChangedIso: string | undefined, cooldownDays: number): number {
+  if (!lastChangedIso) return 0;
+  const elapsed = Date.now() - new Date(lastChangedIso).getTime();
+  const cooldownMs = cooldownDays * 24 * 60 * 60 * 1000;
+  return Math.max(0, Math.ceil((cooldownMs - elapsed) / (24 * 60 * 60 * 1000)));
 }
 
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
@@ -76,56 +75,282 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
       onClick={() => onChange(!value)}
       className={`relative w-11 h-6 rounded-full transition-colors ${value ? "bg-blue-600" : "bg-slate-200"}`}
     >
-      <div
-        className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-          value ? "translate-x-5" : "translate-x-0.5"
-        }`}
-      />
+      <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${value ? "translate-x-5" : "translate-x-0.5"}`} />
     </button>
   );
 }
 
+const UPGRADE_PLANS = [
+  {
+    name: "Premium",
+    monthly: 4.99,
+    annual: 49.99,
+    description: "Unlimited growth for serious learners.",
+    popular: true,
+    icon: Zap,
+    features: [
+      "Everything in Free",
+      "Unlimited AI Buddy messages",
+      "Unlimited lessons & topics",
+      "Full analytics dashboard",
+      "Offline mode (PWA)",
+      "Streak Shield weekly pass",
+      "Priority support",
+    ],
+    plan: "premium",
+  },
+  {
+    name: "Family",
+    monthly: 9.99,
+    annual: 79.99,
+    description: "Up to 5 accounts. Grow together.",
+    popular: false,
+    icon: Users2,
+    features: [
+      "5 separate family accounts",
+      "All Premium features",
+      "Family dashboard & leaderboard",
+      "Shared calendar events",
+      "Parental controls",
+      "One shared billing",
+    ],
+    plan: "family",
+  },
+];
+
+function UpgradeModal({ onClose }: { onClose: () => void }) {
+  const [annual, setAnnual] = useState(false);
+  return (
+    <div
+      className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 8 }}
+        transition={{ duration: 0.2 }}
+        className="w-full max-w-lg rounded-3xl overflow-hidden"
+        style={{
+          background: "rgba(255,255,255,0.97)",
+          backdropFilter: "blur(32px)",
+          WebkitBackdropFilter: "blur(32px)",
+          border: "1px solid rgba(255,255,255,0.95)",
+          boxShadow: "0 24px 60px rgba(15,23,42,0.18)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">Upgrade your plan</h2>
+            <p className="text-sm text-slate-400 mt-0.5">Unlock unlimited Islamic growth</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
+            <X size={15} className="text-slate-500" />
+          </button>
+        </div>
+
+        {/* Toggle */}
+        <div className="flex justify-center py-4 border-b border-slate-100">
+          <div className="flex items-center gap-1 bg-slate-100 rounded-full p-1">
+            <button
+              onClick={() => setAnnual(false)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${!annual ? "bg-white shadow text-slate-900" : "text-slate-500"}`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setAnnual(true)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${annual ? "bg-white shadow text-slate-900" : "text-slate-500"}`}
+            >
+              Annual
+              <span className="text-[10px] font-bold bg-emerald-500 text-white px-1.5 py-0.5 rounded-full">Save 33%</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Plans */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-6">
+          {UPGRADE_PLANS.map(({ name, monthly, annual: annualPrice, description, popular, icon: Icon, features, plan }) => {
+            const price = annual ? (annualPrice / 12).toFixed(2) : monthly.toFixed(2);
+            return (
+              <div
+                key={name}
+                className={`relative rounded-2xl p-5 flex flex-col border ${popular ? "border-blue-400 bg-blue-50/60" : "border-slate-200 bg-white"}`}
+              >
+                {popular && (
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-bold px-3 py-0.5 rounded-full">
+                    Most Popular
+                  </div>
+                )}
+                <div className="flex items-center gap-2 mb-1">
+                  <Icon size={16} className={popular ? "text-blue-600" : "text-slate-600"} />
+                  <h3 className="font-bold text-slate-900">{name}</h3>
+                </div>
+                <p className="text-xs text-slate-400 mb-3">{description}</p>
+                <div className="mb-4">
+                  <span className="text-3xl font-bold text-slate-900">£{price}</span>
+                  <span className="text-xs text-slate-400 ml-1">/mo</span>
+                  {annual && (
+                    <p className="text-[11px] text-slate-400">Billed as £{annualPrice}/year</p>
+                  )}
+                </div>
+                <ul className="space-y-1.5 mb-5 flex-1">
+                  {features.map((f) => (
+                    <li key={f} className="flex items-start gap-1.5 text-xs text-slate-600">
+                      <Check size={12} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <a
+                  href={`/checkout?plan=${plan}&interval=${annual ? "annual" : "monthly"}`}
+                  className={`block text-center text-sm font-semibold py-2.5 rounded-xl transition-colors ${
+                    popular
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : "border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
+                  }`}
+                >
+                  Get {name}
+                </a>
+              </div>
+            );
+          })}
+        </div>
+
+        <p className="text-center text-xs text-slate-400 pb-4">
+          Cancel anytime · Secure payment via Stripe
+        </p>
+      </motion.div>
+    </div>
+  );
+}
+
+type EditField = "name" | "username" | "phone" | "email" | null;
+
 export default function SettingsPage() {
   const { profile, user, logOut } = useAuth();
-  const [name, setName] = useState(profile?.displayName ?? "");
+  const [expandedField, setExpandedField] = useState<EditField>(null);
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [prayerReminders, setPrayerReminders] = useState(true);
   const [habitReminders, setHabitReminders] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
-  // Phone number — parse existing value if set
+  // Name edit
+  const [newName, setNewName] = useState(profile?.displayName ?? "");
+  const [savingName, setSavingName] = useState(false);
+  const nameDaysLeft = daysUntilAllowed(profile?.nameLastChanged, 30);
+
+  // Username edit
+  const [newUsername, setNewUsername] = useState(profile?.username ?? "");
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "taken" | "available">("idle");
+  const usernameTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [savingUsername, setSavingUsername] = useState(false);
+  const usernameDaysLeft = daysUntilAllowed(profile?.usernameLastChanged, 14);
+
+  // Phone edit
   const existingPhone = profile?.phone ?? "";
   const existingCountry = COUNTRY_CODES.find((c) => existingPhone.startsWith(c.code))?.code ?? "+44";
-  const existingNumber = existingPhone.startsWith(existingCountry)
-    ? existingPhone.slice(existingCountry.length)
-    : existingPhone;
+  const existingNumber = existingPhone.startsWith(existingCountry) ? existingPhone.slice(existingCountry.length) : existingPhone;
   const [phoneCountry, setPhoneCountry] = useState(existingCountry);
   const [phoneNumber, setPhoneNumber] = useState(existingNumber);
+  const [savingPhone, setSavingPhone] = useState(false);
 
-  const initials = (profile?.displayName ?? "J")
-    .split(" ")
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  // Email edit
+  const [newEmail, setNewEmail] = useState(user?.email ?? "");
+  const [savingEmail, setSavingEmail] = useState(false);
 
-  async function saveProfile() {
-    if (!user) return;
-    setSaving(true);
+  const initials = (profile?.displayName ?? "J").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+
+  function toggle(field: EditField) {
+    setExpandedField((prev) => (prev === field ? null : field));
+    setUsernameStatus("idle");
+    setNewName(profile?.displayName ?? "");
+    setNewUsername(profile?.username ?? "");
+  }
+
+  const handleUsernameInput = useCallback((val: string) => {
+    const v = val.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 18);
+    setNewUsername(v);
+    setUsernameStatus("idle");
+    if (usernameTimer.current) clearTimeout(usernameTimer.current);
+    if (v.length < 5 || v === profile?.username) return;
+    setUsernameStatus("checking");
+    usernameTimer.current = setTimeout(async () => {
+      const snap = await getDocs(query(collection(db, "users"), where("username", "==", v), limit(1)));
+      setUsernameStatus(snap.empty ? "available" : "taken");
+    }, 500);
+  }, [profile?.username]);
+
+  async function saveName() {
+    if (!user || !newName.trim() || nameDaysLeft > 0) return;
+    setSavingName(true);
     try {
-      const updates: Record<string, unknown> = {};
-      if (name.trim()) updates.displayName = name.trim();
-      if (phoneNumber.trim()) {
-        updates.phone = `${phoneCountry}${phoneNumber.trim()}`;
-      } else {
-        updates.phone = null;
-      }
-      await updateDoc(doc(db, "users", user.uid), updates);
-      toast.success("Profile updated.");
+      await updateDoc(doc(db, "users", user.uid), {
+        displayName: newName.trim(),
+        nameLastChanged: new Date().toISOString(),
+      });
+      toast.success("Name updated!");
+      setExpandedField(null);
     } catch {
-      toast.error("Failed to save changes.");
+      toast.error("Failed to update name.");
     } finally {
-      setSaving(false);
+      setSavingName(false);
+    }
+  }
+
+  async function saveUsername() {
+    if (!user || newUsername.length < 5 || usernameDaysLeft > 0) return;
+    if (usernameStatus === "taken") { toast.error("That username is already taken."); return; }
+    if (usernameStatus === "checking") { toast.error("Still checking availability."); return; }
+    if (newUsername === profile?.username) { setExpandedField(null); return; }
+    setSavingUsername(true);
+    try {
+      await updateDoc(doc(db, "users", user.uid), {
+        username: newUsername,
+        usernameLastChanged: new Date().toISOString(),
+      });
+      toast.success("Username updated!");
+      setExpandedField(null);
+    } catch {
+      toast.error("Failed to update username.");
+    } finally {
+      setSavingUsername(false);
+    }
+  }
+
+  async function savePhone() {
+    if (!user) return;
+    setSavingPhone(true);
+    try {
+      const phone = phoneNumber.trim() ? `${phoneCountry}${phoneNumber.trim()}` : null;
+      await updateDoc(doc(db, "users", user.uid), { phone });
+      toast.success(phone ? "Phone number saved!" : "Phone number removed.");
+      setExpandedField(null);
+    } catch {
+      toast.error("Failed to save phone number.");
+    } finally {
+      setSavingPhone(false);
+    }
+  }
+
+  async function saveEmail() {
+    if (!user || !newEmail.trim() || newEmail === user.email) return;
+    setSavingEmail(true);
+    try {
+      await updateEmail(auth.currentUser!, newEmail.trim());
+      toast.success("Email updated!");
+      setExpandedField(null);
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code === "auth/requires-recent-login") {
+        toast.error("Please sign out and sign back in, then try again.");
+      } else {
+        toast.error("Failed to update email.");
+      }
+    } finally {
+      setSavingEmail(false);
     }
   }
 
@@ -134,89 +359,272 @@ export default function SettingsPage() {
       <div className="max-w-2xl mx-auto px-5 py-8">
         <h1 className="text-2xl font-bold text-slate-900 mb-6">Settings</h1>
 
-        {/* Profile */}
-        <SectionCard>
-          <SectionHeader icon={User} title="Profile" />
-
-          <div className="flex items-center gap-4 mb-6">
-            {profile?.photoURL ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile.photoURL} alt={name} width={56} height={56}
-                className="w-14 h-14 rounded-full object-cover flex-shrink-0 ring-2 ring-blue-200"
-                style={{ width: 56, height: 56 }} />
-            ) : (
-              <div className="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0 ring-2 ring-blue-200">
-                {initials}
-              </div>
-            )}
-            <div>
-              <p className="font-semibold text-slate-800">{name || "Your name"}</p>
-              <p className="text-sm text-slate-400">{user?.email}</p>
-              {profile?.username && (
-                <p className="text-xs text-slate-400">@{profile.username}</p>
-              )}
+        {/* Profile card — avatar + name + username only */}
+        <div className="rounded-2xl p-5 mb-4 flex items-center gap-4" style={glassCard}>
+          {profile?.photoURL ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={profile.photoURL} alt={profile.displayName ?? ""} width={56} height={56}
+              className="w-14 h-14 rounded-full object-cover flex-shrink-0 ring-2 ring-blue-200"
+              style={{ width: 56, height: 56 }} />
+          ) : (
+            <div className="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0 ring-2 ring-blue-200">
+              {initials}
             </div>
+          )}
+          <div>
+            <p className="font-semibold text-slate-900 text-lg leading-tight">{profile?.displayName ?? "Your name"}</p>
+            {profile?.username && <p className="text-sm text-slate-400 mt-0.5">@{profile.username}</p>}
+          </div>
+        </div>
+
+        {/* Personal Details */}
+        <div className="rounded-2xl mb-4 overflow-hidden" style={glassCard}>
+          <div className="flex items-center gap-2 px-6 pt-5 pb-3">
+            <User size={17} className="text-blue-600" />
+            <h2 className="font-semibold text-slate-800">Personal Details</h2>
           </div>
 
-          <div className="space-y-4 mb-5">
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1.5">Display name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 border border-slate-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1.5">Email</label>
-              <input
-                type="email"
-                value={user?.email ?? ""}
-                disabled
-                className="w-full rounded-xl px-4 py-3 text-sm text-slate-400 cursor-not-allowed border border-slate-200 bg-slate-50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1.5 flex items-center gap-1.5">
-                <Phone size={13} /> Phone number <span className="text-slate-400 font-normal">(optional — for SMS reminders)</span>
-              </label>
-              <div className="flex gap-2">
-                <select
-                  value={phoneCountry}
-                  onChange={(e) => setPhoneCountry(e.target.value)}
-                  className="border border-slate-200 rounded-xl px-2 py-3 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0 max-w-[140px]"
+          {/* Name */}
+          <div className="border-t border-slate-100">
+            <button
+              onClick={() => nameDaysLeft === 0 && toggle("name")}
+              className={`w-full flex items-center justify-between px-6 py-4 transition-colors text-left ${nameDaysLeft === 0 ? "hover:bg-slate-50/60 cursor-pointer" : "cursor-default"}`}
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Display name</p>
+                <p className="text-sm text-slate-800 truncate">{profile?.displayName ?? "—"}</p>
+              </div>
+              {nameDaysLeft > 0 ? (
+                <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1 flex-shrink-0">
+                  {nameDaysLeft}d remaining
+                </span>
+              ) : (
+                <ChevronRight size={16} className={`text-slate-300 flex-shrink-0 transition-transform ${expandedField === "name" ? "rotate-90" : ""}`} />
+              )}
+            </button>
+            <AnimatePresence>
+              {expandedField === "name" && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
                 >
-                  {COUNTRY_CODES.map(({ code, name: cname }) => (
-                    <option key={code} value={code}>{cname}</option>
-                  ))}
-                </select>
-                <input
-                  type="tel"
-                  placeholder="7911 123456"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9\s\-]/g, ""))}
-                  className="w-full rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 border border-slate-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all flex-1"
-                />
-              </div>
-              {profile?.phone && (
-                <p className="text-xs text-emerald-600 mt-1">✓ Phone saved: {profile.phone}</p>
+                  <div className="px-6 pb-5 pt-1 space-y-3 bg-slate-50/50">
+                    <input
+                      type="text"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      placeholder="Your display name"
+                      className={inputCls}
+                      autoFocus
+                    />
+                    <p className="text-xs text-slate-400">
+                      You can change your display name once every 30 days.
+                    </p>
+                    <div className="flex gap-2">
+                      <button onClick={() => setExpandedField(null)} className="flex-1 py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors font-medium border border-slate-200 rounded-xl hover:bg-white">
+                        Cancel
+                      </button>
+                      <button
+                        onClick={saveName}
+                        disabled={savingName || !newName.trim()}
+                        className="flex-[2] py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      >
+                        {savingName ? "Saving…" : "Save name"}
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
               )}
-            </div>
+            </AnimatePresence>
           </div>
 
-          <button
-            onClick={saveProfile}
-            disabled={saving}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors disabled:opacity-60"
-          >
-            {saving ? "Saving…" : "Save changes"}
-          </button>
-        </SectionCard>
+          {/* Username */}
+          <div className="border-t border-slate-100">
+            <button
+              onClick={() => usernameDaysLeft === 0 && toggle("username")}
+              className={`w-full flex items-center justify-between px-6 py-4 transition-colors text-left ${usernameDaysLeft === 0 ? "hover:bg-slate-50/60 cursor-pointer" : "cursor-default"}`}
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Username</p>
+                <p className="text-sm text-slate-800 truncate">@{profile?.username ?? "—"}</p>
+              </div>
+              {usernameDaysLeft > 0 ? (
+                <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1 flex-shrink-0">
+                  {usernameDaysLeft}d remaining
+                </span>
+              ) : (
+                <ChevronRight size={16} className={`text-slate-300 flex-shrink-0 transition-transform ${expandedField === "username" ? "rotate-90" : ""}`} />
+              )}
+            </button>
+            <AnimatePresence>
+              {expandedField === "username" && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="px-6 pb-5 pt-1 space-y-2 bg-slate-50/50">
+                    <input
+                      type="text"
+                      value={newUsername}
+                      onChange={(e) => handleUsernameInput(e.target.value)}
+                      placeholder="new_username"
+                      className={inputCls}
+                      autoFocus
+                    />
+                    <div className="h-4">
+                      {usernameStatus === "checking" && <p className="text-xs text-slate-400">Checking…</p>}
+                      {usernameStatus === "taken" && (
+                        <div className="flex items-center gap-1"><X size={10} className="text-red-400" /><p className="text-xs text-red-500">Already taken</p></div>
+                      )}
+                      {usernameStatus === "available" && (
+                        <div className="flex items-center gap-1"><Check size={10} className="text-emerald-500" /><p className="text-xs text-emerald-600">Available</p></div>
+                      )}
+                      {usernameStatus === "idle" && <p className="text-xs text-slate-400">5–18 characters · letters, numbers, underscores</p>}
+                    </div>
+                    <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      After changing your username you will need to wait 14 days before you can change it again.
+                    </p>
+                    <div className="flex gap-2">
+                      <button onClick={() => setExpandedField(null)} className="flex-1 py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors font-medium border border-slate-200 rounded-xl hover:bg-white">
+                        Cancel
+                      </button>
+                      <button
+                        onClick={saveUsername}
+                        disabled={savingUsername || newUsername.length < 5 || usernameStatus === "taken" || usernameStatus === "checking"}
+                        className="flex-[2] py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      >
+                        {savingUsername ? "Saving…" : "Save username"}
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Phone */}
+          <div className="border-t border-slate-100">
+            <button
+              onClick={() => toggle("phone")}
+              className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50/60 transition-colors text-left"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Phone number</p>
+                <p className="text-sm text-slate-800 truncate">{profile?.phone ?? <span className="text-slate-400">Not set</span>}</p>
+              </div>
+              <ChevronRight size={16} className={`text-slate-300 flex-shrink-0 transition-transform ${expandedField === "phone" ? "rotate-90" : ""}`} />
+            </button>
+            <AnimatePresence>
+              {expandedField === "phone" && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="px-6 pb-5 pt-1 space-y-3 bg-slate-50/50">
+                    <p className="text-xs text-slate-400">Used for SMS habit reminders from friends. Optional.</p>
+                    <div className="flex gap-2">
+                      <select
+                        value={phoneCountry}
+                        onChange={(e) => setPhoneCountry(e.target.value)}
+                        className="border border-slate-200 rounded-xl px-2 py-2.5 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0 max-w-[140px]"
+                      >
+                        {COUNTRY_CODES.map(({ code, name }) => (
+                          <option key={code} value={code}>{name}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="tel"
+                        placeholder="7911 123456"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9\s\-]/g, ""))}
+                        className={inputCls + " flex-1"}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setExpandedField(null)} className="flex-1 py-2 text-sm text-slate-500 font-medium border border-slate-200 rounded-xl hover:bg-white transition-colors">
+                        Cancel
+                      </button>
+                      <button
+                        onClick={savePhone}
+                        disabled={savingPhone}
+                        className="flex-[2] py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      >
+                        {savingPhone ? "Saving…" : "Save number"}
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Email */}
+          <div className="border-t border-slate-100">
+            <button
+              onClick={() => toggle("email")}
+              className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50/60 transition-colors text-left"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Email address</p>
+                <p className="text-sm text-slate-800 truncate">{user?.email ?? "—"}</p>
+              </div>
+              <ChevronRight size={16} className={`text-slate-300 flex-shrink-0 transition-transform ${expandedField === "email" ? "rotate-90" : ""}`} />
+            </button>
+            <AnimatePresence>
+              {expandedField === "email" && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="px-6 pb-5 pt-1 space-y-3 bg-slate-50/50">
+                    <input
+                      type="email"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      placeholder="new@email.com"
+                      className={inputCls}
+                      autoFocus
+                    />
+                    <p className="text-xs text-slate-400">
+                      For security, you may need to sign out and sign back in before changing your email.
+                    </p>
+                    <div className="flex gap-2">
+                      <button onClick={() => { setExpandedField(null); setNewEmail(user?.email ?? ""); }} className="flex-1 py-2 text-sm text-slate-500 font-medium border border-slate-200 rounded-xl hover:bg-white transition-colors">
+                        Cancel
+                      </button>
+                      <button
+                        onClick={saveEmail}
+                        disabled={savingEmail || !newEmail.trim() || newEmail === user?.email}
+                        className="flex-[2] py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      >
+                        {savingEmail ? "Saving…" : "Update email"}
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
 
         {/* Notifications */}
-        <SectionCard>
-          <SectionHeader icon={Bell} title="Notifications" />
+        <div className="rounded-2xl p-6 mb-4" style={glassCard}>
+          <div className="flex items-center gap-2 mb-5">
+            <Bell size={17} className="text-blue-600" />
+            <h2 className="font-semibold text-slate-800">Notifications</h2>
+          </div>
           <div className="space-y-5">
             {[
               { label: "Prayer time reminders", desc: "Get notified before each Salah", value: prayerReminders, onChange: setPrayerReminders },
@@ -232,17 +640,19 @@ export default function SettingsPage() {
               </div>
             ))}
           </div>
-        </SectionCard>
+        </div>
 
         {/* Subscription */}
-        <SectionCard>
-          <SectionHeader icon={CreditCard} title="Subscription" />
-          <div
-            className="flex items-center justify-between p-4 rounded-xl mb-2 border border-slate-200 bg-slate-50"
-          >
+        <div className="rounded-2xl p-6 mb-4" style={glassCard}>
+          <div className="flex items-center gap-2 mb-4">
+            <CreditCard size={17} className="text-blue-600" />
+            <h2 className="font-semibold text-slate-800">Subscription</h2>
+          </div>
+          <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-slate-50">
             <div>
-              <p className="font-semibold text-slate-800 capitalize">
+              <p className="font-semibold text-slate-800 capitalize flex items-center gap-2">
                 {profile?.plan ?? "free"} Plan
+                {profile?.plan && profile.plan !== "free" && <Crown size={14} className="text-amber-500" />}
               </p>
               <p className="text-xs text-slate-400 mt-0.5">
                 {profile?.plan === "free"
@@ -251,16 +661,22 @@ export default function SettingsPage() {
               </p>
             </div>
             {profile?.plan === "free" && (
-              <a href="/pricing" className="text-sm font-semibold text-blue-600 hover:text-blue-500 flex items-center gap-0.5 transition-colors">
-                Upgrade <ChevronRight size={14} />
-              </a>
+              <button
+                onClick={() => setShowUpgrade(true)}
+                className="flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                <Crown size={13} /> Upgrade
+              </button>
             )}
           </div>
-        </SectionCard>
+        </div>
 
-        {/* Privacy */}
-        <SectionCard>
-          <SectionHeader icon={Shield} title="Privacy and Security" />
+        {/* Privacy & Security */}
+        <div className="rounded-2xl p-6 mb-4" style={glassCard}>
+          <div className="flex items-center gap-2 mb-4">
+            <Shield size={17} className="text-blue-600" />
+            <h2 className="font-semibold text-slate-800">Privacy &amp; Security</h2>
+          </div>
           <div className="space-y-1">
             {["Change password", "Download my data"].map((label) => (
               <button
@@ -275,17 +691,17 @@ export default function SettingsPage() {
               View Privacy Policy
             </a>
           </div>
-        </SectionCard>
+        </div>
 
         {/* Danger zone */}
         <div
           className="rounded-2xl p-6"
           style={{
-            background: "rgba(255, 255, 255, 0.65)",
-            border: "1px solid rgba(254, 202, 202, 0.80)",
+            background: "rgba(255,255,255,0.65)",
+            border: "1px solid rgba(254,202,202,0.80)",
             backdropFilter: "blur(20px)",
             WebkitBackdropFilter: "blur(20px)",
-            boxShadow: "0 4px 24px rgba(15, 23, 42, 0.07)",
+            boxShadow: "0 4px 24px rgba(15,23,42,0.07)",
           }}
         >
           <div className="flex items-center gap-2 mb-2">
@@ -306,6 +722,11 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Upgrade modal */}
+      <AnimatePresence>
+        {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
+      </AnimatePresence>
     </div>
   );
 }
