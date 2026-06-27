@@ -11,7 +11,11 @@ import {
 import {
   collection, query, where, getDocs, doc, updateDoc, limit,
 } from "firebase/firestore";
-import { updateEmail } from "firebase/auth";
+import {
+  updateEmail, RecaptchaVerifier, linkWithPhoneNumber,
+  unlink, PhoneAuthProvider,
+  type ConfirmationResult,
+} from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -274,12 +278,11 @@ export default function SettingsPage() {
   const [confirmingOtp, setConfirmingOtp] = useState(false);
   const [otpInput, setOtpInput] = useState("");
   const [otpError, setOtpError] = useState<string | null>(null);
-  const [otpToken, setOtpToken] = useState("");
-  const [otpTs, setOtpTs] = useState(0);
-  const [otpExpiry, setOtpExpiry] = useState(0);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [confirmRemovePhone, setConfirmRemovePhone] = useState(false);
   const [removingPhone, setRemovingPhone] = useState(false);
+  const recaptchaRef = useRef<RecaptchaVerifier | null>(null);
+  const confirmationRef = useRef<ConfirmationResult | null>(null);
 
   // Email edit
   const [newEmail, setNewEmail] = useState(user?.email ?? "");
@@ -365,64 +368,52 @@ export default function SettingsPage() {
   function startResendCooldown() {
     setResendCooldown(60);
     const t = setInterval(() => {
-      setResendCooldown((v) => {
-        if (v <= 1) { clearInterval(t); return 0; }
-        return v - 1;
-      });
+      setResendCooldown((v) => { if (v <= 1) { clearInterval(t); return 0; } return v - 1; });
     }, 1000);
   }
 
+  function initRecaptcha() {
+    if (!recaptchaRef.current) {
+      recaptchaRef.current = new RecaptchaVerifier(auth, "phone-recaptcha", { size: "invisible" });
+    }
+  }
+
   async function sendOtp() {
-    if (!user || !phoneNumber.trim()) return;
+    if (!auth.currentUser || !phoneNumber.trim()) return;
     const fullPhone = `${phoneCountry}${phoneNumber.trim()}`;
     setSendingOtp(true);
     setOtpError(null);
     try {
-      const res = await fetch("/api/verify-phone/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          uid: user.uid,
-          phone: fullPhone,
-          email: user.email,
-          displayName: profile?.displayName ?? undefined,
-        }),
-      });
-      const data = await res.json() as { token?: string; ts?: number; expiresAt?: number; error?: string };
-      if (!res.ok || !data.token) {
-        toast.error(data.error ?? "Failed to send code.");
-        return;
-      }
-      setOtpToken(data.token);
-      setOtpTs(data.ts!);
-      setOtpExpiry(data.expiresAt!);
+      initRecaptcha();
+      // Unlink existing phone provider if already linked, so we can re-link with new number
+      const linked = auth.currentUser.providerData.some(p => p.providerId === PhoneAuthProvider.PROVIDER_ID);
+      if (linked) await unlink(auth.currentUser, PhoneAuthProvider.PROVIDER_ID);
+      confirmationRef.current = await linkWithPhoneNumber(auth.currentUser, fullPhone, recaptchaRef.current!);
       setPhoneStep("verify");
       setOtpInput("");
       startResendCooldown();
-      toast.success("Verification code sent!");
-    } catch {
-      toast.error("Failed to send verification code.");
+      toast.success("Verification code sent to your phone!");
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code === "auth/invalid-phone-number") setOtpError("Invalid phone number. Check the format and try again.");
+      else if (code === "auth/too-many-requests") setOtpError("Too many attempts. Please wait a few minutes.");
+      else if (code === "auth/credential-already-in-use") setOtpError("This number is already linked to another account.");
+      else toast.error("Failed to send code. Please try again.");
+      // Reset recaptcha on error so it can be reused
+      recaptchaRef.current?.clear();
+      recaptchaRef.current = null;
     } finally {
       setSendingOtp(false);
     }
   }
 
   async function confirmOtp() {
-    if (!user || otpInput.length !== 6) return;
+    if (!user || !confirmationRef.current || otpInput.length !== 6) return;
     const fullPhone = `${phoneCountry}${phoneNumber.trim()}`;
     setConfirmingOtp(true);
     setOtpError(null);
     try {
-      const res = await fetch("/api/verify-phone/confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid: user.uid, phone: fullPhone, code: otpInput, token: otpToken, ts: otpTs, expiresAt: otpExpiry }),
-      });
-      const data = await res.json() as { success?: boolean; error?: string };
-      if (!res.ok || !data.success) {
-        setOtpError(data.error ?? "Incorrect code.");
-        return;
-      }
+      await confirmationRef.current.confirm(otpInput);
       await updateDoc(doc(db, "users", user.uid), { phone: fullPhone });
       if (user.email) {
         await sendSecurityEmail(user.email, "phone", fullPhone, profile?.displayName ?? undefined);
@@ -431,8 +422,12 @@ export default function SettingsPage() {
       setExpandedField(null);
       setPhoneStep("enter");
       setOtpInput("");
-    } catch {
-      setOtpError("Something went wrong. Please try again.");
+      confirmationRef.current = null;
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code === "auth/invalid-verification-code") setOtpError("Incorrect code. Please try again.");
+      else if (code === "auth/code-expired") setOtpError("Code has expired. Please request a new one.");
+      else setOtpError("Verification failed. Please try again.");
     } finally {
       setConfirmingOtp(false);
     }
@@ -442,6 +437,9 @@ export default function SettingsPage() {
     if (!user) return;
     setRemovingPhone(true);
     try {
+      // Unlink phone from Firebase Auth if linked
+      const linked = auth.currentUser?.providerData.some(p => p.providerId === PhoneAuthProvider.PROVIDER_ID);
+      if (linked && auth.currentUser) await unlink(auth.currentUser, PhoneAuthProvider.PROVIDER_ID);
       await updateDoc(doc(db, "users", user.uid), { phone: null });
       setConfirmRemovePhone(false);
       setPhoneNumber("");
@@ -735,12 +733,9 @@ export default function SettingsPage() {
                         <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
                           <span className="text-2xl font-bold text-blue-600">#</span>
                         </div>
-                        <p className="text-sm font-semibold text-slate-800">Check your email</p>
+                        <p className="text-sm font-semibold text-slate-800">Enter your verification code</p>
                         <p className="text-xs text-slate-400 mt-1">
-                          We sent a 6-digit code to <span className="font-medium text-slate-600">{user?.email}</span>
-                        </p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          Verifying number: <span className="font-medium text-slate-600">{phoneCountry} {phoneNumber}</span>
+                          We sent a 6-digit SMS to <span className="font-medium text-slate-600">{phoneCountry} {phoneNumber}</span>
                         </p>
                       </div>
 
@@ -949,6 +944,9 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Invisible reCAPTCHA container required by Firebase Phone Auth */}
+      <div id="phone-recaptcha" />
 
       {/* Upgrade modal */}
       <AnimatePresence>
