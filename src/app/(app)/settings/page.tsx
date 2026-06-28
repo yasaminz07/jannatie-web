@@ -373,9 +373,14 @@ export default function SettingsPage() {
   }
 
   function initRecaptcha() {
-    if (!recaptchaRef.current) {
-      recaptchaRef.current = new RecaptchaVerifier(auth, "phone-recaptcha", { size: "invisible" });
+    if (recaptchaRef.current) {
+      try { recaptchaRef.current.clear(); } catch { /* ignore */ }
+      recaptchaRef.current = null;
     }
+    // Wipe DOM widget — clear() removes it from Firebase registry but leaves the HTML element
+    const container = document.getElementById("phone-recaptcha");
+    if (container) container.innerHTML = "";
+    recaptchaRef.current = new RecaptchaVerifier(auth, "phone-recaptcha", { size: "invisible" });
   }
 
   async function sendOtp() {
@@ -395,10 +400,22 @@ export default function SettingsPage() {
       toast.success("Verification code sent to your phone!");
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
-      if (code === "auth/invalid-phone-number") setOtpError("Invalid phone number. Check the format and try again.");
-      else if (code === "auth/too-many-requests") setOtpError("Too many attempts. Please wait a few minutes.");
-      else if (code === "auth/credential-already-in-use") setOtpError("This number is already linked to another account.");
-      else toast.error("Failed to send code. Please try again.");
+      console.error("[Phone OTP] error code:", code, "| message:", (err as Error).message, "| full:", err);
+      if (code === "auth/operation-not-allowed") {
+        toast.error("Could not send code. Hard-refresh the page (Ctrl+Shift+R) and try again.");
+      } else if (code === "auth/invalid-phone-number") {
+        setOtpError("Invalid phone number. Check the format and try again.");
+      } else if (code === "auth/too-many-requests") {
+        setOtpError("Too many attempts. Please wait a few minutes and try again.");
+      } else if (code === "auth/credential-already-in-use") {
+        setOtpError("This number is already linked to another account.");
+      } else if (code === "auth/captcha-check-failed" || code === "auth/web-storage-unsupported") {
+        setOtpError("reCAPTCHA check failed. Make sure third-party cookies are not blocked.");
+      } else if (code === "auth/requires-recent-login") {
+        toast.error("Session expired. Please sign out and sign back in, then try again.");
+      } else {
+        toast.error(`Error: ${code ?? (err as Error).message ?? "unknown"}`, { duration: 8000 });
+      }
       // Reset recaptcha on error so it can be reused
       recaptchaRef.current?.clear();
       recaptchaRef.current = null;

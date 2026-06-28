@@ -74,27 +74,62 @@ function nextPrayer(timings: PrayerTimings): PrayerName | null {
 }
 
 async function fetchMosquesNearby(lat: number, lon: number): Promise<NearbyMosque[]> {
-  const query = `
-    [out:json][timeout:10];
-    node["amenity"="place_of_worship"]["religion"="muslim"](around:5000,${lat},${lon});
-    out 20;
+  // Search nodes, ways AND relations — mosques are often stored as polygon ways/relations in OSM
+  // Use two tag combos: amenity=mosque OR amenity=place_of_worship + religion=muslim
+  // out center gives lat/lon for way/relation centroids
+  const overpassQuery = `
+[out:json][timeout:30];
+(
+  node["amenity"="mosque"](around:25000,${lat},${lon});
+  node["amenity"="place_of_worship"]["religion"="muslim"](around:25000,${lat},${lon});
+  way["amenity"="mosque"](around:25000,${lat},${lon});
+  way["amenity"="place_of_worship"]["religion"="muslim"](around:25000,${lat},${lon});
+  relation["amenity"="mosque"](around:25000,${lat},${lon});
+  relation["amenity"="place_of_worship"]["religion"="muslim"](around:25000,${lat},${lon});
+);
+out center 100;
   `.trim();
+
   const res = await fetch("https://overpass-api.de/api/interpreter", {
     method: "POST",
-    body: query,
+    body: overpassQuery,
   });
-  const json = await res.json() as { elements: { id: number; lat: number; lon: number; tags?: Record<string, string> }[] };
+  const json = await res.json() as {
+    elements: {
+      id: number;
+      type: "node" | "way" | "relation";
+      lat?: number;
+      lon?: number;
+      center?: { lat: number; lon: number };
+      tags?: Record<string, string>;
+    }[];
+  };
+
+  const seen = new Set<string>();
   return json.elements
-    .filter((el) => el.tags?.name)
-    .map((el) => ({
-      id: el.id,
-      name: el.tags!.name!,
-      lat: el.lat,
-      lon: el.lon,
-      distanceKm: haversineKm(lat, lon, el.lat, el.lon),
-    }))
+    .filter((el) => {
+      const name = el.tags?.name;
+      if (!name) return false;
+      // deduplicate by name (nodes and ways for same mosque both appear)
+      if (seen.has(name.toLowerCase())) return false;
+      seen.add(name.toLowerCase());
+      return true;
+    })
+    .map((el) => {
+      // nodes have lat/lon directly; ways and relations expose a center object
+      const elLat = el.lat ?? el.center?.lat ?? 0;
+      const elLon = el.lon ?? el.center?.lon ?? 0;
+      return {
+        id: el.id,
+        name: el.tags!.name!,
+        lat: elLat,
+        lon: elLon,
+        distanceKm: haversineKm(lat, lon, elLat, elLon),
+      };
+    })
+    .filter((m) => m.lat !== 0 && m.lon !== 0)
     .sort((a, b) => a.distanceKm - b.distanceKm)
-    .slice(0, 12);
+    .slice(0, 60);
 }
 
 async function fetchTimingsForCoords(lat: number, lon: number): Promise<PrayerTimings | null> {
@@ -151,12 +186,13 @@ export default function MosquePage() {
         setError("Could not load prayer times. Please try again.");
       }
       const geo = await geoRes.json();
-      setCity(
+      const cityName =
         (geo.address?.city as string | undefined) ??
         (geo.address?.town as string | undefined) ??
         (geo.address?.county as string | undefined) ??
-        null
-      );
+        null;
+      const countryCode = (geo.address?.country_code as string | undefined)?.toUpperCase() ?? null;
+      setCity(cityName && countryCode ? `${cityName}, ${countryCode}` : cityName);
     } catch {
       setError("Could not load prayer times. Please check your connection.");
     } finally {
@@ -176,9 +212,19 @@ export default function MosquePage() {
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
         setUserCoords({ lat, lon });
-        // Use already-chosen mosque from Firestore if set, otherwise load by user coords
         const mosque = (profile as { chosenMosque?: SavedMosque })?.chosenMosque ?? selectedMosque ?? null;
         await loadPrayerTimes(lat, lon, mosque);
+        // If picker is open and list is empty, fetch now that we have coords
+        setNearbyMosques((prev) => {
+          if (prev.length === 0) {
+            setLoadingMosques(true);
+            fetchMosquesNearby(lat, lon)
+              .then((m) => setNearbyMosques(m))
+              .catch(() => setNearbyMosques([]))
+              .finally(() => setLoadingMosques(false));
+          }
+          return prev;
+        });
       },
       () => {
         setError("Location access was denied. Please allow location access to see prayer times.");
@@ -190,13 +236,19 @@ export default function MosquePage() {
 
   async function openMosquePicker() {
     setShowPicker(true);
-    if (nearbyMosques.length > 0 || !userCoords) return;
+    // Already fetched — no need to re-fetch
+    if (nearbyMosques.length > 0) return;
+    // Coords not ready yet — getLocation will trigger fetch once they arrive
+    if (!userCoords) {
+      setLoadingMosques(true);
+      return;
+    }
     setLoadingMosques(true);
     try {
       const mosques = await fetchMosquesNearby(userCoords.lat, userCoords.lon);
       setNearbyMosques(mosques);
     } catch {
-      // silently fail — user can still see picker with empty list
+      setNearbyMosques([]);
     } finally {
       setLoadingMosques(false);
     }
@@ -326,7 +378,7 @@ export default function MosquePage() {
                           {nearbyMosques.length === 0
                             ? !userCoords
                               ? "Allow location access to find local mosques."
-                              : "No mosques found within 5km."
+                              : "No mosques found in your area."
                             : "No matches for your search."}
                         </p>
                       </div>
@@ -361,7 +413,7 @@ export default function MosquePage() {
                   </div>
                   <div className="px-4 py-2 border-t border-slate-100">
                     <p className="text-[11px] text-slate-400 text-center">
-                      Mosques sourced from OpenStreetMap within 5km of your location
+                      Mosques sourced from OpenStreetMap · sorted by distance
                     </p>
                   </div>
                 </motion.div>
