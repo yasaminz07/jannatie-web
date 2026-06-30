@@ -1366,7 +1366,9 @@ function ExamView({
                 : "bg-white/70 text-slate-500 border-slate-200 hover:border-amber-400 hover:text-amber-600"
             }`}
           >
-            🔤 Phonetics
+            <span className="inline-flex items-center gap-1">
+              <Languages size={12} /> Phonetics
+            </span>
           </button>
         </div>
 
