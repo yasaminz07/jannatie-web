@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
 import { CheckCircle, Zap } from "lucide-react";
+import { trackFunnelStep } from "@/lib/analytics-tracker";
 
 function SuccessContent() {
   const { user } = useAuth();
@@ -14,6 +15,7 @@ function SuccessContent() {
   useEffect(() => {
     // Stripe webhook will have already updated the user's plan in Firestore via the webhook handler.
     // The profile will auto-refresh via onSnapshot in auth-context.
+    trackFunnelStep("upgraded_premium");
     void sessionId;
   }, [sessionId]);
 
@@ -26,7 +28,7 @@ function SuccessContent() {
 
         <h1 className="text-2xl font-bold text-slate-900 mb-2">Subscription activated!</h1>
         <p className="text-slate-500 text-sm mb-6 leading-relaxed">
-          Masha&apos;Allah — your Premium subscription is now active.
+          Masha&apos;Allah, your Premium subscription is now active.
           Enjoy unlimited access to everything Jannatie has to offer.
         </p>
 

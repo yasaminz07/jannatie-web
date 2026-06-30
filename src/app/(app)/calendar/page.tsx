@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, MapPin, Clock, X, Plus,
@@ -9,10 +9,12 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import {
   collection, addDoc, getDocs, query, orderBy,
-  serverTimestamp, deleteDoc, doc, getDoc,
+  serverTimestamp, deleteDoc, doc, getDoc, setDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import toast from "react-hot-toast";
+import { differenceInCalendarDays, parseISO, format as formatDate } from "date-fns";
+import { computeCycleStats, groupPeriodDays, expandRangeToDates } from "@/lib/period-utils";
 
 const HIJRI_MONTHS = [
   "Muharram", "Safar", "Rabi al-Awwal", "Rabi al-Thani",
@@ -25,7 +27,7 @@ const HIJRI_MONTH_MEANINGS: Record<string, string> = {
   "Safar": "The second month. Historically associated with travel.",
   "Rabi al-Awwal": "The month of the Prophet's birth ﷺ. A time of great celebration.",
   "Rabi al-Thani": "The fourth month. A continuation of spring.",
-  "Jumada al-Awwal": "The fifth month — an ancient pre-Islamic name meaning 'frozen'.",
+  "Jumada al-Awwal": "The fifth month, an ancient pre-Islamic name meaning 'frozen'.",
   "Jumada al-Thani": "The sixth month. Paired with Jumada al-Awwal.",
   "Rajab": "One of the four sacred months. The Night Journey (Isra and Mi'raj) occurred in this month.",
   "Shaban": "The month before Ramadan. The Prophet ﷺ used to fast much in Shaban.",
@@ -59,14 +61,6 @@ interface UserEvent {
   note?: string;
 }
 
-interface PeriodEntry {
-  id: string;
-  start: string;
-  end?: string;
-  duringRamadan?: boolean;
-  ramadanYear?: number;
-}
-
 const glassCard = {
   background: "rgba(255, 255, 255, 0.65)",
   border: "1px solid rgba(255, 255, 255, 0.80)",
@@ -79,6 +73,10 @@ function fmt12(time: string) {
   const [h, m] = time.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
   return `${h % 12 || 12}:${m.toString().padStart(2, "0")} ${ampm}`;
+}
+
+function toDateStr(year: number, month: number, day: number): string {
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 function getNextFriday(): Date {
@@ -119,12 +117,12 @@ export default function CalendarPage() {
   const [addingEvent, setAddingEvent] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<UserEvent | null>(null);
 
-  // Period tracker (females only)
-  const [periods, setPeriods] = useState<PeriodEntry[]>([]);
-  const [periodStart, setPeriodStart] = useState("");
-  const [periodEnd, setPeriodEnd] = useState("");
-  const [addingPeriod, setAddingPeriod] = useState(false);
+  // Period tracker (females only) — each logged day is its own Firestore doc, id = date string
+  const [periodDays, setPeriodDays] = useState<Set<string>>(new Set());
   const [periodOpen, setPeriodOpen] = useState(false);
+  const [periodDisplayMonth, setPeriodDisplayMonth] = useState(today.getMonth());
+  const [periodDisplayYear, setPeriodDisplayYear] = useState(today.getFullYear());
+  const [togglingDay, setTogglingDay] = useState<string | null>(null);
 
   // Fetch Jumu'ah time — use the chosen mosque's coords if saved, else user's own location
   useEffect(() => {
@@ -210,22 +208,12 @@ export default function CalendarPage() {
       });
   }, [user]);
 
-  // Load period data (females only)
+  // Load period data (females only) — doc id is the date string, no index needed
   useEffect(() => {
     if (!user || !isFemale) return;
-    getDocs(query(collection(db, "users", user.uid, "periods"), orderBy("start", "desc")))
-      .then((snap) => {
-        setPeriods(snap.docs.map((d) => ({ id: d.id, ...d.data() } as PeriodEntry)));
-      })
-      .catch(() => {
-        getDocs(collection(db, "users", user.uid, "periods")).then((snap) => {
-          setPeriods(
-            snap.docs
-              .map((d) => ({ id: d.id, ...d.data() } as PeriodEntry))
-              .sort((a, b) => b.start.localeCompare(a.start))
-          );
-        }).catch(() => {});
-      });
+    getDocs(collection(db, "users", user.uid, "periods"))
+      .then((snap) => setPeriodDays(new Set(snap.docs.map((d) => d.id))))
+      .catch(() => {});
   }, [user, isFemale]);
 
   async function addEvent() {
@@ -262,23 +250,43 @@ export default function CalendarPage() {
     toast.success("Event removed.");
   }
 
-  async function addPeriod() {
-    if (!user || !periodStart) return;
-    setAddingPeriod(true);
+  async function togglePeriodDay(dateStr: string) {
+    if (!user || dateStr > todayStr) return;
+    setTogglingDay(dateStr);
+    const wasMarked = periodDays.has(dateStr);
+    setPeriodDays((prev) => {
+      const next = new Set(prev);
+      if (wasMarked) next.delete(dateStr); else next.add(dateStr);
+      return next;
+    });
     try {
-      const ref = await addDoc(collection(db, "users", user.uid, "periods"), {
-        start: periodStart,
-        end: periodEnd || null,
-        createdAt: serverTimestamp(),
-      });
-      setPeriods((prev) => [{ id: ref.id, start: periodStart, end: periodEnd || undefined }, ...prev]);
-      setPeriodStart(""); setPeriodEnd("");
-      toast.success("Period cycle saved.");
+      if (wasMarked) {
+        await deleteDoc(doc(db, "users", user.uid, "periods", dateStr));
+      } else {
+        await setDoc(doc(db, "users", user.uid, "periods", dateStr), {
+          date: dateStr,
+          loggedAt: serverTimestamp(),
+        });
+      }
     } catch {
-      toast.error("Failed to save period.");
+      setPeriodDays((prev) => {
+        const next = new Set(prev);
+        if (wasMarked) next.add(dateStr); else next.delete(dateStr);
+        return next;
+      });
+      toast.error("Failed to update period day.");
     } finally {
-      setAddingPeriod(false);
+      setTogglingDay(null);
     }
+  }
+
+  function prevPeriodMonth() {
+    if (periodDisplayMonth === 0) { setPeriodDisplayMonth(11); setPeriodDisplayYear((y) => y - 1); }
+    else setPeriodDisplayMonth((m) => m - 1);
+  }
+  function nextPeriodMonth() {
+    if (periodDisplayMonth === 11) { setPeriodDisplayMonth(0); setPeriodDisplayYear((y) => y + 1); }
+    else setPeriodDisplayMonth((m) => m + 1);
   }
 
   // Calendar grid
@@ -304,6 +312,23 @@ export default function CalendarPage() {
   const nextFriday = getNextFriday();
   const nextFridayStr = nextFriday.toISOString().split("T")[0];
   const nextFridayDisplay = nextFriday.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+
+  // Period cycle stats + predictions (females only)
+  const cycleStats = useMemo(() => computeCycleStats(Array.from(periodDays)), [periodDays]);
+  const predictedDaySet = useMemo(() => {
+    const s = new Set<string>();
+    cycleStats.predictedRanges.forEach((r) => expandRangeToDates(r).forEach((d) => s.add(d)));
+    return s;
+  }, [cycleStats]);
+  const recentCycles = useMemo(
+    () => groupPeriodDays(Array.from(periodDays).sort()).slice(-3).reverse(),
+    [periodDays]
+  );
+  const nextPredicted = cycleStats.predictedRanges[0] ?? null;
+
+  // Period mini-calendar grid dimensions
+  const periodDaysInMonth = new Date(periodDisplayYear, periodDisplayMonth + 1, 0).getDate();
+  const periodFirstDay = new Date(periodDisplayYear, periodDisplayMonth, 1).getDay();
 
   return (
     <div className="min-h-screen">
@@ -390,6 +415,10 @@ export default function CalendarPage() {
                     const isTodayCell = isTodayMonth && day === today.getDate();
                     const hasEvent = eventDatesInMonth.has(day);
                     const isFriday = new Date(displayYear, displayMonth, day).getDay() === 5;
+                    const cellDateStr = toDateStr(displayYear, displayMonth, day);
+                    const isPeriodDay = isFemale && periodDays.has(cellDateStr);
+                    const isPredictedPeriod = isFemale && !isPeriodDay && predictedDaySet.has(cellDateStr);
+                    const showDots = hasEvent || (isFriday && !hasEvent) || isPeriodDay || isPredictedPeriod;
                     return (
                       <div
                         key={day}
@@ -399,14 +428,12 @@ export default function CalendarPage() {
                         <span className={`text-xs font-medium ${isTodayCell ? "text-blue-700" : isFriday ? "text-blue-500" : "text-slate-500"}`}>
                           {day}
                         </span>
-                        {hasEvent && (
+                        {showDots && (
                           <div className="flex gap-0.5 justify-center mt-0.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                          </div>
-                        )}
-                        {isFriday && !hasEvent && (
-                          <div className="flex gap-0.5 justify-center mt-0.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-200" />
+                            {hasEvent && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                            {isFriday && !hasEvent && <div className="w-1.5 h-1.5 rounded-full bg-blue-200" />}
+                            {isPeriodDay && <div className="w-1.5 h-1.5 rounded-full bg-pink-500" />}
+                            {isPredictedPeriod && <div className="w-1.5 h-1.5 rounded-full border border-pink-300" />}
                           </div>
                         )}
                       </div>
@@ -421,6 +448,16 @@ export default function CalendarPage() {
                   <div className="flex items-center gap-1.5 text-xs text-slate-400">
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Your event
                   </div>
+                  {isFemale && (
+                    <>
+                      <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                        <div className="w-1.5 h-1.5 rounded-full bg-pink-500" /> Period
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                        <div className="w-1.5 h-1.5 rounded-full border border-pink-300" /> Predicted
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -496,13 +533,13 @@ export default function CalendarPage() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Droplets size={15} className="text-pink-400" />
-                    <h3 className="font-semibold text-slate-800 text-sm">Period Cycle Tracker</h3>
+                    <h3 className="font-semibold text-slate-800 text-sm">Period Tracker</h3>
                   </div>
                   <button
                     onClick={() => setPeriodOpen(!periodOpen)}
-                    className="text-xs text-slate-400 hover:text-slate-700 transition-colors"
+                    className="flex items-center gap-1.5 bg-pink-500 hover:bg-pink-600 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition-colors"
                   >
-                    {periodOpen ? "Hide" : "Log cycle"}
+                    {periodOpen ? "Hide" : "Log period days"}
                   </button>
                 </div>
 
@@ -514,69 +551,104 @@ export default function CalendarPage() {
                       exit={{ opacity: 0, height: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="space-y-3 mb-4">
-                        <div>
-                          <label className="block text-xs font-medium text-slate-500 mb-1">Period start date</label>
-                          <input
-                            type="date"
-                            value={periodStart}
-                            onChange={(e) => setPeriodStart(e.target.value)}
-                            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-300"
-                          />
+                      <div className="mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <button
+                            onClick={prevPeriodMonth}
+                            className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-pink-50 border border-pink-100 transition-colors"
+                          >
+                            <ChevronLeft size={13} className="text-pink-400" />
+                          </button>
+                          <p className="text-xs font-bold text-slate-700">
+                            {GREG_MONTHS[periodDisplayMonth]} {periodDisplayYear}
+                          </p>
+                          <button
+                            onClick={nextPeriodMonth}
+                            className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-pink-50 border border-pink-100 transition-colors"
+                          >
+                            <ChevronRight size={13} className="text-pink-400" />
+                          </button>
                         </div>
-                        <div>
-                          <label className="block text-xs font-medium text-slate-500 mb-1">Period end date (optional)</label>
-                          <input
-                            type="date"
-                            value={periodEnd}
-                            onChange={(e) => setPeriodEnd(e.target.value)}
-                            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-300"
-                          />
+
+                        <div className="grid grid-cols-7 gap-1 mb-1">
+                          {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+                            <div key={d + i} className="text-center text-[9px] font-semibold text-slate-400 py-0.5">
+                              {d}
+                            </div>
+                          ))}
                         </div>
-                        <button
-                          onClick={addPeriod}
-                          disabled={!periodStart || addingPeriod}
-                          className="w-full bg-pink-500 hover:bg-pink-600 text-white font-semibold py-2 rounded-xl text-sm transition-colors disabled:opacity-50"
-                        >
-                          {addingPeriod ? "Saving…" : "Save cycle"}
-                        </button>
+
+                        <div className="grid grid-cols-7 gap-1">
+                          {Array.from({ length: periodFirstDay }).map((_, i) => <div key={`pe-${i}`} />)}
+                          {Array.from({ length: periodDaysInMonth }).map((_, i) => {
+                            const day = i + 1;
+                            const cellDateStr = toDateStr(periodDisplayYear, periodDisplayMonth, day);
+                            const isMarked = periodDays.has(cellDateStr);
+                            const isPredicted = !isMarked && predictedDaySet.has(cellDateStr);
+                            const isFuture = cellDateStr > todayStr;
+                            const isTodayCell = cellDateStr === todayStr;
+                            const isBusy = togglingDay === cellDateStr;
+                            return (
+                              <button
+                                key={day}
+                                type="button"
+                                disabled={isFuture || isBusy}
+                                onClick={() => togglePeriodDay(cellDateStr)}
+                                className={`relative h-8 rounded-lg text-[11px] font-semibold flex items-center justify-center transition-all ${
+                                  isFuture ? "cursor-default" : "cursor-pointer hover:bg-pink-50"
+                                } ${isTodayCell ? "ring-1 ring-blue-300" : ""}`}
+                                style={
+                                  isMarked
+                                    ? { background: "#ec4899", color: "white" }
+                                    : isPredicted
+                                    ? { border: "1.5px dashed #f9a8d4", color: "#db2777" }
+                                    : { color: isFuture ? "#cbd5e1" : "#475569" }
+                                }
+                              >
+                                {day}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
 
-                {periods.length > 0 ? (
+                {cycleStats.ranges.length > 0 ? (
                   <div className="space-y-2">
-                    {periods.slice(0, 3).map((p) => {
-                      const startD = new Date(p.start);
-                      const endD = p.end ? new Date(p.end) : null;
-                      const days = endD
-                        ? Math.round((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24)) + 1
-                        : null;
-                      return (
-                        <div key={p.id} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-pink-50 border border-pink-100">
-                          <div>
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 bg-pink-50/70 rounded-xl px-3 py-2">
+                      <span>Avg cycle: <strong className="text-slate-700">{cycleStats.avgCycleLength}d</strong></span>
+                      <span>Avg period: <strong className="text-slate-700">{cycleStats.avgPeriodLength}d</strong></span>
+                    </div>
+                    {nextPredicted && (
+                      <p className="text-[11px] text-pink-600 text-center font-semibold">
+                        Next period expected {formatDate(parseISO(nextPredicted.start), "d MMM")}
+                        {" "}({Math.max(0, differenceInCalendarDays(parseISO(nextPredicted.start), today))}d away)
+                      </p>
+                    )}
+                    {recentCycles.length > 0 && (
+                      <div className="space-y-1.5 pt-1">
+                        {recentCycles.map((r) => (
+                          <div key={r.start} className="flex items-center justify-between px-3 py-2 rounded-xl bg-pink-50 border border-pink-100">
                             <p className="text-xs font-semibold text-slate-700">
-                              {startD.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-                              {endD ? ` – ${endD.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : " (ongoing)"}
+                              {formatDate(parseISO(r.start), "d MMM")}
+                              {r.end !== r.start ? ` – ${formatDate(parseISO(r.end), "d MMM")}` : ""}
                             </p>
-                            {days && <p className="text-[11px] text-slate-400">{days} day{days !== 1 ? "s" : ""}</p>}
-                          </div>
-                          {days && (
                             <span className="text-[10px] font-bold text-pink-600 bg-pink-100 rounded-full px-2 py-0.5">
-                              {days}d
+                              {differenceInCalendarDays(parseISO(r.end), parseISO(r.start)) + 1}d
                             </span>
-                          )}
-                        </div>
-                      );
-                    })}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <p className="text-[11px] text-slate-400 text-center pt-1">
-                      Mark missed fasting days during Ramadan to track days to make up (Qadha).
+                      Also helps track which Ramadan fasting days may need to be made up (Qadha).
                     </p>
                   </div>
                 ) : (
                   <p className="text-xs text-slate-400 text-center py-2">
-                    Track your cycle to know which Ramadan fasting days need to be made up.
+                    Tap &quot;Log period days&quot; to mark days on the calendar, including past cycles you remember.
                   </p>
                 )}
               </div>

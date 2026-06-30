@@ -7,7 +7,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   LayoutDashboard, CheckSquare, BookOpen, MessageCircle,
   Calendar, TrendingUp, Settings, Building2, LogOut, Trophy,
-  UserPlus, Search, UserCheck, X, Home,
+  UserPlus, Search, UserCheck, X, Home, Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -27,6 +27,7 @@ const navItems = [
   { label: "AI Buddy", href: "/ai", icon: MessageCircle },
   { label: "Calendar", href: "/calendar", icon: Calendar },
   { label: "Progress", href: "/progress", icon: TrendingUp },
+  { label: "Community", href: "/community", icon: Users },
   { label: "Mosque", href: "/mosque", icon: Building2 },
   { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
 ];
@@ -268,7 +269,7 @@ export default function Sidebar() {
       <nav className="flex-1 px-3 py-2 flex flex-col justify-between overflow-hidden">
         <div className="space-y-0.5">
           {navItems.map(({ label, href, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(href + "/");
+            const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href + "/"));
             return (
               <Link key={href} href={href}
                 className={cn(

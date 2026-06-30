@@ -3,36 +3,63 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — Jannatie",
-  description: "Jannatie Terms of Service. By using Jannatie, you agree to these terms.",
+  title: "Terms and Conditions of Service — Jannatie",
+  description: "Jannatie Terms and Conditions of Service. By using Jannatie, you agree to these terms.",
 };
+
+const SECTIONS = [
+  { id: "acceptance", label: "1. Acceptance of terms" },
+  { id: "service", label: "2. The Service" },
+  { id: "accounts", label: "3. Accounts" },
+  { id: "subscriptions", label: "4. Subscriptions and payments" },
+  { id: "acceptable-use", label: "5. Acceptable use" },
+  { id: "ip", label: "6. Intellectual property" },
+  { id: "liability", label: "7. Limitation of liability" },
+  { id: "changes", label: "8. Changes to terms" },
+  { id: "contact", label: "9. Contact" },
+];
 
 export default function TermsPage() {
   return (
     <>
       <Navbar />
-      <main className="pt-24 pb-20">
+      <main className="pt-24 pb-20 bg-slate-50 min-h-screen">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-12">
-            <h1 className="text-4xl font-bold text-foreground mb-2">Terms of Service</h1>
+            <h1 className="text-4xl font-bold text-foreground mb-2">Terms and Conditions of Service</h1>
             <p className="text-muted text-sm mb-10">Last updated: January 2025 · Jannatie Ltd, England & Wales</p>
+
+            {/* Quick nav */}
+            <nav className="mb-10 rounded-2xl border border-slate-200 bg-white p-5">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">On this page</p>
+              <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2">
+                {SECTIONS.map((s) => (
+                  <li key={s.id}>
+                    <a href={`#${s.id}`} className="text-sm text-blue-600 hover:text-blue-700 transition-colors">
+                      {s.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
 
             <div className="space-y-10 text-sm leading-relaxed">
 
-              <section>
+              <section id="acceptance">
                 <h2 className="text-xl font-bold text-foreground mb-3">1. Acceptance of terms</h2>
                 <p className="text-muted">
                   By accessing or using the Jannatie service (&ldquo;Service&rdquo;), you agree to be bound
-                  by these Terms of Service. If you do not agree, please do not use the Service.
+                  by these Terms and Conditions of Service. If you do not agree, please do not use the Service.
                   These terms are governed by the laws of England and Wales.
                 </p>
               </section>
 
-              <section>
+              <section id="service">
                 <h2 className="text-xl font-bold text-foreground mb-3">2. The Service</h2>
                 <p className="text-muted mb-3">
                   Jannatie provides an AI-powered Islamic growth companion including habit tracking,
-                  Islamic learning, an AI Buddy, an Islamic calendar, and progress tracking.
+                  Islamic learning, an AI Buddy, an Islamic calendar, progress tracking, and community
+                  accounts for mosques, businesses and organisers to post local events.
                 </p>
                 <p className="text-muted">
                   <strong className="text-foreground">AI Buddy disclaimer:</strong> Responses from the AI Buddy
@@ -42,17 +69,19 @@ export default function TermsPage() {
                 </p>
               </section>
 
-              <section>
+              <section id="accounts">
                 <h2 className="text-xl font-bold text-foreground mb-3">3. Accounts</h2>
                 <ul className="space-y-2 text-muted">
                   <li>You must be at least 13 years old to create an account.</li>
                   <li>You are responsible for keeping your account credentials secure.</li>
                   <li>You may not create accounts for others without their consent.</li>
                   <li>One person per account (Family plans permit up to 5 separate accounts).</li>
+                  <li>Community accounts must accurately represent a real mosque, business or organisation, and are subject to manual review before approval.</li>
+                  <li>All members are expected to follow our <a href="/community-guidelines" className="text-blue-600 hover:underline">Community Guidelines</a>.</li>
                 </ul>
               </section>
 
-              <section>
+              <section id="subscriptions">
                 <h2 className="text-xl font-bold text-foreground mb-3">4. Subscriptions and payments</h2>
                 <ul className="space-y-2 text-muted">
                   <li>Paid plans are billed monthly or annually as selected at checkout.</li>
@@ -63,7 +92,7 @@ export default function TermsPage() {
                 </ul>
               </section>
 
-              <section>
+              <section id="acceptable-use">
                 <h2 className="text-xl font-bold text-foreground mb-3">5. Acceptable use</h2>
                 <p className="text-muted mb-3">You agree not to:</p>
                 <ul className="space-y-2 text-muted">
@@ -73,18 +102,24 @@ export default function TermsPage() {
                   <li>Share your account credentials with others</li>
                   <li>Use the AI Buddy to generate content you know to be false or misleading</li>
                 </ul>
+                <p className="text-muted mt-3">
+                  Reported content and accounts are reviewed by our team and may be removed; repeat or
+                  severe violations may result in suspension. See our{" "}
+                  <a href="/community-guidelines" className="text-blue-600 hover:underline">Community Guidelines</a>{" "}
+                  for full detail on what is and isn&apos;t allowed.
+                </p>
               </section>
 
-              <section>
+              <section id="ip">
                 <h2 className="text-xl font-bold text-foreground mb-3">6. Intellectual property</h2>
                 <p className="text-muted">
-                  All content on the Service — including our learning materials, UI, and brand — is owned
+                  All content on the Service, including our learning materials, UI, and brand, is owned
                   by Jannatie Ltd. Islamic texts (Quran and hadith) are in the public domain.
                   User-generated content (your habits, notes) belongs to you.
                 </p>
               </section>
 
-              <section>
+              <section id="liability">
                 <h2 className="text-xl font-bold text-foreground mb-3">7. Limitation of liability</h2>
                 <p className="text-muted">
                   The Service is provided &ldquo;as is&rdquo;. We are not liable for indirect, incidental,
@@ -94,7 +129,7 @@ export default function TermsPage() {
                 </p>
               </section>
 
-              <section>
+              <section id="changes">
                 <h2 className="text-xl font-bold text-foreground mb-3">8. Changes to terms</h2>
                 <p className="text-muted">
                   We may update these terms from time to time. We will notify you by email and display
@@ -102,10 +137,10 @@ export default function TermsPage() {
                 </p>
               </section>
 
-              <section>
+              <section id="contact">
                 <h2 className="text-xl font-bold text-foreground mb-3">9. Contact</h2>
                 <p className="text-muted">
-                  Jannatie Ltd · legal@jannatie.com · [Registered Address], England
+                  Jannatie Ltd · jannatieteam@gmail.com · Birmingham, England
                 </p>
               </section>
             </div>

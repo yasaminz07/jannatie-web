@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  const message = `As-salamu alaykum ${friendName}! ${senderName} is sending you a reminder from Jannatie to check in on your daily habits. Keep going — every small step counts! 🌙`;
+  const message = `As-salamu alaykum ${friendName}! ${senderName} is sending you a reminder from Jannatie to check in on your daily habits. Keep going — every small step counts!`;
 
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;

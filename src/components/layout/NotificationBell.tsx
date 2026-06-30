@@ -7,31 +7,38 @@ import {
   writeBatch, doc, Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Bell, X } from "lucide-react";
+import { Bell, X, CalendarDays, Heart, MessageCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 
 interface Notif {
   id: string;
   fromName: string;
   fromUsername: string;
-  type: "prayer" | "adhkar" | "habit" | "hifz";
+  type: "prayer" | "adhkar" | "habit" | "hifz" | "community-event" | "community-like" | "community-comment";
   label: string;
+  eventId?: string;
   sentAt: Timestamp;
   read: boolean;
 }
 
-const typeLabel: Record<Notif["type"], string> = {
+const typeLabel: Record<Exclude<Notif["type"], "community-event" | "community-like" | "community-comment">, string> = {
   prayer: "reminded you to pray",
   adhkar: "reminded you to do adhkar",
   habit: "reminded you to complete a habit",
   hifz: "reminded you to do your Hifz",
 };
 
+// Community accounts get a focused inbox: only other communities reaching out
+// (likes/comments on their posts, collab activity) — not the normal-user reminder types.
+const COMMUNITY_NOTIF_TYPES: Notif["type"][] = ["community-like", "community-comment"];
+
 export default function NotificationBell({ className = "" }: { className?: string }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const isCommunity = profile?.accountType === "community";
 
   useEffect(() => {
     if (!user) return;
@@ -41,9 +48,10 @@ export default function NotificationBell({ className = "" }: { className?: strin
       limit(20)
     );
     return onSnapshot(q, snap => {
-      setNotifs(snap.docs.map(d => ({ id: d.id, ...d.data() } as Notif)));
+      const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as Notif));
+      setNotifs(isCommunity ? all.filter(n => COMMUNITY_NOTIF_TYPES.includes(n.type)) : all);
     });
-  }, [user]);
+  }, [user, isCommunity]);
 
   const unread = notifs.filter(n => !n.read).length;
 
@@ -122,7 +130,44 @@ export default function NotificationBell({ className = "" }: { className?: strin
               </div>
             ) : (
               <div className="max-h-72 overflow-y-auto divide-y divide-slate-50">
-                {notifs.map(n => (
+                {notifs.map(n => n.type === "community-event" ? (
+                  <Link
+                    key={n.id}
+                    href={n.eventId ? `/community?event=${n.eventId}` : "/community"}
+                    onClick={() => setOpen(false)}
+                    className={`block px-4 py-3 hover:bg-slate-50 transition-colors ${!n.read ? "bg-blue-50/60" : ""}`}
+                  >
+                    <p className="text-xs text-slate-800 leading-relaxed flex items-start gap-1.5">
+                      <CalendarDays size={12} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                      <span>
+                        <span className="font-semibold">{n.fromName}</span> posted a new event —{" "}
+                        <span className="font-medium text-blue-600">{n.label}</span>
+                      </span>
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 ml-[18px]">{timeAgo(n.sentAt)}</p>
+                  </Link>
+                ) : n.type === "community-like" || n.type === "community-comment" ? (
+                  <Link
+                    key={n.id}
+                    href={n.eventId ? `/community-hub/events` : "/community-hub"}
+                    onClick={() => setOpen(false)}
+                    className={`block px-4 py-3 hover:bg-slate-50 transition-colors ${!n.read ? "bg-blue-50/60" : ""}`}
+                  >
+                    <p className="text-xs text-slate-800 leading-relaxed flex items-start gap-1.5">
+                      {n.type === "community-like" ? (
+                        <Heart size={12} className="text-rose-500 mt-0.5 flex-shrink-0 fill-rose-500" />
+                      ) : (
+                        <MessageCircle size={12} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                      )}
+                      <span>
+                        <span className="font-semibold">{n.fromName}</span>{" "}
+                        {n.type === "community-like" ? "liked" : "commented on"} your post —{" "}
+                        <span className="font-medium text-blue-600">{n.label}</span>
+                      </span>
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 ml-[18px]">{timeAgo(n.sentAt)}</p>
+                  </Link>
+                ) : (
                   <div key={n.id} className={`px-4 py-3 ${!n.read ? "bg-blue-50/60" : ""}`}>
                     <p className="text-xs text-slate-800 leading-relaxed">
                       <span className="font-semibold">@{n.fromUsername}</span>{" "}

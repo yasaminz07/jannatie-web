@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { motion, useInView } from "framer-motion";
 import { ShieldCheck, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
@@ -21,10 +21,13 @@ const conversation = [
 export default function AIBuddySpotlight() {
   const [visibleChars, setVisibleChars] = useState(0);
   const [msgIndex, setMsgIndex] = useState(0);
+  const chatRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(chatRef, { amount: 0.4 });
 
   const currentText = conversation[msgIndex]?.text ?? "";
 
   useEffect(() => {
+    if (!inView) return;
     if (visibleChars < currentText.length) {
       const t = setTimeout(() => setVisibleChars((v) => v + 1), 22);
       return () => clearTimeout(t);
@@ -37,7 +40,7 @@ export default function AIBuddySpotlight() {
         return () => clearTimeout(t);
       }
     }
-  }, [visibleChars, currentText, msgIndex]);
+  }, [visibleChars, currentText, msgIndex, inView]);
 
   return (
     <section className="py-28 bg-white">
@@ -46,6 +49,7 @@ export default function AIBuddySpotlight() {
 
           {/* Left — Chat UI */}
           <motion.div
+            ref={chatRef}
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}

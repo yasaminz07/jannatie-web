@@ -4,11 +4,39 @@ service cloud.firestore {
 
     // Users collection
     match /users/{userId} {
-      // Any logged-in user can read any profile (for leaderboard, search, profile pages)
-      allow read: if request.auth != null;
+      // Public read needed for unauthenticated username lookup (signup check + username login)
+      allow read: if true;
 
-      // Only the owner can write to their own document
-      allow create, update, delete: if request.auth != null && request.auth.uid == userId;
+      // Anyone can create their own doc (signup). Updates: owners can edit their own
+      // profile fields, but cannot change accountType/applicationStatus themselves —
+      // only the Jannatie admin account can approve/reject community applications.
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && (
+        (
+          request.auth.uid == userId &&
+          request.resource.data.get('accountType', null) == resource.data.get('accountType', null) &&
+          request.resource.data.get('applicationStatus', null) == resource.data.get('applicationStatus', null)
+        ) ||
+        request.auth.token.email == "jannatieteam@gmail.com"
+      );
+      // Owner can delete their own account (Settings → Danger zone → Delete account)
+      allow delete: if request.auth != null && request.auth.uid == userId;
+
+      // Subcollections (events, periods, etc.) — owner only
+      match /{subcollection}/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Users can only read and write their own habits
+    match /habits/{userId}/items/{habitId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Calendar events — anyone logged in can read, only creator can write
+    match /events/{eventId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == resource.data.createdBy;
     }
 
     // Notifications — subcollection per user
@@ -18,6 +46,93 @@ service cloud.firestore {
 
       // Any logged-in user can CREATE a notification for another user (for reminders)
       allow create: if request.auth != null;
+    }
+
+    // Community events — public structured event posts created by community accounts
+    match /communityEvents/{eventId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.communityUid;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.communityUid;
+
+      match /likes/{uid} {
+        allow read: if true;
+        // Doc ID must equal the liker's own uid — toggle by create/delete of own doc
+        allow create: if request.auth != null && request.auth.uid == uid;
+        allow delete: if request.auth != null && request.auth.uid == uid;
+        allow update: if false;
+      }
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if request.auth != null && request.auth.uid == request.resource.data.authorUid;
+        // Comment author, the event's owning community, or the admin (moderating a report) may remove a comment
+        allow delete: if request.auth != null && (
+          request.auth.uid == resource.data.authorUid ||
+          request.auth.uid == get(/databases/$(database)/documents/communityEvents/$(eventId)).data.communityUid ||
+          request.auth.token.email == "jannatieteam@gmail.com"
+        );
+        // Any signed-in user may toggle their own heart reaction on a comment, by
+        // adding/removing only their own key in the likedBy map (can't touch others' entries)
+        allow update: if request.auth != null &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy']) &&
+          request.resource.data.likedBy.diff(resource.data.get('likedBy', {})).affectedKeys().hasOnly([request.auth.uid]);
+      }
+
+      match /shares/{shareId} {
+        allow create: if request.auth != null && request.auth.uid == request.resource.data.sharerUid;
+        // Allow any authenticated user to read — needed for aggregate count queries
+        // (resource is null for list/count, so uid checks can't be used there)
+        allow read: if request.auth != null;
+        allow update, delete: if false;
+      }
+    }
+
+    // Collaboration requests between community accounts
+    match /collabRequests/{requestId} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.fromUid || request.auth.uid == resource.data.toUid);
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.fromUid;
+      // Only the recipient can respond (accept/decline), and only the status may change
+      allow update: if request.auth != null && request.auth.uid == resource.data.toUid &&
+        request.resource.data.fromUid == resource.data.fromUid &&
+        request.resource.data.toUid == resource.data.toUid;
+      allow delete: if request.auth != null &&
+        (request.auth.uid == resource.data.fromUid || request.auth.uid == resource.data.toUid);
+    }
+
+    // Reports — normal users or community accounts reporting a comment on a
+    // community event post. Only the reporter can create; only the admin can
+    // read/moderate.
+    match /reports/{reportId} {
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.reporterUid;
+      allow read, update: if request.auth != null && request.auth.token.email == "jannatieteam@gmail.com";
+      allow delete: if false;
+    }
+
+    // Site analytics — anyone (including anonymous visitors) can write tracking
+    // events, but only the admin can read the aggregated data back.
+    match /analyticsSessions/{sessionId} {
+      allow create, update: if true;
+      allow read: if request.auth != null && request.auth.token.email == "jannatieteam@gmail.com";
+      allow delete: if false;
+    }
+
+    match /analyticsPageviews/{pageviewId} {
+      allow create, update: if true;
+      allow read: if request.auth != null && request.auth.token.email == "jannatieteam@gmail.com";
+      allow delete: if false;
+    }
+
+    match /analyticsPresence/{sessionId} {
+      allow create, update: if true;
+      allow read: if request.auth != null && request.auth.token.email == "jannatieteam@gmail.com";
+      allow delete: if false;
+    }
+
+    match /analyticsFunnel/{funnelId} {
+      allow create, update: if true;
+      allow read: if request.auth != null && request.auth.token.email == "jannatieteam@gmail.com";
+      allow delete: if false;
     }
   }
 }

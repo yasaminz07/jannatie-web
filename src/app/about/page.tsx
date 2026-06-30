@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { Heart, BookOpen, Shield, Users, Star } from "lucide-react";
+import { Heart, BookOpen, Shield, Users, Star, Check } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "About — Our Story and Mission",
@@ -12,7 +12,7 @@ const values = [
   {
     icon: BookOpen,
     title: "Authentic knowledge",
-    desc: "Every piece of Islamic content is sourced from authenticated texts — Sahih al-Bukhari, Sahih Muslim, and trusted scholars. We cite every hadith with its collection and number.",
+    desc: "Every piece of Islamic content is sourced from authenticated texts, including Sahih al-Bukhari, Sahih Muslim, and trusted scholars. We cite every hadith with its collection and number.",
   },
   {
     icon: Heart,
@@ -22,12 +22,12 @@ const values = [
   {
     icon: Shield,
     title: "Privacy by design",
-    desc: "We are UK GDPR compliant from day one. Your spiritual journey is personal — we never sell your data, never track you for ads, and never profit from your faith.",
+    desc: "We are UK GDPR compliant from day one. Your spiritual journey is personal, and we never sell your data, never track you for ads, and never profit from your faith.",
   },
   {
     icon: Users,
     title: "Community, not competition",
-    desc: "Our leaderboards celebrate collective mosque progress, not individual ranking. Islam is a community — we build tools that reflect that.",
+    desc: "Our leaderboards celebrate collective mosque progress, not individual ranking. Islam is a community, and we build tools that reflect that.",
   },
   {
     icon: Star,
@@ -61,34 +61,46 @@ export default function AboutPage() {
               <p className="text-foreground leading-relaxed text-lg mb-5">
                 We are a team of British Muslims who noticed the same frustration: the
                 apps we used felt generic, disconnected from Islamic values, and
-                often made us feel worse — not better — when we missed a prayer or
+                often made us feel worse, not better, when we missed a prayer or
                 fell behind on Quran.
               </p>
               <p className="text-muted leading-relaxed mb-5">
                 Islam is not a list of boxes to tick. It is a living, breathing
                 relationship with Allah ﷻ that is built through consistency, mercy,
-                and knowledge. We built Jannatie to reflect that — warm encouragement
+                and knowledge. We built Jannatie to reflect that: warm encouragement
                 instead of guilt, authentic knowledge instead of vague &ldquo;Islamic
                 content&rdquo;, and a community that lifts each other up.
               </p>
               <p className="text-muted leading-relaxed">
-                Every feature — the Habit Tracker, AI Buddy, Learning Game, Calendar,
-                and Progress system — was designed with a single question in mind:
+                Every feature, including the Habit Tracker, AI Buddy, Learning Game, Calendar,
+                and Progress system, was designed with a single question in mind:
                 <em> does this help someone get closer to Allah ﷻ?</em>
               </p>
             </div>
 
             <div className="bg-primary-50 border border-primary-500/20 rounded-2xl p-8 mb-8">
-              <h2 className="text-2xl font-bold text-foreground mb-3">Our Islamic content charter</h2>
-              <ul className="space-y-3 text-sm text-foreground leading-relaxed">
-                <li>✅ All Islamic rulings reviewed by a qualified Sunni scholar before publishing</li>
-                <li>✅ All hadith include collection name and number (e.g. Bukhari 1:1)</li>
-                <li>✅ All duas include Arabic text, transliteration, and English translation</li>
-                <li>✅ PBUH / ﷺ used after every mention of Prophet Muhammad</li>
-                <li>✅ AI Buddy responses always include the guidance-only disclaimer</li>
-                <li>✅ No content that could cause division between Muslim communities</li>
-                <li>✅ Scholar verification badge shown on all reviewed AI responses</li>
-              </ul>
+              <h2 className="text-2xl font-bold text-foreground mb-5">Our Islamic content charter</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  "All Islamic rulings reviewed by a qualified Sunni scholar before publishing",
+                  "All hadith include collection name and number (e.g. Bukhari 1:1)",
+                  "All duas include Arabic text, transliteration, and English translation",
+                  "PBUH / ﷺ used after every mention of Prophet Muhammad",
+                  "AI Buddy responses always include the guidance-only disclaimer",
+                  "No content that could cause division between Muslim communities",
+                  "Scholar verification badge shown on all reviewed AI responses",
+                ].map((item) => (
+                  <div
+                    key={item}
+                    className="flex items-start gap-3 bg-white/80 rounded-xl p-3.5 border border-primary-500/10 shadow-sm shadow-primary-900/[0.02]"
+                  >
+                    <span className="w-6 h-6 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm shadow-primary-500/30">
+                      <Check size={13} strokeWidth={3} className="text-white" />
+                    </span>
+                    <p className="text-sm text-foreground leading-relaxed">{item}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

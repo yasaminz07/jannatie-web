@@ -2,59 +2,70 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import toast from "react-hot-toast";
 import {
   User, Bell, CreditCard, Shield, Trash2, ChevronRight,
-  Check, X, Crown, Zap, Users2, ChevronDown,
+  Check, X, Crown, Zap, Users2, ChevronDown, LifeBuoy, Eye, EyeOff, AlertTriangle,
 } from "lucide-react";
 import {
-  collection, query, where, getDocs, doc, updateDoc, limit,
+  collection, query, where, getDocs, doc, updateDoc, deleteDoc, limit,
 } from "firebase/firestore";
 import {
   updateEmail, RecaptchaVerifier, linkWithPhoneNumber,
   unlink, PhoneAuthProvider,
+  updatePassword, EmailAuthProvider, reauthenticateWithCredential, deleteUser,
   type ConfirmationResult,
 } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
+import { sendSecurityEmail } from "@/lib/security-email";
 import { motion, AnimatePresence } from "framer-motion";
 
+function getPwChecks(pw: string) {
+  return {
+    length: pw.length >= 8,
+    upper: /[A-Z]/.test(pw),
+    symbol: /[^a-zA-Z0-9]/.test(pw),
+  };
+}
+
 const COUNTRY_CODES = [
-  { code: "+44", name: "🇬🇧 UK (+44)" },
-  { code: "+1", name: "🇺🇸 US/Canada (+1)" },
-  { code: "+92", name: "🇵🇰 Pakistan (+92)" },
-  { code: "+880", name: "🇧🇩 Bangladesh (+880)" },
-  { code: "+91", name: "🇮🇳 India (+91)" },
-  { code: "+20", name: "🇪🇬 Egypt (+20)" },
-  { code: "+966", name: "🇸🇦 Saudi Arabia (+966)" },
-  { code: "+971", name: "🇦🇪 UAE (+971)" },
-  { code: "+49", name: "🇩🇪 Germany (+49)" },
-  { code: "+33", name: "🇫🇷 France (+33)" },
-  { code: "+31", name: "🇳🇱 Netherlands (+31)" },
-  { code: "+90", name: "🇹🇷 Turkey (+90)" },
-  { code: "+60", name: "🇲🇾 Malaysia (+60)" },
-  { code: "+62", name: "🇮🇩 Indonesia (+62)" },
-  { code: "+234", name: "🇳🇬 Nigeria (+234)" },
-  { code: "+212", name: "🇲🇦 Morocco (+212)" },
-  { code: "+216", name: "🇹🇳 Tunisia (+216)" },
-  { code: "+213", name: "🇩🇿 Algeria (+213)" },
-  { code: "+249", name: "🇸🇩 Sudan (+249)" },
-  { code: "+252", name: "🇸🇴 Somalia (+252)" },
-  { code: "+964", name: "🇮🇶 Iraq (+964)" },
-  { code: "+962", name: "🇯🇴 Jordan (+962)" },
-  { code: "+968", name: "🇴🇲 Oman (+968)" },
-  { code: "+974", name: "🇶🇦 Qatar (+974)" },
-  { code: "+965", name: "🇰🇼 Kuwait (+965)" },
-  { code: "+973", name: "🇧🇭 Bahrain (+973)" },
-  { code: "+967", name: "🇾🇪 Yemen (+967)" },
-  { code: "+93", name: "🇦🇫 Afghanistan (+93)" },
-  { code: "+94", name: "🇱🇰 Sri Lanka (+94)" },
-  { code: "+61", name: "🇦🇺 Australia (+61)" },
-  { code: "+27", name: "🇿🇦 South Africa (+27)" },
-  { code: "+254", name: "🇰🇪 Kenya (+254)" },
-  { code: "+233", name: "🇬🇭 Ghana (+233)" },
-  { code: "+55", name: "🇧🇷 Brazil (+55)" },
-  { code: "+65", name: "🇸🇬 Singapore (+65)" },
+  { code: "+44", name: "UK (+44)" },
+  { code: "+1", name: "US/Canada (+1)" },
+  { code: "+92", name: "Pakistan (+92)" },
+  { code: "+880", name: "Bangladesh (+880)" },
+  { code: "+91", name: "India (+91)" },
+  { code: "+20", name: "Egypt (+20)" },
+  { code: "+966", name: "Saudi Arabia (+966)" },
+  { code: "+971", name: "UAE (+971)" },
+  { code: "+49", name: "Germany (+49)" },
+  { code: "+33", name: "France (+33)" },
+  { code: "+31", name: "Netherlands (+31)" },
+  { code: "+90", name: "Turkey (+90)" },
+  { code: "+60", name: "Malaysia (+60)" },
+  { code: "+62", name: "Indonesia (+62)" },
+  { code: "+234", name: "Nigeria (+234)" },
+  { code: "+212", name: "Morocco (+212)" },
+  { code: "+216", name: "Tunisia (+216)" },
+  { code: "+213", name: "Algeria (+213)" },
+  { code: "+249", name: "Sudan (+249)" },
+  { code: "+252", name: "Somalia (+252)" },
+  { code: "+964", name: "Iraq (+964)" },
+  { code: "+962", name: "Jordan (+962)" },
+  { code: "+968", name: "Oman (+968)" },
+  { code: "+974", name: "Qatar (+974)" },
+  { code: "+965", name: "Kuwait (+965)" },
+  { code: "+973", name: "Bahrain (+973)" },
+  { code: "+967", name: "Yemen (+967)" },
+  { code: "+93", name: "Afghanistan (+93)" },
+  { code: "+94", name: "Sri Lanka (+94)" },
+  { code: "+61", name: "Australia (+61)" },
+  { code: "+27", name: "South Africa (+27)" },
+  { code: "+254", name: "Kenya (+254)" },
+  { code: "+233", name: "Ghana (+233)" },
+  { code: "+55", name: "Brazil (+55)" },
+  { code: "+65", name: "Singapore (+65)" },
 ];
 
 const glassCard = {
@@ -232,20 +243,11 @@ function UpgradeModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-async function sendSecurityEmail(to: string, changeType: string, newValue: string, displayName?: string) {
-  try {
-    await fetch("/api/security-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ to, changeType, newValue, displayName }),
-    });
-  } catch { /* non-critical — don't block the save */ }
-}
-
-type EditField = "name" | "username" | "phone" | "email" | null;
+type EditField = "name" | "username" | "phone" | "email" | "gender" | "password" | null;
 
 export default function SettingsPage() {
   const { profile, user, logOut } = useAuth();
+  const router = useRouter();
   const [expandedField, setExpandedField] = useState<EditField>(null);
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [prayerReminders, setPrayerReminders] = useState(true);
@@ -288,6 +290,29 @@ export default function SettingsPage() {
   const [newEmail, setNewEmail] = useState(user?.email ?? "");
   const [savingEmail, setSavingEmail] = useState(false);
 
+  // Gender edit
+  const [newGender, setNewGender] = useState<"" | "male" | "female">(profile?.gender ?? "");
+  const [savingGender, setSavingGender] = useState(false);
+
+  // Password change
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmNewPw, setConfirmNewPw] = useState("");
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmNewPw, setShowConfirmNewPw] = useState(false);
+  const [changingPw, setChangingPw] = useState(false);
+  const hasPasswordProvider = user?.providerData.some((p) => p.providerId === "password") ?? false;
+  const pwChecks = getPwChecks(newPw);
+  const pwAllValid = pwChecks.length && pwChecks.upper && pwChecks.symbol;
+  const pwMatch = confirmNewPw.length > 0 && newPw === confirmNewPw;
+
+  // Delete account
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePw, setDeletePw] = useState("");
+  const [showDeletePw, setShowDeletePw] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   const initials = (profile?.displayName ?? "J").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
   // Close country picker on outside click
@@ -307,6 +332,7 @@ export default function SettingsPage() {
     setUsernameStatus("idle");
     setNewName(profile?.displayName ?? "");
     setNewUsername(profile?.username ?? "");
+    setNewGender(profile?.gender ?? "");
   }
 
   const handleUsernameInput = useCallback((val: string) => {
@@ -412,7 +438,7 @@ export default function SettingsPage() {
       } else if (code === "auth/captcha-check-failed" || code === "auth/web-storage-unsupported") {
         setOtpError("reCAPTCHA check failed. Make sure third-party cookies are not blocked.");
       } else if (code === "auth/requires-recent-login") {
-        toast.error("Session expired. Please sign out and sign back in, then try again.");
+        toast.error("Session expired — please sign out and sign back in, then try again.");
       } else {
         toast.error(`Error: ${code ?? (err as Error).message ?? "unknown"}`, { duration: 8000 });
       }
@@ -487,6 +513,74 @@ export default function SettingsPage() {
       }
     } finally {
       setSavingEmail(false);
+    }
+  }
+
+  async function saveGender() {
+    if (!user || !newGender || newGender === profile?.gender) return;
+    setSavingGender(true);
+    try {
+      await updateDoc(doc(db, "users", user.uid), { gender: newGender });
+      toast.success("Gender updated!");
+      setExpandedField(null);
+    } catch {
+      toast.error("Failed to update gender.");
+    } finally {
+      setSavingGender(false);
+    }
+  }
+
+  async function handleChangePassword() {
+    if (!auth.currentUser || !auth.currentUser.email) return;
+    if (!currentPw) { toast.error("Please enter your current password."); return; }
+    if (!pwAllValid) { toast.error("New password doesn't meet all requirements."); return; }
+    if (!pwMatch) { toast.error("New passwords don't match."); return; }
+    setChangingPw(true);
+    try {
+      const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPw);
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await updatePassword(auth.currentUser, newPw);
+      toast.success("Password updated!");
+      setExpandedField(null);
+      setCurrentPw(""); setNewPw(""); setConfirmNewPw("");
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code === "auth/wrong-password" || code === "auth/invalid-credential") {
+        toast.error("Current password is incorrect.");
+      } else if (code === "auth/requires-recent-login") {
+        toast.error("Session expired — please sign out and sign back in, then try again.");
+      } else {
+        toast.error("Failed to update password. Please try again.");
+      }
+    } finally {
+      setChangingPw(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (!auth.currentUser) return;
+    if (hasPasswordProvider && !deletePw) { toast.error("Please enter your password to confirm."); return; }
+    setDeleting(true);
+    try {
+      if (hasPasswordProvider && auth.currentUser.email) {
+        const credential = EmailAuthProvider.credential(auth.currentUser.email, deletePw);
+        await reauthenticateWithCredential(auth.currentUser, credential);
+      }
+      await deleteDoc(doc(db, "users", auth.currentUser.uid));
+      await deleteUser(auth.currentUser);
+      toast.success("Your account has been deleted.");
+      router.push("/");
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code === "auth/wrong-password" || code === "auth/invalid-credential") {
+        toast.error("Incorrect password.");
+      } else if (code === "auth/requires-recent-login") {
+        toast.error("Session expired — please sign out and sign back in, then try again.");
+      } else {
+        toast.error("Failed to delete account. Please try again.");
+      }
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -856,6 +950,67 @@ export default function SettingsPage() {
               )}
             </AnimatePresence>
           </div>
+
+          {/* Gender — locked once set; only editable while unset (e.g. Google sign-up accounts) */}
+          <div className="border-t border-slate-100">
+            <button
+              onClick={() => !profile?.gender && toggle("gender")}
+              className={`w-full flex items-center justify-between px-6 py-4 transition-colors text-left ${!profile?.gender ? "hover:bg-slate-50/60 cursor-pointer" : "cursor-default"}`}
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Gender</p>
+                <p className="text-sm text-slate-800 truncate capitalize">{profile?.gender ?? <span className="text-slate-400 normal-case">Not set</span>}</p>
+              </div>
+              {!profile?.gender && (
+                <ChevronRight size={16} className={`text-slate-300 flex-shrink-0 transition-transform ${expandedField === "gender" ? "rotate-90" : ""}`} />
+              )}
+            </button>
+            <AnimatePresence>
+              {expandedField === "gender" && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="px-6 pb-5 pt-1 space-y-3 bg-slate-50/50">
+                    <div className="grid grid-cols-2 gap-2">
+                      {(["male", "female"] as const).map((g) => (
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() => setNewGender(g)}
+                          className={`py-2.5 rounded-xl border text-sm font-medium transition-all capitalize ${
+                            newGender === g
+                              ? "border-blue-600 bg-blue-50 text-blue-700"
+                              : "border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                          }`}
+                        >
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      Used to show you relevant features, like the Period Tracker.
+                    </p>
+                    <div className="flex gap-2">
+                      <button onClick={() => setExpandedField(null)} className="flex-1 py-2 text-sm text-slate-500 font-medium border border-slate-200 rounded-xl hover:bg-white transition-colors">
+                        Cancel
+                      </button>
+                      <button
+                        onClick={saveGender}
+                        disabled={savingGender || !newGender || newGender === profile?.gender}
+                        className="flex-[2] py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      >
+                        {savingGender ? "Saving…" : "Save gender"}
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* Notifications */}
@@ -917,17 +1072,148 @@ export default function SettingsPage() {
             <h2 className="font-semibold text-slate-800">Privacy &amp; Security</h2>
           </div>
           <div className="space-y-1">
-            {["Change password", "Download my data"].map((label) => (
+            {/* Change password */}
+            <div className="rounded-xl overflow-hidden">
               <button
-                key={label}
+                onClick={() => toggle("password")}
                 className="w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2.5 px-3 rounded-xl hover:bg-slate-100 transition-colors font-medium flex items-center justify-between"
               >
-                {label}
-                <ChevronRight size={14} className="text-slate-300" />
+                Change password
+                <ChevronRight size={14} className={`text-slate-300 transition-transform ${expandedField === "password" ? "rotate-90" : ""}`} />
               </button>
-            ))}
+              <AnimatePresence>
+                {expandedField === "password" && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    {!hasPasswordProvider ? (
+                      <p className="text-xs text-slate-400 px-3 pb-4 pt-1">
+                        You signed in with Google, so there&apos;s no Jannatie password to change — manage it from your Google Account instead.
+                      </p>
+                    ) : (
+                      <div className="px-3 pb-5 pt-1 space-y-3 bg-slate-50/50 rounded-xl">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 mb-1">Current password</label>
+                          <div className="relative">
+                            <input
+                              type={showCurrentPw ? "text" : "password"}
+                              value={currentPw}
+                              onChange={(e) => setCurrentPw(e.target.value)}
+                              placeholder="Current password"
+                              className={inputCls + " pr-11"}
+                              autoComplete="current-password"
+                            />
+                            <button type="button" onClick={() => setShowCurrentPw((v) => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                              {showCurrentPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                            </button>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 mb-1">New password</label>
+                          <div className="relative">
+                            <input
+                              type={showNewPw ? "text" : "password"}
+                              value={newPw}
+                              onChange={(e) => setNewPw(e.target.value)}
+                              placeholder="New password"
+                              className={inputCls + " pr-11"}
+                              autoComplete="new-password"
+                            />
+                            <button type="button" onClick={() => setShowNewPw((v) => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                              {showNewPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                            </button>
+                          </div>
+                          {newPw.length > 0 && (
+                            <div className="mt-2 flex flex-col gap-0.5">
+                              {[
+                                { label: "8+ characters", pass: pwChecks.length },
+                                { label: "One capital letter", pass: pwChecks.upper },
+                                { label: "One symbol", pass: pwChecks.symbol },
+                              ].map(({ label, pass }) => (
+                                <div key={label} className="flex items-center gap-1.5">
+                                  {pass ? <Check size={10} className="text-emerald-500 flex-shrink-0" /> : <X size={10} className="text-red-400 flex-shrink-0" />}
+                                  <span className={`text-xs ${pass ? "text-emerald-600" : "text-red-400"}`}>{label}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 mb-1">Confirm new password</label>
+                          <div className="relative">
+                            <input
+                              type={showConfirmNewPw ? "text" : "password"}
+                              value={confirmNewPw}
+                              onChange={(e) => setConfirmNewPw(e.target.value)}
+                              placeholder="Repeat new password"
+                              className={inputCls + " pr-11"}
+                              autoComplete="new-password"
+                            />
+                            <button type="button" onClick={() => setShowConfirmNewPw((v) => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                              {showConfirmNewPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                            </button>
+                          </div>
+                          {confirmNewPw.length > 0 && (
+                            <div className="flex items-center gap-1 mt-1">
+                              {pwMatch ? <Check size={10} className="text-emerald-500" /> : <X size={10} className="text-red-400" />}
+                              <span className={`text-xs ${pwMatch ? "text-emerald-600" : "text-red-400"}`}>
+                                {pwMatch ? "Passwords match" : "Passwords don't match"}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => { setExpandedField(null); setCurrentPw(""); setNewPw(""); setConfirmNewPw(""); }}
+                            className="flex-1 py-2 text-sm text-slate-500 font-medium border border-slate-200 rounded-xl hover:bg-white transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleChangePassword}
+                            disabled={changingPw || !currentPw || !pwAllValid || !pwMatch}
+                            className="flex-[2] py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
+                          >
+                            {changingPw ? "Updating…" : "Update password"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             <a href="/privacy" className="block text-sm text-blue-600 hover:text-blue-500 py-1 px-3 transition-colors">
               View Privacy Policy
+            </a>
+          </div>
+        </div>
+
+        {/* Help & Support */}
+        <div className="rounded-2xl p-6 mb-4" style={glassCard}>
+          <div className="flex items-center gap-2 mb-4">
+            <LifeBuoy size={17} className="text-blue-600" />
+            <h2 className="font-semibold text-slate-800">Help &amp; Support</h2>
+          </div>
+          <div className="space-y-1">
+            <a
+              href="/support#help-centre"
+              className="w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2.5 px-3 rounded-xl hover:bg-slate-100 transition-colors font-medium flex items-center justify-between"
+            >
+              Help Centre
+              <ChevronRight size={14} className="text-slate-300" />
+            </a>
+            <a
+              href="/support#contact"
+              className="w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2.5 px-3 rounded-xl hover:bg-slate-100 transition-colors font-medium flex items-center justify-between"
+            >
+              Contact Support
+              <ChevronRight size={14} className="text-slate-300" />
             </a>
           </div>
         </div>
@@ -955,12 +1241,82 @@ export default function SettingsPage() {
             >
               Sign out
             </button>
-            <button className="bg-red-600 hover:bg-red-500 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors">
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="bg-red-600 hover:bg-red-500 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors"
+            >
               Delete account
             </button>
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <div
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => !deleting && setShowDeleteConfirm(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-sm rounded-3xl p-6"
+              style={{
+                background: "rgba(255,255,255,0.98)",
+                backdropFilter: "blur(32px)",
+                WebkitBackdropFilter: "blur(32px)",
+                border: "1px solid rgba(255,255,255,0.95)",
+                boxShadow: "0 24px 60px rgba(15,23,42,0.18)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center mb-3">
+                <AlertTriangle size={20} className="text-red-500" />
+              </div>
+              <h2 className="text-lg font-bold text-slate-900 mb-1">Delete your account?</h2>
+              <p className="text-sm text-slate-500 mb-4">
+                This permanently deletes your profile, habits, progress, and everything else tied to your account. This cannot be undone.
+              </p>
+              {hasPasswordProvider && (
+                <div className="mb-4">
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Enter your password to confirm</label>
+                  <div className="relative">
+                    <input
+                      type={showDeletePw ? "text" : "password"}
+                      value={deletePw}
+                      onChange={(e) => setDeletePw(e.target.value)}
+                      placeholder="Password"
+                      className={inputCls + " pr-11"}
+                      autoComplete="current-password"
+                    />
+                    <button type="button" onClick={() => setShowDeletePw((v) => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      {showDeletePw ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setShowDeleteConfirm(false); setDeletePw(""); }}
+                  disabled={deleting}
+                  className="flex-1 py-2.5 text-sm text-slate-600 font-medium border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleting || (hasPasswordProvider && !deletePw)}
+                  className="flex-[2] py-2.5 text-sm font-semibold bg-red-600 text-white rounded-xl hover:bg-red-500 transition-colors disabled:opacity-50"
+                >
+                  {deleting ? "Deleting…" : "Delete my account"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Invisible reCAPTCHA container required by Firebase Phone Auth */}
       <div id="phone-recaptcha" />

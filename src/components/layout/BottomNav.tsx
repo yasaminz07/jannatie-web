@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard, CheckSquare, BookOpen, MessageCircle,
   MoreHorizontal, Trophy, Calendar, TrendingUp, Building2,
-  Home, Settings, LogOut, X, UserPlus, Search, UserCheck,
+  Home, Settings, LogOut, X, UserPlus, Search, UserCheck, Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -29,6 +29,7 @@ const moreItems = [
   { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
   { label: "Calendar", href: "/calendar", icon: Calendar },
   { label: "Progress", href: "/progress", icon: TrendingUp },
+  { label: "Community", href: "/community", icon: Users },
   { label: "Mosque", href: "/mosque", icon: Building2 },
 ];
 
@@ -166,7 +167,7 @@ export default function BottomNav() {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [moreOpen]);
 
-  const activeInMore = moreItems.some(i => pathname === i.href || pathname.startsWith(i.href + "/"));
+  const activeInMore = moreItems.some(i => pathname === i.href || (i.href !== "/dashboard" && pathname.startsWith(i.href + "/")));
 
   return (
     <>
@@ -205,7 +206,7 @@ export default function BottomNav() {
                 {/* Nav links */}
                 <div className="grid grid-cols-2 gap-2 mb-5">
                   {moreItems.map(({ label, href, icon: Icon }) => {
-                    const active = pathname === href || pathname.startsWith(href + "/");
+                    const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href + "/"));
                     return (
                       <Link
                         key={href}

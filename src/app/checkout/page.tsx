@@ -130,7 +130,7 @@ function CheckoutContent() {
               <Shield size={12} className="flex-shrink-0 mt-0.5" />
               <p>
                 You can cancel anytime from your account settings. After cancelling, your Premium access continues until
-                your current billing period ends — you will not be charged again.
+                your current billing period ends, you will not be charged again.
               </p>
             </div>
             <div className="flex items-start gap-2">

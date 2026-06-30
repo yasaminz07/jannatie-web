@@ -78,18 +78,20 @@ export default function LeaderboardPage() {
     try {
       const q = query(collection(db, "users"), orderBy("xp", "desc"), limit(100));
       const snap = await getDocs(q);
-      setAllUsers(snap.docs.map(d => {
-        const data = d.data();
-        return {
-          uid: data.uid,
-          displayName: data.displayName ?? null,
-          username: data.username ?? "",
-          photoURL: data.photoURL ?? null,
-          xp: data.xp ?? 0,
-          level: data.level ?? 1,
-          streak: data.streak ?? 0,
-        };
-      }));
+      setAllUsers(
+        snap.docs
+          .map(d => d.data())
+          .filter(data => data.accountType !== "community")
+          .map(data => ({
+            uid: data.uid,
+            displayName: data.displayName ?? null,
+            username: data.username ?? "",
+            photoURL: data.photoURL ?? null,
+            xp: data.xp ?? 0,
+            level: data.level ?? 1,
+            streak: data.streak ?? 0,
+          }))
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);

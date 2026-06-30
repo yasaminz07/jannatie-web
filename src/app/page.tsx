@@ -5,6 +5,7 @@ import SocialProof from "@/components/homepage/SocialProof";
 import FeaturesGrid from "@/components/homepage/FeaturesGrid";
 import HowItWorks from "@/components/homepage/HowItWorks";
 import AIBuddySpotlight from "@/components/homepage/AIBuddySpotlight";
+import CommunitySpotlight from "@/components/homepage/CommunitySpotlight";
 import Statistics from "@/components/homepage/Statistics";
 import Testimonials from "@/components/homepage/Testimonials";
 import PricingPreview from "@/components/homepage/PricingPreview";
@@ -20,6 +21,7 @@ export default function HomePage() {
         <FeaturesGrid />
         <HowItWorks />
         <AIBuddySpotlight />
+        <CommunitySpotlight />
         <Statistics />
         <Testimonials />
         <PricingPreview />

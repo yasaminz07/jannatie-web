@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { Toaster } from "react-hot-toast";
+import AnalyticsTracker from "@/components/analytics/AnalyticsTracker";
 
 export const metadata: Metadata = {
   title: {
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
     template: "%s | Jannatie",
   },
   description:
-    "Jannatie (جنتي — My Paradise) is an AI-powered Islamic growth companion. Track your habits, learn Islam, chat with your AI Buddy, and grow every single day.",
+    "Jannatie (جنتي, My Paradise) is an AI-powered Islamic growth companion. Track your habits, learn Islam, chat with your AI Buddy, and grow every single day.",
   keywords: [
     "Islamic app",
     "Muslim habits",
@@ -65,6 +66,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
+          <AnalyticsTracker />
           {children}
           <Toaster
             position="bottom-right"

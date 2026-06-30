@@ -4,22 +4,48 @@ import Footer from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — Jannatie",
-  description: "Jannatie Privacy Policy — UK GDPR compliant. Learn how we collect, use, and protect your data.",
+  description: "Jannatie Privacy Policy: UK GDPR compliant. Learn how we collect, use, and protect your data.",
 };
+
+const SECTIONS = [
+  { id: "who-we-are", label: "1. Who we are" },
+  { id: "data-we-collect", label: "2. Data we collect" },
+  { id: "how-we-use", label: "3. How we use your data" },
+  { id: "legal-basis", label: "4. Legal basis (UK GDPR)" },
+  { id: "cookies", label: "5. Cookies" },
+  { id: "retention", label: "6. Data retention" },
+  { id: "gdpr", label: "7. Your rights (UK GDPR)" },
+  { id: "processors", label: "8. Third-party processors" },
+  { id: "contact", label: "9. Contact" },
+];
 
 export default function PrivacyPage() {
   return (
     <>
       <Navbar />
-      <main className="pt-24 pb-20">
+      <main className="pt-24 pb-20 bg-slate-50 min-h-screen">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-12">
             <h1 className="text-4xl font-bold text-foreground mb-2">Privacy Policy</h1>
             <p className="text-muted text-sm mb-10">Last updated: January 2025 · Jannatie Ltd, England & Wales</p>
 
+            {/* Quick nav */}
+            <nav className="mb-10 rounded-2xl border border-slate-200 bg-white p-5">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">On this page</p>
+              <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2">
+                {SECTIONS.map((s) => (
+                  <li key={s.id}>
+                    <a href={`#${s.id}`} className="text-sm text-blue-600 hover:text-blue-700 transition-colors">
+                      {s.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
             <div className="prose prose-sm max-w-none space-y-10 text-foreground">
 
-              <section>
+              <section id="who-we-are">
                 <h2 className="text-xl font-bold mb-3">1. Who we are</h2>
                 <p className="text-muted leading-relaxed">
                   Jannatie Ltd (&ldquo;Jannatie&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;) is a company registered in England and Wales.
@@ -29,25 +55,27 @@ export default function PrivacyPage() {
                 </p>
               </section>
 
-              <section>
+              <section id="data-we-collect">
                 <h2 className="text-xl font-bold mb-3">2. Data we collect</h2>
                 <p className="text-muted leading-relaxed mb-3">We collect only what is necessary to provide the Service:</p>
                 <ul className="space-y-2 text-muted text-sm">
                   <li><strong className="text-foreground">Account data:</strong> Your name, email address, and optionally a profile photo.</li>
                   <li><strong className="text-foreground">Usage data:</strong> Habits you track, lessons you complete, XP earned, and streak counts — stored to provide personalisation.</li>
+                  <li><strong className="text-foreground">Community data:</strong> If you create or follow a community account, the events, comments and reports associated with that activity.</li>
                   <li><strong className="text-foreground">Payment data:</strong> Processed securely by Stripe. We never store full card numbers.</li>
                   <li><strong className="text-foreground">Device data:</strong> Browser type, device type, and general location (country level) for analytics.</li>
-                  <li><strong className="text-foreground">Communication data:</strong> If you contact us by email.</li>
+                  <li><strong className="text-foreground">Communication data:</strong> If you contact us by email or our support form.</li>
                 </ul>
               </section>
 
-              <section>
+              <section id="how-we-use">
                 <h2 className="text-xl font-bold mb-3">3. How we use your data</h2>
                 <ul className="space-y-2 text-muted text-sm">
                   <li>To provide and improve the Service</li>
                   <li>To process payments and manage subscriptions</li>
                   <li>To send transactional emails (account, receipts, password reset)</li>
                   <li>To send our newsletter — only if you have opted in</li>
+                  <li>To moderate reported content and keep the community safe</li>
                   <li>To monitor for security and fraud</li>
                   <li>To comply with legal obligations</li>
                 </ul>
@@ -57,11 +85,11 @@ export default function PrivacyPage() {
                 </p>
               </section>
 
-              <section>
+              <section id="legal-basis">
                 <h2 className="text-xl font-bold mb-3">4. Legal basis (UK GDPR)</h2>
                 <ul className="space-y-2 text-muted text-sm">
                   <li><strong className="text-foreground">Contract performance:</strong> Providing the Service you signed up for.</li>
-                  <li><strong className="text-foreground">Legitimate interests:</strong> Product analytics, security, fraud prevention.</li>
+                  <li><strong className="text-foreground">Legitimate interests:</strong> Product analytics, security, fraud prevention, content moderation.</li>
                   <li><strong className="text-foreground">Consent:</strong> Newsletter emails and optional cookies.</li>
                   <li><strong className="text-foreground">Legal obligation:</strong> Accounting records, regulatory compliance.</li>
                 </ul>
@@ -76,7 +104,7 @@ export default function PrivacyPage() {
                 </p>
               </section>
 
-              <section>
+              <section id="retention">
                 <h2 className="text-xl font-bold mb-3">6. Data retention</h2>
                 <p className="text-muted text-sm leading-relaxed">
                   We retain your account data for as long as your account is active. If you delete your account,
@@ -103,22 +131,23 @@ export default function PrivacyPage() {
                 </p>
               </section>
 
-              <section>
+              <section id="processors">
                 <h2 className="text-xl font-bold mb-3">8. Third-party processors</h2>
                 <ul className="space-y-2 text-muted text-sm">
                   <li><strong className="text-foreground">Firebase (Google):</strong> Authentication and database — EU data residency available.</li>
                   <li><strong className="text-foreground">Stripe:</strong> Payment processing — PCI-DSS compliant.</li>
                   <li><strong className="text-foreground">Azure OpenAI:</strong> AI Buddy responses — no data used for training.</li>
-                  <li><strong className="text-foreground">PostHog:</strong> Product analytics — EU hosted, no personal data in events.</li>
+                  <li><strong className="text-foreground">PostHog:</strong> Product analytics, EU hosted — no personal data in events.</li>
                   <li><strong className="text-foreground">Sentry:</strong> Error tracking — anonymised where possible.</li>
-                  <li><strong className="text-foreground">Brevo:</strong> Transactional email.</li>
+                  <li><strong className="text-foreground">Resend / Brevo:</strong> Transactional email.</li>
+                  <li><strong className="text-foreground">GNews:</strong> Powers the external Islamic news feed — no personal data shared.</li>
                 </ul>
               </section>
 
-              <section>
+              <section id="contact">
                 <h2 className="text-xl font-bold mb-3">9. Contact</h2>
                 <p className="text-muted text-sm">
-                  Jannatie Ltd · jannatieteam@gmail.com · [Registered Address], England
+                  Jannatie Ltd · jannatieteam@gmail.com · Birmingham, England
                 </p>
               </section>
             </div>

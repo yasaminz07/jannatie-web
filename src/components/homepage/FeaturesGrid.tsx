@@ -1,7 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { motion, useInView } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { CheckSquare, GraduationCap, Calendar, TrendingUp, MessageCircle } from "lucide-react";
 
 const chatMessages = [
@@ -9,12 +9,13 @@ const chatMessages = [
   { role: "ai", text: "After Salah, recite Ayat al-Kursi (Quran 2:255). The Prophet ﷺ said whoever recites it after each prayer will be protected until the next (Sahih al-Bukhari 5010)." },
 ];
 
-function MiniChat() {
+function MiniChat({ active }: { active: boolean }) {
   const [visible, setVisible] = useState(0);
   const [charCount, setCharCount] = useState(0);
   const current = chatMessages[visible];
 
   useEffect(() => {
+    if (!active) return;
     if (charCount < current.text.length) {
       const t = setTimeout(() => setCharCount(c => c + 1), 18);
       return () => clearTimeout(t);
@@ -27,7 +28,7 @@ function MiniChat() {
         return () => clearTimeout(t);
       }
     }
-  }, [charCount, current, visible]);
+  }, [charCount, current, visible, active]);
 
   return (
     <div className="mt-5 space-y-3">
@@ -82,6 +83,9 @@ const smallFeatures = [
 ];
 
 export default function FeaturesGrid() {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const cardInView = useInView(cardRef, { amount: 0.4 });
+
   return (
     <section className="py-28 bg-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -95,7 +99,7 @@ export default function FeaturesGrid() {
             Everything you need
           </p>
           <h2 className="text-4xl sm:text-5xl font-black text-slate-900 leading-tight">
-            Five tools. One deen.
+            One app. Every part of your deen.
           </h2>
         </motion.div>
 
@@ -103,6 +107,7 @@ export default function FeaturesGrid() {
 
           {/* Large AI card */}
           <motion.div
+            ref={cardRef}
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -117,7 +122,7 @@ export default function FeaturesGrid() {
               Get answers to any Islamic question. Every response cites the exact hadith so you can verify it yourself.
             </p>
             <div className="flex-1 flex flex-col justify-end">
-              <MiniChat />
+              <MiniChat active={cardInView} />
               <p className="text-slate-600 text-xs mt-4 text-center">For guidance only. Not a fatwa.</p>
             </div>
           </motion.div>

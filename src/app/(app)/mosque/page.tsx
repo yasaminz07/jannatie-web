@@ -2,11 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { Building2, MapPin, Lock, RefreshCw, Crown, Clock, Newspaper, ChevronDown, Check, Search } from "lucide-react";
+import {
+  Building2, MapPin, Lock, RefreshCw, Crown, Clock, Newspaper, ChevronDown, Check, Search,
+  TrendingUp, ExternalLink, Users, History,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, collection, query, orderBy, limit, onSnapshot, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import type { NewsArticle } from "@/app/api/islamic-news/route";
 
 interface PrayerTimings {
   Fajr: string;
@@ -30,6 +34,30 @@ interface SavedMosque {
   name: string;
   lat: number;
   lon: number;
+}
+
+interface CommunityNewsItem {
+  id: string;
+  communityName: string;
+  communityUsername: string;
+  communityPhotoURL: string | null;
+  title: string;
+  city: string;
+  createdAt: Timestamp | null;
+}
+
+type TrendingItem =
+  | { kind: "community"; ts: number; data: CommunityNewsItem }
+  | { kind: "news"; ts: number; data: NewsArticle };
+
+function timeAgoFromMs(ms: number): string {
+  const diff = Date.now() - ms;
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
 }
 
 const glassCard = {
@@ -169,6 +197,13 @@ export default function MosquePage() {
     m.name.toLowerCase().includes(mosqueSearch.toLowerCase())
   );
 
+  // Mosque & Islamic News
+  const [communityNews, setCommunityNews] = useState<CommunityNewsItem[]>([]);
+  const [newsArticles, setNewsArticles] = useState<NewsArticle[]>([]);
+  const [newsConfigured, setNewsConfigured] = useState(true);
+  const [loadingNews, setLoadingNews] = useState(true);
+  const [showPastNews, setShowPastNews] = useState(false);
+
   async function loadPrayerTimes(lat: number, lon: number, mosque?: SavedMosque | null) {
     setLoading(true);
     setError(null);
@@ -285,7 +320,65 @@ export default function MosquePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!isPremium) return;
+    setLoadingNews(true);
+
+    const unsub = onSnapshot(
+      query(collection(db, "communityEvents"), orderBy("createdAt", "desc"), limit(12)),
+      (snap) => {
+        setCommunityNews(
+          snap.docs.map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              communityName: data.communityName,
+              communityUsername: data.communityUsername,
+              communityPhotoURL: data.communityPhotoURL ?? null,
+              title: data.title,
+              city: data.city,
+              createdAt: data.createdAt ?? null,
+            } as CommunityNewsItem;
+          })
+        );
+      },
+      () => setCommunityNews([])
+    );
+
+    fetch("/api/islamic-news")
+      .then((res) => res.json())
+      .then((json: { articles: NewsArticle[]; configured: boolean }) => {
+        setNewsArticles(json.articles ?? []);
+        setNewsConfigured(json.configured);
+      })
+      .catch(() => setNewsArticles([]))
+      .finally(() => setLoadingNews(false));
+
+    return unsub;
+  }, [isPremium]);
+
   const next = timings ? nextPrayer(timings) : null;
+
+  // Merge the two live sources into a single "Trending" strip — the 3 most
+  // recent items across both, since neither source carries engagement data.
+  const trendingItems: TrendingItem[] = [
+    ...communityNews
+      .filter((c) => c.createdAt)
+      .map((c): TrendingItem => ({ kind: "community", ts: c.createdAt!.toMillis(), data: c })),
+    ...newsArticles.map((a): TrendingItem => ({ kind: "news", ts: new Date(a.publishedAt).getTime(), data: a })),
+  ]
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, 3);
+
+  const trendingCommunityIds = new Set(trendingItems.filter((t) => t.kind === "community").map((t) => t.data.id));
+  const trendingNewsUrls = new Set(
+    trendingItems.filter((t): t is Extract<TrendingItem, { kind: "news" }> => t.kind === "news").map((t) => t.data.url)
+  );
+
+  const restCommunityNews = communityNews.filter((c) => !trendingCommunityIds.has(c.id));
+  const restNewsArticles = newsArticles.filter((a) => !trendingNewsUrls.has(a.url));
+  const latestNewsArticles = restNewsArticles.slice(0, 5);
+  const pastNewsArticles = restNewsArticles.slice(5);
 
   return (
     <div className="min-h-screen">
@@ -506,22 +599,184 @@ export default function MosquePage() {
             </div>
 
             {isPremium ? (
-              <div className="space-y-3">
-                {[
-                  { title: "Community iftar event this weekend — all welcome", source: "Community", time: "2h ago" },
-                  { title: "New Quran class for beginners starting next week", source: "Community", time: "5h ago" },
-                  { title: "Jumu'ah khutbah: the importance of gratitude in Islam", source: "Community", time: "1d ago" },
-                ].map((item, i) => (
-                  <div key={i} className="flex flex-col gap-0.5 px-4 py-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <p className="text-sm font-medium text-slate-800 leading-snug">{item.title}</p>
-                    <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                      <span>{item.source}</span>
-                      <span>·</span>
-                      <span>{item.time}</span>
-                    </div>
+              <div className="space-y-6">
+                {loadingNews ? (
+                  <div className="flex items-center justify-center py-8 gap-2">
+                    <div className="w-5 h-5 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+                    <p className="text-sm text-slate-400">Loading news…</p>
                   </div>
-                ))}
-                <p className="text-xs text-slate-400 text-center pt-1">Live news integration coming soon</p>
+                ) : (
+                  <>
+                    {/* Trending */}
+                    {trendingItems.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-2.5">
+                          <TrendingUp size={13} className="text-blue-600" />
+                          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Trending now</h3>
+                        </div>
+                        <div className="space-y-2">
+                          {trendingItems.map((item) =>
+                            item.kind === "community" ? (
+                              <Link
+                                key={`t-${item.data.id}`}
+                                href={`/community?event=${item.data.id}`}
+                                className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-blue-50 border border-blue-100 hover:bg-blue-100/70 transition-colors"
+                              >
+                                <Users size={14} className="text-blue-600 flex-shrink-0 mt-0.5" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium text-slate-800 leading-snug">{item.data.title}</p>
+                                  <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                                    <span className="font-medium">{item.data.communityName}</span>
+                                    <span>·</span>
+                                    <span>{timeAgoFromMs(item.ts)}</span>
+                                  </div>
+                                </div>
+                              </Link>
+                            ) : (
+                              <a
+                                key={`t-${item.data.url}`}
+                                href={item.data.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-blue-50 border border-blue-100 hover:bg-blue-100/70 transition-colors"
+                              >
+                                <Newspaper size={14} className="text-blue-600 flex-shrink-0 mt-0.5" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium text-slate-800 leading-snug">{item.data.title}</p>
+                                  <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                                    <span className="font-medium">{item.data.sourceName}</span>
+                                    <span>·</span>
+                                    <span>{timeAgoFromMs(item.ts)}</span>
+                                  </div>
+                                </div>
+                                <ExternalLink size={12} className="text-slate-300 flex-shrink-0 mt-1" />
+                              </a>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Community updates */}
+                    {restCommunityNews.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-2.5">
+                          <Users size={13} className="text-slate-500" />
+                          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Community updates</h3>
+                        </div>
+                        <div className="space-y-2">
+                          {restCommunityNews.slice(0, 5).map((item) => (
+                            <Link
+                              key={item.id}
+                              href={`/community?event=${item.id}`}
+                              className="flex flex-col gap-0.5 px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors"
+                            >
+                              <p className="text-sm font-medium text-slate-800 leading-snug">{item.title}</p>
+                              <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                                <span>{item.communityName}</span>
+                                {item.city && (
+                                  <>
+                                    <span>·</span>
+                                    <span>{item.city}</span>
+                                  </>
+                                )}
+                                <span>·</span>
+                                <span>{item.createdAt ? timeAgoFromMs(item.createdAt.toMillis()) : ""}</span>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Islamic news */}
+                    {latestNewsArticles.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-2.5">
+                          <Newspaper size={13} className="text-slate-500" />
+                          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Islamic news</h3>
+                        </div>
+                        <div className="space-y-2">
+                          {latestNewsArticles.map((a) => (
+                            <a
+                              key={a.url}
+                              href={a.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium text-slate-800 leading-snug">{a.title}</p>
+                                <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                                  <span>{a.sourceName}</span>
+                                  <span>·</span>
+                                  <span>{timeAgoFromMs(new Date(a.publishedAt).getTime())}</span>
+                                </div>
+                              </div>
+                              <ExternalLink size={12} className="text-slate-300 flex-shrink-0 mt-1" />
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Past articles */}
+                    {pastNewsArticles.length > 0 && (
+                      <div>
+                        <button
+                          onClick={() => setShowPastNews((v) => !v)}
+                          className="flex items-center gap-1.5 mb-2.5 text-xs font-bold text-slate-500 uppercase tracking-wide"
+                        >
+                          <History size={13} />
+                          Earlier articles
+                          <ChevronDown size={12} className={`transition-transform ${showPastNews ? "rotate-180" : ""}`} />
+                        </button>
+                        <AnimatePresence>
+                          {showPastNews && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden space-y-2"
+                            >
+                              {pastNewsArticles.map((a) => (
+                                <a
+                                  key={a.url}
+                                  href={a.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors"
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-medium text-slate-700 leading-snug">{a.title}</p>
+                                    <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                                      <span>{a.sourceName}</span>
+                                      <span>·</span>
+                                      <span>{timeAgoFromMs(new Date(a.publishedAt).getTime())}</span>
+                                    </div>
+                                  </div>
+                                  <ExternalLink size={12} className="text-slate-300 flex-shrink-0 mt-1" />
+                                </a>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )}
+
+                    {trendingItems.length === 0 && restCommunityNews.length === 0 && latestNewsArticles.length === 0 && (
+                      <div className="flex flex-col items-center py-6 gap-2 text-center">
+                        <Newspaper size={22} className="text-slate-300" />
+                        <p className="text-sm text-slate-400">
+                          {newsConfigured
+                            ? "No news yet — check back soon."
+                            : "Follow communities for live event updates."}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center py-8 gap-3 text-center">

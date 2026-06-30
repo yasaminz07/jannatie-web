@@ -54,6 +54,14 @@ interface UserProfile {
   onboarded?: boolean;
   following?: string[];
   followers?: string[];
+  // Community accounts
+  accountType?: "user" | "community"; // undefined = normal user
+  communityCategory?: "business" | "influencer" | "coffee_shop" | "organization" | "other";
+  bio?: string;
+  website?: string;
+  city?: string;
+  verificationInfo?: string; // applicant-submitted proof (social link, registration info, etc.)
+  applicationStatus?: "pending" | "approved" | "rejected"; // community accounts only
 }
 
 interface AuthContextValue {
@@ -62,6 +70,17 @@ interface AuthContextValue {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string, username: string) => Promise<void>;
+  signUpCommunity: (params: {
+    email: string;
+    password: string;
+    name: string;
+    username: string;
+    category: NonNullable<UserProfile["communityCategory"]>;
+    city: string;
+    website: string;
+    verificationInfo: string;
+    photoURL: string | null;
+  }) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   logOut: () => Promise<void>;
 }
@@ -133,6 +152,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  async function signUpCommunity(params: {
+    email: string;
+    password: string;
+    name: string;
+    username: string;
+    category: NonNullable<UserProfile["communityCategory"]>;
+    city: string;
+    website: string;
+    verificationInfo: string;
+    photoURL: string | null;
+  }) {
+    const { email, password, name, username, category, city, website, verificationInfo, photoURL } = params;
+    const taken = await getDocs(query(collection(db, "users"), where("username", "==", username.toLowerCase())));
+    if (!taken.empty) throw new Error("That username is already taken. Please choose a different one.");
+
+    const { user: newUser } = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(newUser, { displayName: name });
+    const ref = doc(db, "users", newUser.uid);
+    await setDoc(ref, {
+      uid: newUser.uid,
+      email: newUser.email,
+      displayName: name,
+      username: username.toLowerCase(),
+      photoURL: photoURL ?? null,
+      plan: "free",
+      xp: 0,
+      level: 1,
+      streak: 0,
+      joinedAt: serverTimestamp(),
+      accountType: "community",
+      communityCategory: category,
+      city,
+      website,
+      verificationInfo,
+      bio: "",
+      applicationStatus: "pending",
+    });
+  }
+
   async function signInWithGoogle() {
     const { user: googleUser } = await signInWithPopup(auth, googleProvider);
     const ref = doc(db, "users", googleUser.uid);
@@ -160,7 +218,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signInWithGoogle, logOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signUpCommunity, signInWithGoogle, logOut }}>
       {children}
     </AuthContext.Provider>
   );

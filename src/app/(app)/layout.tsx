@@ -8,14 +8,18 @@ import BottomNav from "@/components/layout/BottomNav";
 import SkeletonCard from "@/components/ui/SkeletonCard";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login");
+      return;
     }
-  }, [user, loading, router]);
+    if (!loading && profile?.accountType === "community") {
+      router.push("/community-hub");
+    }
+  }, [user, profile, loading, router]);
 
   if (loading) {
     return (
@@ -29,7 +33,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) return null;
+  if (!user || profile?.accountType === "community") return null;
 
   return (
     <div className="min-h-screen">

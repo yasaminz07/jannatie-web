@@ -11,67 +11,68 @@ import { collection, query, where, getDocs, doc, getDoc, updateDoc, limit } from
 import { sendPasswordResetEmail } from "firebase/auth";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, Check, X, ChevronRight, ArrowLeft } from "lucide-react";
+import { trackFunnelStep } from "@/lib/analytics-tracker";
 
 const COUNTRY_CODES = [
-  { code: "+44", name: "🇬🇧 UK (+44)" },
-  { code: "+1", name: "🇺🇸 US/Canada (+1)" },
-  { code: "+92", name: "🇵🇰 Pakistan (+92)" },
-  { code: "+880", name: "🇧🇩 Bangladesh (+880)" },
-  { code: "+91", name: "🇮🇳 India (+91)" },
-  { code: "+20", name: "🇪🇬 Egypt (+20)" },
-  { code: "+966", name: "🇸🇦 Saudi Arabia (+966)" },
-  { code: "+971", name: "🇦🇪 UAE (+971)" },
-  { code: "+49", name: "🇩🇪 Germany (+49)" },
-  { code: "+33", name: "🇫🇷 France (+33)" },
-  { code: "+31", name: "🇳🇱 Netherlands (+31)" },
-  { code: "+32", name: "🇧🇪 Belgium (+32)" },
-  { code: "+46", name: "🇸🇪 Sweden (+46)" },
-  { code: "+47", name: "🇳🇴 Norway (+47)" },
-  { code: "+45", name: "🇩🇰 Denmark (+45)" },
-  { code: "+353", name: "🇮🇪 Ireland (+353)" },
-  { code: "+90", name: "🇹🇷 Turkey (+90)" },
-  { code: "+60", name: "🇲🇾 Malaysia (+60)" },
-  { code: "+62", name: "🇮🇩 Indonesia (+62)" },
-  { code: "+234", name: "🇳🇬 Nigeria (+234)" },
-  { code: "+212", name: "🇲🇦 Morocco (+212)" },
-  { code: "+216", name: "🇹🇳 Tunisia (+216)" },
-  { code: "+213", name: "🇩🇿 Algeria (+213)" },
-  { code: "+249", name: "🇸🇩 Sudan (+249)" },
-  { code: "+252", name: "🇸🇴 Somalia (+252)" },
-  { code: "+964", name: "🇮🇶 Iraq (+964)" },
-  { code: "+962", name: "🇯🇴 Jordan (+962)" },
-  { code: "+961", name: "🇱🇧 Lebanon (+961)" },
-  { code: "+968", name: "🇴🇲 Oman (+968)" },
-  { code: "+974", name: "🇶🇦 Qatar (+974)" },
-  { code: "+965", name: "🇰🇼 Kuwait (+965)" },
-  { code: "+973", name: "🇧🇭 Bahrain (+973)" },
-  { code: "+967", name: "🇾🇪 Yemen (+967)" },
-  { code: "+98", name: "🇮🇷 Iran (+98)" },
-  { code: "+93", name: "🇦🇫 Afghanistan (+93)" },
-  { code: "+94", name: "🇱🇰 Sri Lanka (+94)" },
-  { code: "+977", name: "🇳🇵 Nepal (+977)" },
-  { code: "+61", name: "🇦🇺 Australia (+61)" },
-  { code: "+64", name: "🇳🇿 New Zealand (+64)" },
-  { code: "+27", name: "🇿🇦 South Africa (+27)" },
-  { code: "+254", name: "🇰🇪 Kenya (+254)" },
-  { code: "+255", name: "🇹🇿 Tanzania (+255)" },
-  { code: "+256", name: "🇺🇬 Uganda (+256)" },
-  { code: "+233", name: "🇬🇭 Ghana (+233)" },
-  { code: "+221", name: "🇸🇳 Senegal (+221)" },
-  { code: "+243", name: "🇨🇩 DR Congo (+243)" },
-  { code: "+86", name: "🇨🇳 China (+86)" },
-  { code: "+81", name: "🇯🇵 Japan (+81)" },
-  { code: "+82", name: "🇰🇷 South Korea (+82)" },
-  { code: "+65", name: "🇸🇬 Singapore (+65)" },
-  { code: "+63", name: "🇵🇭 Philippines (+63)" },
-  { code: "+66", name: "🇹🇭 Thailand (+66)" },
-  { code: "+55", name: "🇧🇷 Brazil (+55)" },
-  { code: "+7", name: "🇷🇺 Russia (+7)" },
-  { code: "+380", name: "🇺🇦 Ukraine (+380)" },
-  { code: "+48", name: "🇵🇱 Poland (+48)" },
-  { code: "+34", name: "🇪🇸 Spain (+34)" },
-  { code: "+39", name: "🇮🇹 Italy (+39)" },
-  { code: "+41", name: "🇨🇭 Switzerland (+41)" },
+  { code: "+44", name: "UK (+44)" },
+  { code: "+1", name: "US/Canada (+1)" },
+  { code: "+92", name: "Pakistan (+92)" },
+  { code: "+880", name: "Bangladesh (+880)" },
+  { code: "+91", name: "India (+91)" },
+  { code: "+20", name: "Egypt (+20)" },
+  { code: "+966", name: "Saudi Arabia (+966)" },
+  { code: "+971", name: "UAE (+971)" },
+  { code: "+49", name: "Germany (+49)" },
+  { code: "+33", name: "France (+33)" },
+  { code: "+31", name: "Netherlands (+31)" },
+  { code: "+32", name: "Belgium (+32)" },
+  { code: "+46", name: "Sweden (+46)" },
+  { code: "+47", name: "Norway (+47)" },
+  { code: "+45", name: "Denmark (+45)" },
+  { code: "+353", name: "Ireland (+353)" },
+  { code: "+90", name: "Turkey (+90)" },
+  { code: "+60", name: "Malaysia (+60)" },
+  { code: "+62", name: "Indonesia (+62)" },
+  { code: "+234", name: "Nigeria (+234)" },
+  { code: "+212", name: "Morocco (+212)" },
+  { code: "+216", name: "Tunisia (+216)" },
+  { code: "+213", name: "Algeria (+213)" },
+  { code: "+249", name: "Sudan (+249)" },
+  { code: "+252", name: "Somalia (+252)" },
+  { code: "+964", name: "Iraq (+964)" },
+  { code: "+962", name: "Jordan (+962)" },
+  { code: "+961", name: "Lebanon (+961)" },
+  { code: "+968", name: "Oman (+968)" },
+  { code: "+974", name: "Qatar (+974)" },
+  { code: "+965", name: "Kuwait (+965)" },
+  { code: "+973", name: "Bahrain (+973)" },
+  { code: "+967", name: "Yemen (+967)" },
+  { code: "+98", name: "Iran (+98)" },
+  { code: "+93", name: "Afghanistan (+93)" },
+  { code: "+94", name: "Sri Lanka (+94)" },
+  { code: "+977", name: "Nepal (+977)" },
+  { code: "+61", name: "Australia (+61)" },
+  { code: "+64", name: "New Zealand (+64)" },
+  { code: "+27", name: "South Africa (+27)" },
+  { code: "+254", name: "Kenya (+254)" },
+  { code: "+255", name: "Tanzania (+255)" },
+  { code: "+256", name: "Uganda (+256)" },
+  { code: "+233", name: "Ghana (+233)" },
+  { code: "+221", name: "Senegal (+221)" },
+  { code: "+243", name: "DR Congo (+243)" },
+  { code: "+86", name: "China (+86)" },
+  { code: "+81", name: "Japan (+81)" },
+  { code: "+82", name: "South Korea (+82)" },
+  { code: "+65", name: "Singapore (+65)" },
+  { code: "+63", name: "Philippines (+63)" },
+  { code: "+66", name: "Thailand (+66)" },
+  { code: "+55", name: "Brazil (+55)" },
+  { code: "+7", name: "Russia (+7)" },
+  { code: "+380", name: "Ukraine (+380)" },
+  { code: "+48", name: "Poland (+48)" },
+  { code: "+34", name: "Spain (+34)" },
+  { code: "+39", name: "Italy (+39)" },
+  { code: "+41", name: "Switzerland (+41)" },
 ];
 
 const HABITS = [
@@ -271,7 +272,7 @@ export default function AuthFlow({
     const v = val
       .toLowerCase()
       .replace(/[^a-z0-9_]/g, "")
-      .slice(0, 18);
+      .slice(0, 14);
     setSuUsername(v);
     setUsernameStatus("idle");
     if (usernameTimer.current) clearTimeout(usernameTimer.current);
@@ -327,7 +328,7 @@ export default function AuthFlow({
   }
 
   function handleGUsernameChange(val: string) {
-    const v = val.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 18);
+    const v = val.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 14);
     setGUsername(v);
     setGUsernameStatus("idle");
     if (gUsernameTimer.current) clearTimeout(gUsernameTimer.current);
@@ -349,6 +350,8 @@ export default function AuthFlow({
     setGUsernameLoading(true);
     try {
       await updateDoc(doc(db, "users", uid), { username: gUsername });
+      trackFunnelStep("signed_up");
+      trackFunnelStep("completed_onboarding");
       toast.success("Username set!");
       router.push("/dashboard");
     } catch {
@@ -360,6 +363,10 @@ export default function AuthFlow({
 
   function handleStep1(e: React.FormEvent) {
     e.preventDefault();
+    if (!fullName.trim()) {
+      toast.error("Please enter your full name.");
+      return;
+    }
     if (!gender) {
       toast.error("Please select your gender to continue.");
       return;
@@ -374,6 +381,10 @@ export default function AuthFlow({
     }
     if (usernameStatus === "checking") {
       toast.error("Still checking username availability. Please wait.");
+      return;
+    }
+    if (!email.trim()) {
+      toast.error("Please enter your email address.");
       return;
     }
     if (!allValid) {
@@ -410,6 +421,9 @@ export default function AuthFlow({
         }
         await updateDoc(doc(db, "users", uid), extra);
       }
+      trackFunnelStep("signed_up");
+      trackFunnelStep("completed_onboarding");
+      if (selectedHabits.length > 0) trackFunnelStep("started_habit_plan");
       toast.success("Bismillah! Welcome to Jannatie.");
       router.push("/dashboard");
     } catch (err: unknown) {
@@ -654,7 +668,7 @@ export default function AuthFlow({
                                 : "border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
                             }`}
                           >
-                            {g === "male" ? "♂ Male" : "♀ Female"}
+                            {g === "male" ? "Male" : "Female"}
                           </button>
                         ))}
                       </div>
@@ -695,7 +709,7 @@ export default function AuthFlow({
                         )}
                         {usernameStatus === "idle" && (
                           <p className="text-xs text-slate-400">
-                            5–18 chars
+                            5–14 chars
                           </p>
                         )}
                       </div>
@@ -1219,7 +1233,7 @@ export default function AuthFlow({
                         )}
                         {gUsernameStatus === "idle" && (
                           <p className="text-xs text-slate-400">
-                            5–18 chars
+                            5–14 chars
                           </p>
                         )}
                       </div>
