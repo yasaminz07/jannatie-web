@@ -410,6 +410,9 @@ export default function EventCard({
               {orderedComments.map(c => {
                 const isPinned = c.id === event.pinnedCommentId;
                 const commentReplies = allReplies.filter(r => r.parentId === c.id);
+                const commentLikers = Object.values(c.likedBy ?? {});
+                const commentLikeCount = commentLikers.length;
+                const communityLiker = commentLikers.find(l => l.isCommunity) ?? null;
                 const isLikedByMe = !!(user && c.likedBy?.[user.uid]);
                 return (
                   <div key={c.id}>
@@ -433,6 +436,19 @@ export default function EventCard({
                             <p className="text-sm text-slate-700 leading-snug">{c.text}</p>
                           </div>
 
+                          {/* Community-account liked indicator (only visible when a community liked the comment) */}
+                          {communityLiker && (
+                            <div className="flex items-center gap-1.5 mt-1 ml-1">
+                              <div className="relative flex-shrink-0">
+                                <Avatar name={communityLiker.name} photoURL={communityLiker.photoURL} size={16} />
+                                <Heart size={8} className="absolute -bottom-0.5 -right-1 fill-rose-500 text-rose-500 drop-shadow-[0_0_1.5px_rgba(255,255,255,0.9)]" />
+                              </div>
+                              <span className="text-[10px] text-slate-400">
+                                Liked by <span className="font-medium text-slate-600">{communityLiker.name}</span>
+                              </span>
+                            </div>
+                          )}
+
                           {/* Action row */}
                           <div className="flex items-center flex-wrap gap-x-3 gap-y-0.5 mt-1 ml-1">
                             <span className="text-[10px] text-slate-400">{timeAgo(c.createdAt)}</span>
@@ -447,7 +463,7 @@ export default function EventCard({
                               </button>
                             )}
 
-                            {/* Like (any signed-in user) */}
+                            {/* Like with count (any signed-in user) */}
                             {user && (
                               <button
                                 onClick={() => handleToggleCommentLike(c.id, isLikedByMe)}
@@ -457,6 +473,7 @@ export default function EventCard({
                               >
                                 <Heart size={9} className={isLikedByMe ? "fill-rose-500" : ""} />
                                 {isLikedByMe ? "Liked" : "Like"}
+                                {commentLikeCount > 0 && <span className="ml-0.5 tabular-nums">{commentLikeCount}</span>}
                               </button>
                             )}
 
@@ -524,6 +541,9 @@ export default function EventCard({
                           {commentReplies.length > 0 && (
                             <div className="mt-2 ml-1 space-y-2 border-l-2 border-slate-100 pl-3">
                               {commentReplies.map(reply => {
+                                const replyLikers = Object.values(reply.likedBy ?? {});
+                                const replyLikeCount = replyLikers.length;
+                                const replyCommunityLiker = replyLikers.find(l => l.isCommunity) ?? null;
                                 const isReplyLikedByMe = !!(user && reply.likedBy?.[user.uid]);
                                 return (
                                 <div key={reply.id} className="flex items-start gap-2">
@@ -536,6 +556,19 @@ export default function EventCard({
                                       </div>
                                       <p className="text-xs text-slate-700 leading-snug">{reply.text}</p>
                                     </div>
+
+                                    {/* Community-account liked indicator for replies */}
+                                    {replyCommunityLiker && (
+                                      <div className="flex items-center gap-1.5 mt-1 ml-1">
+                                        <div className="relative flex-shrink-0">
+                                          <Avatar name={replyCommunityLiker.name} photoURL={replyCommunityLiker.photoURL} size={14} />
+                                          <Heart size={7} className="absolute -bottom-0.5 -right-1 fill-rose-500 text-rose-500 drop-shadow-[0_0_1.5px_rgba(255,255,255,0.9)]" />
+                                        </div>
+                                        <span className="text-[10px] text-slate-400">
+                                          Liked by <span className="font-medium text-slate-600">{replyCommunityLiker.name}</span>
+                                        </span>
+                                      </div>
+                                    )}
 
                                     <div className="flex items-center flex-wrap gap-x-2 mt-0.5 ml-1">
                                       <span className="text-[10px] text-slate-400">{timeAgo(reply.createdAt)}</span>
@@ -556,6 +589,7 @@ export default function EventCard({
                                         >
                                           <Heart size={9} className={isReplyLikedByMe ? "fill-rose-500" : ""} />
                                           {isReplyLikedByMe ? "Liked" : "Like"}
+                                          {replyLikeCount > 0 && <span className="ml-0.5 tabular-nums">{replyLikeCount}</span>}
                                         </button>
                                       )}
                                       {user && user.uid === reply.authorUid && (
