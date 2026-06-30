@@ -410,7 +410,6 @@ export default function EventCard({
               {orderedComments.map(c => {
                 const isPinned = c.id === event.pinnedCommentId;
                 const commentReplies = allReplies.filter(r => r.parentId === c.id);
-                const commentLikers = Object.values(c.likedBy ?? {});
                 const isLikedByMe = !!(user && c.likedBy?.[user.uid]);
                 return (
                   <div key={c.id}>
@@ -433,22 +432,6 @@ export default function EventCard({
                             </div>
                             <p className="text-sm text-slate-700 leading-snug">{c.text}</p>
                           </div>
-
-                          {/* Liked-by indicator */}
-                          {commentLikers.length > 0 && (
-                            <div className="flex items-center gap-1.5 mt-1 ml-1">
-                              <div className="relative flex-shrink-0">
-                                <Avatar name={commentLikers[0].name} photoURL={commentLikers[0].photoURL} size={16} />
-                                <Heart size={8} className="absolute -bottom-0.5 -right-1 fill-rose-500 text-rose-500 drop-shadow-[0_0_1.5px_rgba(255,255,255,0.9)]" />
-                              </div>
-                              <span className="text-[10px] text-slate-400">
-                                Liked by <span className="font-medium text-slate-600">{commentLikers[0].name}</span>
-                                {commentLikers.length > 1 && (
-                                  <> and {commentLikers.length - 1} other{commentLikers.length > 2 ? "s" : ""}</>
-                                )}
-                              </span>
-                            </div>
-                          )}
 
                           {/* Action row */}
                           <div className="flex items-center flex-wrap gap-x-3 gap-y-0.5 mt-1 ml-1">
@@ -541,7 +524,6 @@ export default function EventCard({
                           {commentReplies.length > 0 && (
                             <div className="mt-2 ml-1 space-y-2 border-l-2 border-slate-100 pl-3">
                               {commentReplies.map(reply => {
-                                const replyLikers = Object.values(reply.likedBy ?? {});
                                 const isReplyLikedByMe = !!(user && reply.likedBy?.[user.uid]);
                                 return (
                                 <div key={reply.id} className="flex items-start gap-2">
@@ -555,24 +537,16 @@ export default function EventCard({
                                       <p className="text-xs text-slate-700 leading-snug">{reply.text}</p>
                                     </div>
 
-                                    {/* Liked-by indicator */}
-                                    {replyLikers.length > 0 && (
-                                      <div className="flex items-center gap-1.5 mt-1 ml-1">
-                                        <div className="relative flex-shrink-0">
-                                          <Avatar name={replyLikers[0].name} photoURL={replyLikers[0].photoURL} size={14} />
-                                          <Heart size={7} className="absolute -bottom-0.5 -right-1 fill-rose-500 text-rose-500 drop-shadow-[0_0_1.5px_rgba(255,255,255,0.9)]" />
-                                        </div>
-                                        <span className="text-[10px] text-slate-400">
-                                          Liked by <span className="font-medium text-slate-600">{replyLikers[0].name}</span>
-                                          {replyLikers.length > 1 && (
-                                            <> and {replyLikers.length - 1} other{replyLikers.length > 2 ? "s" : ""}</>
-                                          )}
-                                        </span>
-                                      </div>
-                                    )}
-
                                     <div className="flex items-center flex-wrap gap-x-2 mt-0.5 ml-1">
                                       <span className="text-[10px] text-slate-400">{timeAgo(reply.createdAt)}</span>
+                                      {user && (
+                                        <button
+                                          onClick={() => { setReplyingTo(c.id); setReplyText(`@${reply.authorUsername || reply.authorName} `); }}
+                                          className="text-[10px] text-slate-400 hover:text-blue-500 font-medium"
+                                        >
+                                          Reply
+                                        </button>
+                                      )}
                                       {user && (
                                         <button
                                           onClick={() => handleToggleCommentLike(reply.id, isReplyLikedByMe)}
