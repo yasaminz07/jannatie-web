@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { isAdminEmail } from "@/lib/admin";
 import AdminSidebar from "@/components/layout/AdminSidebar";
+import AdminBottomNav from "@/components/layout/AdminBottomNav";
 import SkeletonCard from "@/components/ui/SkeletonCard";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -39,7 +40,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="min-h-screen bg-slate-50">
       <AdminSidebar />
-      <div className="md:ml-60">{children}</div>
+      <div className="md:ml-60 pb-20 md:pb-0">{children}</div>
+      <AdminBottomNav />
     </div>
   );
 }

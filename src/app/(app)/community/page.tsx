@@ -214,21 +214,21 @@ export default function CommunityFeedPage() {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.03 }}
           className="flex rounded-2xl p-1 gap-1 mb-4 overflow-x-auto scrollbar-hide" style={glass}>
           <button onClick={() => { setTab("discover"); setSearch(""); }}
-            className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 ${tab === "discover" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
-            <Sparkles size={13} /> Discover
+            className={`flex-1 justify-center min-w-0 px-2 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-1 ${tab === "discover" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+            <Sparkles size={13} className="flex-shrink-0" /> <span className="truncate">Discover</span>
           </button>
           <button onClick={() => { setTab("following"); setSearch(""); }}
-            className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 ${tab === "following" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
-            <Heart size={13} /> Following
+            className={`flex-1 justify-center min-w-0 px-2 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-1 ${tab === "following" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+            <Heart size={13} className="flex-shrink-0" /> <span className="truncate">Following</span>
             {followingCommunityUids.length > 0 && (
-              <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 ${tab === "following" ? "bg-white/20 text-white" : "bg-blue-100 text-blue-600"}`}>
+              <span className={`flex-shrink-0 text-[10px] font-bold rounded-full px-1.5 py-0.5 ${tab === "following" ? "bg-white/20 text-white" : "bg-blue-100 text-blue-600"}`}>
                 {followingCommunityUids.length}
               </span>
             )}
           </button>
           <button onClick={() => { setTab("communities"); setSearch(""); }}
-            className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 ${tab === "communities" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
-            <Store size={13} /> Communities
+            className={`flex-1 justify-center min-w-0 px-2 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-1 ${tab === "communities" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+            <Store size={13} className="flex-shrink-0" /> <span className="truncate">Communities</span>
           </button>
         </motion.div>
 

@@ -7,9 +7,8 @@ import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import CommunitySidebar from "@/components/layout/CommunitySidebar";
 import CommunityBottomNav from "@/components/layout/CommunityBottomNav";
-import NotificationBell from "@/components/layout/NotificationBell";
 import SkeletonCard from "@/components/ui/SkeletonCard";
-import { Clock, XCircle, Settings } from "lucide-react";
+import { Clock, XCircle } from "lucide-react";
 
 export default function CommunityHubLayout({ children }: { children: React.ReactNode }) {
   const { user, profile, loading, logOut } = useAuth();
@@ -99,12 +98,7 @@ export default function CommunityHubLayout({ children }: { children: React.React
             className="object-contain" style={{ filter: "brightness(0)" }} />
           <span className="text-sm font-bold text-slate-900 tracking-tight">Jannatie</span>
         </Link>
-        <div className="flex items-center gap-3">
-          <Link href="/community-hub/settings" className="text-slate-500 hover:text-slate-800 transition-colors">
-            <Settings size={18} />
-          </Link>
-          <NotificationBell />
-        </div>
+        <span />
       </header>
 
       <div className="md:ml-60 pt-12 md:pt-0 pb-20 md:pb-0">

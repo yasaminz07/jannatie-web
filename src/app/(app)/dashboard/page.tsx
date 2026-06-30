@@ -165,10 +165,12 @@ function FriendsProgress({ following, senderPhone, senderName }: { following: st
     if (!following.length) { setLoading(false); return; }
     const load = async () => {
       const results = await Promise.all(
-        following.slice(0, 5).map(async (uid) => {
+        following.slice(0, 10).map(async (uid) => {
           const snap = await getDoc(doc(db, "users", uid));
           if (!snap.exists()) return null;
           const d = snap.data();
+          // Exclude community accounts — they're not personal friends and have no habits
+          if (d.accountType === "community") return null;
           return {
             uid,
             displayName: (d.displayName as string | null) ?? null,
@@ -181,7 +183,7 @@ function FriendsProgress({ following, senderPhone, senderName }: { following: st
           } satisfies FriendProfile;
         })
       );
-      setFriends(results.filter(Boolean) as FriendProfile[]);
+      setFriends((results.filter(Boolean) as FriendProfile[]).slice(0, 5));
       setLoading(false);
     };
     load();

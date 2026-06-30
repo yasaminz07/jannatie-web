@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import {
   Building2, MapPin, Lock, RefreshCw, Crown, Clock, Newspaper, ChevronDown, Check, Search,
-  TrendingUp, ExternalLink, Users, History,
+  TrendingUp, ExternalLink, History,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { doc, updateDoc, collection, query, orderBy, limit, onSnapshot, Timestamp } from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { NewsArticle } from "@/app/api/islamic-news/route";
 
@@ -36,19 +36,7 @@ interface SavedMosque {
   lon: number;
 }
 
-interface CommunityNewsItem {
-  id: string;
-  communityName: string;
-  communityUsername: string;
-  communityPhotoURL: string | null;
-  title: string;
-  city: string;
-  createdAt: Timestamp | null;
-}
-
-type TrendingItem =
-  | { kind: "community"; ts: number; data: CommunityNewsItem }
-  | { kind: "news"; ts: number; data: NewsArticle };
+type TrendingItem = { ts: number; data: NewsArticle };
 
 function timeAgoFromMs(ms: number): string {
   const diff = Date.now() - ms;
@@ -198,7 +186,6 @@ export default function MosquePage() {
   );
 
   // Mosque & Islamic News
-  const [communityNews, setCommunityNews] = useState<CommunityNewsItem[]>([]);
   const [newsArticles, setNewsArticles] = useState<NewsArticle[]>([]);
   const [newsConfigured, setNewsConfigured] = useState(true);
   const [loadingNews, setLoadingNews] = useState(true);
@@ -324,27 +311,6 @@ export default function MosquePage() {
     if (!isPremium) return;
     setLoadingNews(true);
 
-    const unsub = onSnapshot(
-      query(collection(db, "communityEvents"), orderBy("createdAt", "desc"), limit(12)),
-      (snap) => {
-        setCommunityNews(
-          snap.docs.map((d) => {
-            const data = d.data();
-            return {
-              id: d.id,
-              communityName: data.communityName,
-              communityUsername: data.communityUsername,
-              communityPhotoURL: data.communityPhotoURL ?? null,
-              title: data.title,
-              city: data.city,
-              createdAt: data.createdAt ?? null,
-            } as CommunityNewsItem;
-          })
-        );
-      },
-      () => setCommunityNews([])
-    );
-
     fetch("/api/islamic-news")
       .then((res) => res.json())
       .then((json: { articles: NewsArticle[]; configured: boolean }) => {
@@ -353,29 +319,15 @@ export default function MosquePage() {
       })
       .catch(() => setNewsArticles([]))
       .finally(() => setLoadingNews(false));
-
-    return unsub;
   }, [isPremium]);
 
   const next = timings ? nextPrayer(timings) : null;
 
-  // Merge the two live sources into a single "Trending" strip — the 3 most
-  // recent items across both, since neither source carries engagement data.
-  const trendingItems: TrendingItem[] = [
-    ...communityNews
-      .filter((c) => c.createdAt)
-      .map((c): TrendingItem => ({ kind: "community", ts: c.createdAt!.toMillis(), data: c })),
-    ...newsArticles.map((a): TrendingItem => ({ kind: "news", ts: new Date(a.publishedAt).getTime(), data: a })),
-  ]
-    .sort((a, b) => b.ts - a.ts)
-    .slice(0, 3);
+  const trendingItems: TrendingItem[] = newsArticles
+    .slice(0, 3)
+    .map((a): TrendingItem => ({ ts: new Date(a.publishedAt).getTime(), data: a }));
 
-  const trendingCommunityIds = new Set(trendingItems.filter((t) => t.kind === "community").map((t) => t.data.id));
-  const trendingNewsUrls = new Set(
-    trendingItems.filter((t): t is Extract<TrendingItem, { kind: "news" }> => t.kind === "news").map((t) => t.data.url)
-  );
-
-  const restCommunityNews = communityNews.filter((c) => !trendingCommunityIds.has(c.id));
+  const trendingNewsUrls = new Set(trendingItems.map((t) => t.data.url));
   const restNewsArticles = newsArticles.filter((a) => !trendingNewsUrls.has(a.url));
   const latestNewsArticles = restNewsArticles.slice(0, 5);
   const pastNewsArticles = restNewsArticles.slice(5);
@@ -615,75 +567,25 @@ export default function MosquePage() {
                           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Trending now</h3>
                         </div>
                         <div className="space-y-2">
-                          {trendingItems.map((item) =>
-                            item.kind === "community" ? (
-                              <Link
-                                key={`t-${item.data.id}`}
-                                href={`/community?event=${item.data.id}`}
-                                className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-blue-50 border border-blue-100 hover:bg-blue-100/70 transition-colors"
-                              >
-                                <Users size={14} className="text-blue-600 flex-shrink-0 mt-0.5" />
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-medium text-slate-800 leading-snug">{item.data.title}</p>
-                                  <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                                    <span className="font-medium">{item.data.communityName}</span>
-                                    <span>·</span>
-                                    <span>{timeAgoFromMs(item.ts)}</span>
-                                  </div>
-                                </div>
-                              </Link>
-                            ) : (
-                              <a
-                                key={`t-${item.data.url}`}
-                                href={item.data.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-blue-50 border border-blue-100 hover:bg-blue-100/70 transition-colors"
-                              >
-                                <Newspaper size={14} className="text-blue-600 flex-shrink-0 mt-0.5" />
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-medium text-slate-800 leading-snug">{item.data.title}</p>
-                                  <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                                    <span className="font-medium">{item.data.sourceName}</span>
-                                    <span>·</span>
-                                    <span>{timeAgoFromMs(item.ts)}</span>
-                                  </div>
-                                </div>
-                                <ExternalLink size={12} className="text-slate-300 flex-shrink-0 mt-1" />
-                              </a>
-                            )
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Community updates */}
-                    {restCommunityNews.length > 0 && (
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-2.5">
-                          <Users size={13} className="text-slate-500" />
-                          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Community updates</h3>
-                        </div>
-                        <div className="space-y-2">
-                          {restCommunityNews.slice(0, 5).map((item) => (
-                            <Link
-                              key={item.id}
-                              href={`/community?event=${item.id}`}
-                              className="flex flex-col gap-0.5 px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors"
+                          {trendingItems.map((item) => (
+                            <a
+                              key={`t-${item.data.url}`}
+                              href={item.data.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-blue-50 border border-blue-100 hover:bg-blue-100/70 transition-colors"
                             >
-                              <p className="text-sm font-medium text-slate-800 leading-snug">{item.title}</p>
-                              <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                                <span>{item.communityName}</span>
-                                {item.city && (
-                                  <>
-                                    <span>·</span>
-                                    <span>{item.city}</span>
-                                  </>
-                                )}
-                                <span>·</span>
-                                <span>{item.createdAt ? timeAgoFromMs(item.createdAt.toMillis()) : ""}</span>
+                              <Newspaper size={14} className="text-blue-600 flex-shrink-0 mt-0.5" />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium text-slate-800 leading-snug">{item.data.title}</p>
+                                <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                                  <span className="font-medium">{item.data.sourceName}</span>
+                                  <span>·</span>
+                                  <span>{timeAgoFromMs(item.ts)}</span>
+                                </div>
                               </div>
-                            </Link>
+                              <ExternalLink size={12} className="text-slate-300 flex-shrink-0 mt-1" />
+                            </a>
                           ))}
                         </div>
                       </div>
@@ -765,7 +667,7 @@ export default function MosquePage() {
                       </div>
                     )}
 
-                    {trendingItems.length === 0 && restCommunityNews.length === 0 && latestNewsArticles.length === 0 && (
+                    {trendingItems.length === 0 && latestNewsArticles.length === 0 && (
                       <div className="flex flex-col items-center py-6 gap-2 text-center">
                         <Newspaper size={22} className="text-slate-300" />
                         <p className="text-sm text-slate-400">
