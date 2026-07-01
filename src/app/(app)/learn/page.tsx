@@ -14,6 +14,11 @@ import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getQuestionsForLesson, UNIT_EXAM_QUESTIONS, type Question } from "./questions";
 import { TOPIC_LESSONS } from "./lessonContent";
+import {
+  calcLevel, calcStreakUpdate, buyStreakFreeze, repairStreak,
+  GEMS_PER_LESSON, GEMS_PER_EXAM, FREEZE_COST, REPAIR_COST, MAX_FREEZES, REPAIR_WINDOW_DAYS,
+} from "@/lib/xpAndStreak";
+import toast from "react-hot-toast";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface FlatLesson {
@@ -376,20 +381,37 @@ function HomeView({
   learnProgress,
   xp,
   streak,
+  gems,
+  streakFreezes,
+  streakBrokenAt,
   setView,
   onShowContent,
+  onBuyFreeze,
+  onRepairStreak,
 }: {
   units: Unit[];
   learnProgress: Record<string, number>;
   xp: number;
   streak: number;
+  gems: number;
+  streakFreezes: number;
+  streakBrokenAt?: string;
   setView: (v: LearnView) => void;
   onShowContent: (topicId: string, lessonIndex: number) => void;
+  onBuyFreeze: () => void;
+  onRepairStreak: () => void;
 }) {
   const [expanded, setExpanded] = useState<Record<number, boolean>>({ 1: true, 2: false, 3: false, 4: false, 5: false });
   const toggle = (id: number) => setExpanded((p) => ({ ...p, [id]: !p[id] }));
   const [desktopActiveUnit, setDesktopActiveUnit] = useState(1);
   const lessonScrollRef = useRef<HTMLDivElement>(null);
+  const [showShop, setShowShop] = useState(false);
+
+  const canRepair = !!streakBrokenAt && (() => {
+    const broken = new Date(streakBrokenAt + "T00:00:00");
+    const diff = (Date.now() - broken.getTime()) / 86400000;
+    return diff <= REPAIR_WINDOW_DAYS;
+  })();
 
   useEffect(() => {
     const el = lessonScrollRef.current;
@@ -413,17 +435,92 @@ function HomeView({
             <h1 className="text-xl font-bold text-slate-900">Islamic Learning</h1>
             <p className="text-xs text-slate-400 mt-0.5">Bismillah — let us begin</p>
           </div>
-          <div className="flex gap-4">
-            <div className="flex items-center gap-1.5">
-              <Flame size={16} className="text-amber-400" />
+          <div className="flex items-center gap-3">
+            {/* Streak */}
+            <button onClick={() => setShowShop(true)} className="flex items-center gap-1 group" title="Streak shop">
+              <Flame size={16} className={streak > 0 ? "text-amber-400" : "text-slate-300"} />
               <span className="text-sm font-bold text-slate-700">{streak}</span>
-            </div>
+              {streakFreezes > 0 && (
+                <span className="text-[10px] bg-blue-100 text-blue-600 font-bold px-1 rounded-full ml-0.5">
+                  ×{streakFreezes}❄
+                </span>
+              )}
+            </button>
+            {/* Gems */}
+            <button onClick={() => setShowShop(true)} className="flex items-center gap-1" title="Gems — use in streak shop">
+              <span className="text-sm">💎</span>
+              <span className="text-sm font-bold text-slate-700">{gems}</span>
+            </button>
+            {/* XP */}
             <div className="flex items-center gap-1.5">
               <Zap size={15} className="text-blue-500" />
               <span className="text-sm font-bold text-slate-700">{xp}</span>
             </div>
           </div>
         </div>
+
+        {/* Streak shop modal */}
+        {showShop && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setShowShop(false)}>
+            <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-bold text-slate-900">Streak Shop</h2>
+                <button onClick={() => setShowShop(false)} className="text-slate-400 hover:text-slate-600">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="flex items-center gap-2 bg-slate-50 rounded-2xl px-4 py-2.5 mb-5">
+                <span className="text-base">💎</span>
+                <span className="text-sm font-semibold text-slate-700">{gems} gems</span>
+                <span className="text-xs text-slate-400 ml-1">· Earn 5 per lesson, 20 per exam</span>
+              </div>
+
+              {/* Streak Freeze */}
+              <div className="rounded-2xl border border-slate-100 p-4 mb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">❄️</span>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">Streak Freeze</p>
+                      <p className="text-xs text-slate-400">Auto-protects 1 missed day · max {MAX_FREEZES}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { onBuyFreeze(); setShowShop(false); }}
+                    disabled={streakFreezes >= MAX_FREEZES || gems < FREEZE_COST}
+                    className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs font-bold rounded-xl px-3 py-1.5 transition-colors"
+                  >
+                    <span>💎 {FREEZE_COST}</span>
+                  </button>
+                </div>
+                {streakFreezes > 0 && (
+                  <p className="text-xs text-blue-600 font-medium mt-2">You have {streakFreezes} freeze{streakFreezes > 1 ? "s" : ""} stored</p>
+                )}
+              </div>
+
+              {/* Streak Repair */}
+              <div className={`rounded-2xl border p-4 ${canRepair ? "border-amber-200 bg-amber-50" : "border-slate-100 opacity-50"}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🔧</span>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">Streak Repair</p>
+                      <p className="text-xs text-slate-400">Restore a broken streak · 2-day window</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { onRepairStreak(); setShowShop(false); }}
+                    disabled={!canRepair || gems < REPAIR_COST}
+                    className="flex items-center gap-1 bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white text-xs font-bold rounded-xl px-3 py-1.5 transition-colors"
+                  >
+                    <span>💎 {REPAIR_COST}</span>
+                  </button>
+                </div>
+                {!canRepair && <p className="text-xs text-slate-400 mt-2">Only available within {REPAIR_WINDOW_DAYS} days of losing your streak</p>}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* DESKTOP: left unit circles + right lesson grid */}
         <div className="hidden md:flex gap-6" style={{ height: "calc(100vh - 168px)" }}>
@@ -1605,6 +1702,9 @@ export default function LearnPage() {
     (profile as unknown as { plan?: string })?.plan === "premium";
   const streak = profile?.streak ?? 0;
   const xp = profile?.xp ?? 0;
+  const gems = profile?.gems ?? 0;
+  const streakFreezes = profile?.streakFreezes ?? 0;
+  const streakBrokenAt = profile?.streakBrokenAt;
   const units = buildUnits(learnProgress);
 
   function openContent(topicId: string, lessonIndex: number) {
@@ -1619,15 +1719,36 @@ export default function LearnPage() {
       const topicMeta = UNIT_CONFIG.flatMap((u) => u.topics).find((t) => t.id === topicId);
       const max = topicMeta?.lessons ?? 1;
       const newProgress = Math.min(currentProgress + 1, max);
-      const todayStr = new Date().toISOString().split("T")[0];
+      const todayStr = new Date().toLocaleDateString("en-CA");
 
       const newXp = (profile?.xp ?? 0) + xpEarned;
-      const newLevel = Math.floor(newXp / 100) + 1;
+      const newLevel = calcLevel(newXp);
+      const newGems = (profile?.gems ?? 0) + GEMS_PER_LESSON;
+
+      const streakResult = calcStreakUpdate({
+        streak: profile?.streak ?? 0,
+        lastActiveDate: profile?.lastActiveDate,
+        streakFreezes: profile?.streakFreezes ?? 0,
+      });
+
       const updates: Record<string, unknown> = {
         [`learnProgress.${topicId}`]: newProgress,
         xp: newXp,
         level: newLevel,
+        gems: newGems,
+        streak: streakResult.newStreak,
+        lastActiveDate: streakResult.newLastActive,
+        streakFreezes: streakResult.newFreezes,
       };
+
+      if (streakResult.streakBroken) {
+        updates.streakBrokenAt = profile?.lastActiveDate ?? null;
+        updates.streakBeforeBreak = profile?.streak ?? 0;
+      }
+      if (streakResult.clearBrokenAt) {
+        updates.streakBrokenAt = null;
+        updates.streakBeforeBreak = null;
+      }
 
       const userHabits = profile?.habits as string[] | undefined;
       if (userHabits?.includes("Learn an Islamic topic daily")) {
@@ -1635,6 +1756,9 @@ export default function LearnPage() {
       }
 
       await updateDoc(doc(db, "users", user.uid), updates);
+
+      if (streakResult.freezeUsed) toast("❄️ Streak freeze used — keep going!");
+      else if (streakResult.streakBroken) toast("🔥 Streak reset — start a new one today!");
     } finally {
       setSaving(false);
     }
@@ -1645,14 +1769,50 @@ export default function LearnPage() {
     setSaving(true);
     try {
       const newXp = (profile?.xp ?? 0) + xpEarned;
-      const newLevel = Math.floor(newXp / 100) + 1;
-      await updateDoc(doc(db, "users", user.uid), {
+      const newLevel = calcLevel(newXp);
+      const newGems = (profile?.gems ?? 0) + GEMS_PER_EXAM;
+
+      const streakResult = calcStreakUpdate({
+        streak: profile?.streak ?? 0,
+        lastActiveDate: profile?.lastActiveDate,
+        streakFreezes: profile?.streakFreezes ?? 0,
+      });
+
+      const updates: Record<string, unknown> = {
         xp: newXp,
         level: newLevel,
-      });
+        gems: newGems,
+        streak: streakResult.newStreak,
+        lastActiveDate: streakResult.newLastActive,
+        streakFreezes: streakResult.newFreezes,
+      };
+      if (streakResult.streakBroken) {
+        updates.streakBrokenAt = profile?.lastActiveDate ?? null;
+        updates.streakBeforeBreak = profile?.streak ?? 0;
+      }
+      if (streakResult.clearBrokenAt) {
+        updates.streakBrokenAt = null;
+        updates.streakBeforeBreak = null;
+      }
+
+      await updateDoc(doc(db, "users", user.uid), updates);
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleBuyFreeze() {
+    if (!user?.uid) return;
+    const result = await buyStreakFreeze(user.uid);
+    if (!result.ok) toast.error(result.reason ?? "Couldn't purchase freeze.");
+    else toast.success("❄️ Streak freeze purchased!");
+  }
+
+  async function handleRepairStreak() {
+    if (!user?.uid) return;
+    const result = await repairStreak(user.uid);
+    if (!result.ok) toast.error(result.reason ?? "Couldn't repair streak.");
+    else toast.success("🔥 Streak repaired — keep it going!");
   }
 
   // Content modal overlay (renders on top of any view)
@@ -1675,8 +1835,13 @@ export default function LearnPage() {
           learnProgress={learnProgress}
           xp={xp}
           streak={streak}
+          gems={gems}
+          streakFreezes={streakFreezes}
+          streakBrokenAt={streakBrokenAt}
           setView={setView}
           onShowContent={openContent}
+          onBuyFreeze={handleBuyFreeze}
+          onRepairStreak={handleRepairStreak}
         />
         {modal}
       </>

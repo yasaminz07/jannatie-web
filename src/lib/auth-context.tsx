@@ -33,6 +33,11 @@ interface UserProfile {
   xp: number;
   level: number;
   streak: number;
+  lastActiveDate?: string;       // YYYY-MM-DD
+  streakFreezes?: number;        // 0–2 stored streak shields
+  streakBrokenAt?: string;       // date streak broke — enables repair within 2 days
+  streakBeforeBreak?: number;    // streak value before break — used for repair
+  gems?: number;                 // earnable currency
   joinedAt: Date | null;
   habits?: string[];
   hifzPlan?: {

@@ -10,7 +10,7 @@ import { useAuth } from "@/lib/auth-context";
 import {
   CommunityEvent, EventComment, toggleEventLike, addEventComment,
   deleteEventComment, reportComment, followCommunity, unfollowCommunity,
-  toggleCommentLike, pinComment, unpinComment, notifyCommunityInteraction,
+  toggleCommentLike, pinComment, unpinComment, notifyCommunityInteraction, logEventShare,
 } from "@/lib/community-utils";
 import type { CommentLiker } from "@/lib/community-utils";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
@@ -140,11 +140,19 @@ export default function EventCard({
 
   async function handleShare() {
     const url = `${window.location.origin}/community?event=${event.id}`;
+    let shared = false;
     if (navigator.share) {
-      try { await navigator.share({ title: event.title, text: event.description, url }); } catch { /* user cancelled */ }
+      try {
+        await navigator.share({ title: event.title, text: event.description, url });
+        shared = true;
+      } catch { /* user cancelled */ }
     } else {
       await navigator.clipboard.writeText(url);
       toast.success("Link copied to clipboard!");
+      shared = true;
+    }
+    if (shared && user) {
+      logEventShare(event.id, user.uid).catch(() => {});
     }
   }
 

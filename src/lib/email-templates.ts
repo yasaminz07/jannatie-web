@@ -108,34 +108,30 @@ export function supportEmailHtml(opts: {
       A new support request was submitted via the Jannatie website.
     </p>
 
-    <!-- From -->
+    <!-- Single combined card -->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-      style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin:0 0 10px;">
+      style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;">
       <tr>
-        <td style="padding:18px 22px;">
+        <td style="padding:18px 22px 14px;">
           <p style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.09em;margin:0 0 6px;">From</p>
           <p style="font-size:15px;font-weight:700;color:#1e293b;margin:0 0 2px;">${opts.name}</p>
           <p style="font-size:13px;color:#64748b;margin:0;">${opts.email}</p>
         </td>
       </tr>
-    </table>
-
-    <!-- Subject -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-      style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin:0 0 10px;">
       <tr>
-        <td style="padding:18px 22px;">
+        <td style="padding:0 22px;"><div style="border-top:1px solid #e2e8f0;"></div></td>
+      </tr>
+      <tr>
+        <td style="padding:14px 22px;">
           <p style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.09em;margin:0 0 6px;">Subject</p>
           <p style="font-size:15px;font-weight:700;color:#1e293b;margin:0;">${opts.subject}</p>
         </td>
       </tr>
-    </table>
-
-    <!-- Message -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-      style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin:0;">
       <tr>
-        <td style="padding:18px 22px;">
+        <td style="padding:0 22px;"><div style="border-top:1px solid #e2e8f0;"></div></td>
+      </tr>
+      <tr>
+        <td style="padding:14px 22px 18px;">
           <p style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.09em;margin:0 0 10px;">Message</p>
           <p style="font-size:14px;color:#334155;line-height:1.75;margin:0;white-space:pre-line;">${opts.message}</p>
         </td>
@@ -175,4 +171,43 @@ export function phoneVerifyEmailHtml(opts: {
     </p>`;
 
   return emailWrapper("Phone Verification", body);
+}
+
+export function supportConfirmEmailHtml(opts: {
+  name: string;
+  subject: string;
+  message: string;
+}): string {
+  const body = `
+    <p style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 10px;">Assalamu Alaykum ${opts.name},</p>
+    <p style="font-size:15px;color:#475569;line-height:1.7;margin:0 0 28px;">
+      Thank you for reaching out — we have received your message and our team will get back to you as soon as possible, in shaa Allah.
+    </p>
+
+    <!-- Summary card -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+      style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;margin:0 0 24px;">
+      <tr>
+        <td style="padding:18px 22px 14px;">
+          <p style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.09em;margin:0 0 6px;">Your subject</p>
+          <p style="font-size:15px;font-weight:700;color:#1e293b;margin:0;">${opts.subject}</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:0 22px;"><div style="border-top:1px solid #e2e8f0;"></div></td>
+      </tr>
+      <tr>
+        <td style="padding:14px 22px 18px;">
+          <p style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.09em;margin:0 0 10px;">Your message</p>
+          <p style="font-size:14px;color:#334155;line-height:1.75;margin:0;white-space:pre-line;">${opts.message}</p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="font-size:13px;color:#64748b;line-height:1.7;margin:0;">
+      If you have any urgent matters, you can also email us directly at
+      <a href="mailto:${SUPPORT_EMAIL}" style="color:#2563eb;font-weight:600;">${SUPPORT_EMAIL}</a>.
+    </p>`;
+
+  return emailWrapper("Support Request Received", body);
 }

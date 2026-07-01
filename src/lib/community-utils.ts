@@ -78,6 +78,14 @@ export async function deleteEventComment(eventId: string, commentId: string) {
   await deleteDoc(doc(db, "communityEvents", eventId, "comments", commentId));
 }
 
+export async function logEventShare(eventId: string, uid: string) {
+  const { setDoc, serverTimestamp: ts } = await import("firebase/firestore");
+  await setDoc(doc(db, "communityEvents", eventId, "shares", uid), {
+    uid,
+    sharedAt: ts(),
+  });
+}
+
 export async function toggleCommentLike(eventId: string, commentId: string, liker: CommentLiker, currentlyLiked: boolean) {
   await updateDoc(doc(db, "communityEvents", eventId, "comments", commentId), {
     [`likedBy.${liker.uid}`]: currentlyLiked ? deleteField() : liker,

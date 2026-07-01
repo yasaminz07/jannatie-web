@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { sendMail } from "@/lib/mailer";
-import { supportEmailHtml } from "@/lib/email-templates";
+import { supportEmailHtml, supportConfirmEmailHtml } from "@/lib/email-templates";
 
 export async function POST(request: NextRequest) {
   const { name, email, subject, message } = await request.json() as {
@@ -25,13 +25,21 @@ export async function POST(request: NextRequest) {
   const html = supportEmailHtml({ name, email, subject, message });
 
   try {
-    await sendMail({
-      to: "jannatieteam@gmail.com",
-      replyTo: email,
-      subject: `[Support] ${subject}`,
-      html,
-      from: "Jannatie Support",
-    });
+    await Promise.all([
+      sendMail({
+        to: "jannatieteam@gmail.com",
+        replyTo: email,
+        subject: `[Support] ${subject}`,
+        html,
+        from: "Jannatie Support",
+      }),
+      sendMail({
+        to: email,
+        subject: `We received your message — Jannatie Support`,
+        html: supportConfirmEmailHtml({ name, subject, message }),
+        from: "Jannatie Support",
+      }),
+    ]);
   } catch (err) {
     console.error("Support email failed:", err);
     return NextResponse.json({ error: "Failed to send email. Please try again." }, { status: 500 });
