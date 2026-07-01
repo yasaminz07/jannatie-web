@@ -1,16 +1,15 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { sendMail } from "@/lib/mailer";
 import { newsletterEmailHtml } from "@/lib/email-templates";
 import { buildUnsubscribeUrl } from "@/app/api/unsubscribe/route";
 
 export async function POST(request: NextRequest) {
-  const { subject, body, adminEmail } = await request.json() as {
+  const { subject, body, adminEmail, emails } = await request.json() as {
     subject?: string;
     body?: string;
     adminEmail?: string;
+    emails?: string[];
   };
 
   if (adminEmail !== "jannatieteam@gmail.com") {
@@ -23,14 +22,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Gmail not configured." }, { status: 503 });
   }
 
-  let subscribers: string[] = [];
-  try {
-    const snap = await getDocs(collection(db, "newsletterSubscribers"));
-    subscribers = snap.docs.map(d => d.id);
-  } catch (err) {
-    console.error("Failed to fetch subscribers:", err);
-    return NextResponse.json({ error: "Could not fetch subscribers." }, { status: 500 });
-  }
+  // Subscriber list is fetched client-side (where admin auth token is present)
+  // and passed in the request body, avoiding a server-side Firestore read with no auth.
+  const subscribers: string[] = Array.isArray(emails) ? emails : [];
 
   if (subscribers.length === 0) {
     return NextResponse.json({ sent: 0, failed: 0, message: "No subscribers yet." });

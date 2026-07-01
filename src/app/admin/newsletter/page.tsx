@@ -18,12 +18,21 @@ export default function AdminNewsletterPage() {
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ sent: number; failed: number; total: number; message?: string } | null>(null);
   const [subscriberCount, setSubscriberCount] = useState<number | null>(null);
+  const [subscriberEmails, setSubscriberEmails] = useState<string[]>([]);
 
+  // Wait for auth to resolve before querying — Firestore rules require the admin token
   useEffect(() => {
+    if (!user) return;
     getDocs(collection(db, "newsletterSubscribers"))
-      .then(snap => setSubscriberCount(snap.size))
-      .catch(() => setSubscriberCount(0));
-  }, []);
+      .then(snap => {
+        setSubscriberCount(snap.size);
+        setSubscriberEmails(snap.docs.map(d => d.id));
+      })
+      .catch(() => {
+        setSubscriberCount(0);
+        setSubscriberEmails([]);
+      });
+  }, [user]);
 
   async function handleSend() {
     if (!subject.trim() || !body.trim()) {
@@ -37,7 +46,7 @@ export default function AdminNewsletterPage() {
       const res = await fetch("/api/admin/send-newsletter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject, body, adminEmail: user.email }),
+        body: JSON.stringify({ subject, body, adminEmail: user.email, emails: subscriberEmails }),
       });
       const data = await res.json() as { sent?: number; failed?: number; total?: number; message?: string; error?: string };
       if (!res.ok) { toast.error(data.error ?? "Send failed."); return; }

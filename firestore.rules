@@ -135,11 +135,15 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Newsletter subscribers — anyone can subscribe (write own doc keyed by email);
-    // only the admin can read the full list.
+    // Newsletter subscribers — anyone can subscribe/unsubscribe (no auth needed for create/delete).
+    // Users can read their own doc (settings page subscription check).
+    // Only admin can list all docs (newsletter send page).
     match /newsletterSubscribers/{email} {
       allow create, delete: if true;
-      allow read: if request.auth != null && request.auth.token.email == "jannatieteam@gmail.com";
+      allow read: if request.auth != null && (
+        request.auth.token.email == email ||
+        request.auth.token.email == "jannatieteam@gmail.com"
+      );
       allow update: if false;
     }
   }

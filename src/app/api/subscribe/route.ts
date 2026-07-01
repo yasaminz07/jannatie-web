@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
-import { collection, doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { sendMail } from "@/lib/mailer";
 import { newsletterWelcomeEmailHtml } from "@/lib/email-templates";
@@ -15,12 +15,13 @@ export async function POST(request: NextRequest) {
 
   const normalised = email.trim().toLowerCase();
 
+  // setDoc without reading first — server-side client SDK has no auth context so
+  // getDoc would fail the rule; allow create: if true means setDoc always works.
   try {
-    const ref = doc(collection(db, "newsletterSubscribers"), normalised);
-    const existing = await getDoc(ref);
-    if (!existing.exists()) {
-      await setDoc(ref, { email: normalised, subscribedAt: new Date().toISOString() });
-    }
+    await setDoc(doc(db, "newsletterSubscribers", normalised), {
+      email: normalised,
+      subscribedAt: new Date().toISOString(),
+    });
   } catch (err) {
     console.error("Firestore subscribe write failed:", err);
   }
