@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 
-export default function UnsubscribePage() {
+function UnsubscribeContent() {
   const params = useSearchParams();
   const [state, setState] = useState<"loading" | "done" | "already" | "error">("loading");
   const [resubState, setResubState] = useState<"idle" | "loading" | "done">("idle");
@@ -133,5 +133,17 @@ export default function UnsubscribePage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function UnsubscribePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-blue-600 animate-spin" />
+      </div>
+    }>
+      <UnsubscribeContent />
+    </Suspense>
   );
 }
