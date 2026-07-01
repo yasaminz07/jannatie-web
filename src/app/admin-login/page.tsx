@@ -3,10 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, ShieldCheck, ArrowLeft, Check } from "lucide-react";
-import { sendPasswordResetEmail } from "firebase/auth";
 import toast from "react-hot-toast";
 import { useAuth } from "@/lib/auth-context";
-import { auth } from "@/lib/firebase";
 import { isAdminEmail, resolveAdminEmail } from "@/lib/admin";
 
 const inputCls =
@@ -63,7 +61,12 @@ export default function AdminLoginPage() {
 
     setResetSubmitting(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      const res = await fetch("/api/password-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) throw new Error("failed");
       setMode("forgot-sent");
     } catch {
       toast.error("Couldn't send reset link. Try again.");

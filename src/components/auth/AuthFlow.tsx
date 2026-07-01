@@ -8,7 +8,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
 import { db, auth } from "@/lib/firebase";
 import { collection, query, where, getDocs, doc, getDoc, updateDoc, limit } from "firebase/firestore";
-import { sendPasswordResetEmail } from "firebase/auth";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, Check, X, ChevronRight, ArrowLeft } from "lucide-react";
 import { trackFunnelStep } from "@/lib/analytics-tracker";
@@ -439,7 +438,12 @@ export default function AuthFlow({
     e.preventDefault();
     setFpLoading(true);
     try {
-      await sendPasswordResetEmail(auth, fpEmail);
+      const res = await fetch("/api/password-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: fpEmail.trim() }),
+      });
+      if (!res.ok) throw new Error("failed");
       setFpSent(true);
     } catch {
       toast.error("No account found with that email address.");
