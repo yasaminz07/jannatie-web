@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
+import { sendMail } from "@/lib/mailer";
 
 const CHANGE_LABELS: Record<string, string> = {
   name: "Display name",
@@ -20,10 +21,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
     return NextResponse.json(
-      { error: "Email service not configured. Add RESEND_API_KEY to your environment variables." },
+      { error: "Email service not configured. Add GMAIL_USER and GMAIL_APP_PASSWORD to your environment variables." },
       { status: 503 }
     );
   }
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       </div>
       <p style="font-size:14px;color:#64748b;margin:0 0 24px;">
         If this was you, no action is needed. If you did <strong>not</strong> make this change,
-        please contact us immediately at <a href="mailto:support@jannatie.com" style="color:#2563eb;">support@jannatie.com</a>
+        please contact us immediately at <a href="mailto:jannatieteam@gmail.com" style="color:#2563eb;">jannatieteam@gmail.com</a>
         and change your password right away.
       </p>
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 20px;" />
@@ -60,23 +60,16 @@ export async function POST(request: NextRequest) {
     </div>
   `;
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: "Jannatie Security <security@jannatie.com>",
-      to: [to],
+  try {
+    await sendMail({
+      to,
       subject: `Your ${label} was changed — Jannatie Security Notice`,
       html,
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json();
-    return NextResponse.json({ error: err.message ?? "Email failed" }, { status: 500 });
+      from: "Jannatie Security",
+    });
+  } catch (err) {
+    console.error("Security email failed:", err);
+    return NextResponse.json({ error: "Failed to send email." }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });

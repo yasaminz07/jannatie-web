@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
+import { sendMail } from "@/lib/mailer";
 
 export async function POST(request: NextRequest) {
   const { name, email, subject, message } = await request.json() as {
@@ -13,10 +14,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
     return NextResponse.json(
-      { error: "Email service not configured. Add RESEND_API_KEY to your environment variables." },
+      { error: "Email service not configured. Add GMAIL_USER and GMAIL_APP_PASSWORD to your environment variables." },
       { status: 503 }
     );
   }
@@ -42,24 +42,17 @@ export async function POST(request: NextRequest) {
     </div>
   `;
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: "Jannatie Support <support@jannatie.com>",
-      to: ["jannatieteam@gmail.com"],
-      reply_to: email,
+  try {
+    await sendMail({
+      to: "jannatieteam@gmail.com",
+      replyTo: email,
       subject: `[Support] ${subject}`,
       html,
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json();
-    return NextResponse.json({ error: err.message ?? "Email failed" }, { status: 500 });
+      from: "Jannatie Support",
+    });
+  } catch (err) {
+    console.error("Support email failed:", err);
+    return NextResponse.json({ error: "Failed to send email. Please try again." }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });
