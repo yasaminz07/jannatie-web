@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
-import { BarChart3, ShieldCheck, Users, Flag, MoreHorizontal, Home, LogOut } from "lucide-react";
+import { BarChart3, ShieldCheck, Users, Flag, Mail, MoreHorizontal, Home, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,6 +13,7 @@ const navItems = [
   { label: "Communities", href: "/admin/communities", icon: Users },
   { label: "Reports", href: "/admin/reports", icon: Flag },
   { label: "Applications", href: "/admin/community-applications", icon: ShieldCheck },
+  { label: "Newsletter", href: "/admin/newsletter", icon: Mail },
 ];
 
 export default function AdminBottomNav() {

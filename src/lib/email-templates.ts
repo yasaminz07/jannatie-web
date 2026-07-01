@@ -251,3 +251,21 @@ export function newsletterWelcomeEmailHtml(opts: { email: string; unsubscribeUrl
 
   return emailWrapper("Welcome to Jannatie", body, opts.unsubscribeUrl);
 }
+
+export function newsletterEmailHtml(opts: {
+  subject: string;
+  body: string;
+  unsubscribeUrl?: string;
+}): string {
+  // Convert newlines to <br> and wrap paragraphs
+  const formatted = opts.body
+    .split(/\n{2,}/)
+    .map(p => `<p style="font-size:15px;color:#334155;line-height:1.8;margin:0 0 16px;">${p.replace(/\n/g, "<br>")}</p>`)
+    .join("");
+
+  const body = `
+    <h2 style="font-size:20px;font-weight:700;color:#1e293b;margin:0 0 20px;">${opts.subject}</h2>
+    ${formatted}`;
+
+  return emailWrapper("Jannatie Newsletter", body, opts.unsubscribeUrl);
+}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { BarChart3, ShieldCheck, LogOut, Home, Users, Flag } from "lucide-react";
+import { BarChart3, ShieldCheck, LogOut, Home, Users, Flag, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 
@@ -12,6 +12,7 @@ const navItems = [
   { label: "Communities", href: "/admin/communities", icon: Users },
   { label: "Reports", href: "/admin/reports", icon: Flag },
   { label: "Community Applications", href: "/admin/community-applications", icon: ShieldCheck },
+  { label: "Newsletter", href: "/admin/newsletter", icon: Mail },
 ];
 
 export default function AdminSidebar() {
