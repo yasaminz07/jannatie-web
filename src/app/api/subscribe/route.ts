@@ -4,7 +4,7 @@ import { doc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { sendMail } from "@/lib/mailer";
 import { newsletterWelcomeEmailHtml } from "@/lib/email-templates";
-import { buildUnsubscribeUrl } from "@/app/api/unsubscribe/route";
+import { buildUnsubscribeUrl } from "@/lib/newsletter-utils";
 
 export async function POST(request: NextRequest) {
   const { email } = await request.json() as { email?: string };

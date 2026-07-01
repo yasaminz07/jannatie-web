@@ -1,19 +1,8 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac } from "crypto";
 import { doc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-
-function makeToken(email: string): string {
-  const secret = process.env.OTP_SECRET ?? "jannatie-otp-secret-change-me";
-  return createHmac("sha256", secret).update(email).digest("hex").slice(0, 32);
-}
-
-export function buildUnsubscribeUrl(email: string): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://jannatie.com";
-  const token = makeToken(email);
-  return `${base}/unsubscribe?e=${encodeURIComponent(email)}&t=${token}`;
-}
+import { makeUnsubscribeToken } from "@/lib/newsletter-utils";
 
 // GET — verify token then unsubscribe (one-click from email link)
 export async function GET(request: NextRequest) {
@@ -25,7 +14,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid link." }, { status: 400 });
   }
 
-  const expected = makeToken(email.toLowerCase());
+  const expected = makeUnsubscribeToken(email.toLowerCase());
   if (token !== expected) {
     return NextResponse.json({ error: "Invalid or expired link." }, { status: 403 });
   }

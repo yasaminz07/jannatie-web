@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { sendMail } from "@/lib/mailer";
 import { newsletterEmailHtml } from "@/lib/email-templates";
-import { buildUnsubscribeUrl } from "@/app/api/unsubscribe/route";
+import { buildUnsubscribeUrl } from "@/lib/newsletter-utils";
 
 export async function POST(request: NextRequest) {
   const { subject, body, adminEmail, emails } = await request.json() as {
