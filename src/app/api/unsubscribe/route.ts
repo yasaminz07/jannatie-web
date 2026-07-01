@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac } from "crypto";
-import { doc, deleteDoc, getDoc } from "firebase/firestore";
+import { doc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 function makeToken(email: string): string {
@@ -46,9 +46,9 @@ export async function POST(request: NextRequest) {
 
 async function removeSubscriber(email: string) {
   try {
-    const ref = doc(db, "newsletterSubscribers", email);
-    const snap = await getDoc(ref);
-    if (snap.exists()) await deleteDoc(ref);
+    // deleteDoc on a non-existent doc is a no-op; no need to getDoc first
+    // (getDoc would fail server-side — no auth context, rule requires read auth)
+    await deleteDoc(doc(db, "newsletterSubscribers", email));
   } catch (err) {
     console.error("Unsubscribe Firestore error:", err);
   }
