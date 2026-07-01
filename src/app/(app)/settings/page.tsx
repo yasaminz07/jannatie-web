@@ -10,7 +10,7 @@ import {
   Check, X, Crown, Zap, Users2, ChevronDown, LifeBuoy, Eye, EyeOff, AlertTriangle,
 } from "lucide-react";
 import {
-  collection, query, where, getDocs, doc, updateDoc, deleteDoc, limit,
+  collection, query, where, getDocs, getDoc, doc, updateDoc, deleteDoc, limit,
 } from "firebase/firestore";
 import {
   updateEmail, RecaptchaVerifier, linkWithPhoneNumber,
@@ -77,22 +77,50 @@ const glassCard = {
 } as const;
 
 function NewsletterSection({ email }: { email: string }) {
-  const [state, setState] = useState<"idle" | "loading" | "done">("idle");
+  const [subscribed, setSubscribed] = useState<boolean | null>(null);
+  const [actioning, setActioning] = useState(false);
+
+  useEffect(() => {
+    if (!email) return;
+    getDoc(doc(db, "newsletterSubscribers", email.toLowerCase()))
+      .then(snap => setSubscribed(snap.exists()))
+      .catch(() => setSubscribed(false));
+  }, [email]);
 
   async function handleUnsubscribe() {
-    if (!email || state === "loading") return;
-    setState("loading");
+    if (!email || actioning) return;
+    setActioning(true);
     try {
       await fetch("/api/unsubscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      setState("done");
+      setSubscribed(false);
       toast.success("Unsubscribed from newsletter.");
     } catch {
-      setState("idle");
       toast.error("Couldn't unsubscribe. Please try again.");
+    } finally {
+      setActioning(false);
+    }
+  }
+
+  async function handleSubscribe() {
+    if (!email || actioning) return;
+    setActioning(true);
+    try {
+      const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) throw new Error();
+      setSubscribed(true);
+      toast.success("Subscribed to newsletter!");
+    } catch {
+      toast.error("Couldn't subscribe. Please try again.");
+    } finally {
+      setActioning(false);
     }
   }
 
@@ -107,15 +135,23 @@ function NewsletterSection({ email }: { email: string }) {
           <p className="text-sm font-medium text-slate-700">Jannatie newsletter</p>
           <p className="text-xs text-slate-400 mt-0.5">Islamic tips, updates &amp; new features</p>
         </div>
-        {state === "done" ? (
-          <span className="text-xs text-slate-400 font-medium">Unsubscribed</span>
-        ) : (
+        {subscribed === null ? (
+          <span className="text-xs text-slate-300">...</span>
+        ) : subscribed ? (
           <button
             onClick={handleUnsubscribe}
-            disabled={state === "loading"}
+            disabled={actioning}
             className="text-xs font-semibold text-red-500 hover:text-red-600 disabled:opacity-50 transition-colors"
           >
-            {state === "loading" ? "..." : "Unsubscribe"}
+            {actioning ? "..." : "Unsubscribe"}
+          </button>
+        ) : (
+          <button
+            onClick={handleSubscribe}
+            disabled={actioning}
+            className="text-xs font-semibold text-blue-600 hover:text-blue-700 disabled:opacity-50 transition-colors"
+          >
+            {actioning ? "..." : "Subscribe"}
           </button>
         )}
       </div>
