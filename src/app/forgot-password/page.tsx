@@ -3,8 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { sendPasswordResetEmail } from "firebase/auth";
-import { auth } from "@/lib/firebase";
 import { ArrowLeft, Check } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -22,12 +20,9 @@ export default function ForgotPasswordPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim() }),
       });
-      const data = await res.json() as { success?: boolean; fallback?: boolean; error?: string };
+      const data = await res.json() as { success?: boolean; error?: string };
 
-      if (data.fallback) {
-        // Admin SDK not yet configured — use Firebase's built-in reset email
-        await sendPasswordResetEmail(auth, email.trim());
-      } else if (!res.ok) {
+      if (!res.ok) {
         throw new Error(data.error ?? "failed");
       }
 
