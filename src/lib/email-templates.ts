@@ -4,7 +4,7 @@ const SUPPORT_EMAIL = "jannatieteam@gmail.com";
 const SITE_URL = "https://jannatie.com";
 const YEAR = new Date().getFullYear();
 
-function emailWrapper(subtitle: string, body: string): string {
+function emailWrapper(subtitle: string, body: string, unsubscribeUrl?: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -43,6 +43,7 @@ function emailWrapper(subtitle: string, body: string): string {
                     <p style="font-size:11px;color:#cbd5e1;margin:0;">
                       This is an automated message. Please do not reply to this email.
                     </p>
+                    ${unsubscribeUrl ? `<p style="font-size:11px;color:#cbd5e1;margin:8px 0 0;"><a href="${unsubscribeUrl}" style="color:#94a3b8;text-decoration:underline;">Unsubscribe</a></p>` : ""}
                   </td>
                 </tr>
               </table>
@@ -212,7 +213,7 @@ export function supportConfirmEmailHtml(opts: {
   return emailWrapper("Support Request Received", body);
 }
 
-export function newsletterWelcomeEmailHtml(opts: { email: string }): string {
+export function newsletterWelcomeEmailHtml(opts: { email: string; unsubscribeUrl?: string }): string {
   const body = `
     <p style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 10px;">Assalamu Alaykum 🌙</p>
     <p style="font-size:15px;color:#475569;line-height:1.7;margin:0 0 28px;">
@@ -248,5 +249,5 @@ export function newsletterWelcomeEmailHtml(opts: { email: string }): string {
       If this wasn't you, ignore this email.
     </p>`;
 
-  return emailWrapper("Welcome to Jannatie", body);
+  return emailWrapper("Welcome to Jannatie", body, opts.unsubscribeUrl);
 }

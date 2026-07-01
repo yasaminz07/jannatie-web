@@ -76,6 +76,53 @@ const glassCard = {
   boxShadow: "0 4px 24px rgba(15, 23, 42, 0.07)",
 } as const;
 
+function NewsletterSection({ email }: { email: string }) {
+  const [state, setState] = useState<"idle" | "loading" | "done">("idle");
+
+  async function handleUnsubscribe() {
+    if (!email || state === "loading") return;
+    setState("loading");
+    try {
+      await fetch("/api/unsubscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      setState("done");
+      toast.success("Unsubscribed from newsletter.");
+    } catch {
+      setState("idle");
+      toast.error("Couldn't unsubscribe. Please try again.");
+    }
+  }
+
+  return (
+    <div className="rounded-2xl p-6 mb-4" style={glassCard}>
+      <div className="flex items-center gap-2 mb-4">
+        <Bell size={17} className="text-blue-600" />
+        <h2 className="font-semibold text-slate-800">Email Preferences</h2>
+      </div>
+      <div className="flex items-center justify-between py-2.5 px-3 rounded-xl">
+        <div>
+          <p className="text-sm font-medium text-slate-700">Jannatie newsletter</p>
+          <p className="text-xs text-slate-400 mt-0.5">Islamic tips, updates &amp; new features</p>
+        </div>
+        {state === "done" ? (
+          <span className="text-xs text-slate-400 font-medium">Unsubscribed</span>
+        ) : (
+          <button
+            onClick={handleUnsubscribe}
+            disabled={state === "loading"}
+            className="text-xs font-semibold text-red-500 hover:text-red-600 disabled:opacity-50 transition-colors"
+          >
+            {state === "loading" ? "..." : "Unsubscribe"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const inputCls = "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-white";
 
 function daysUntilAllowed(lastChangedIso: string | undefined, cooldownDays: number): number {
@@ -1217,6 +1264,9 @@ export default function SettingsPage() {
             </a>
           </div>
         </div>
+
+        {/* Email Preferences */}
+        <NewsletterSection email={profile?.email ?? ""} />
 
         {/* Danger zone */}
         <div

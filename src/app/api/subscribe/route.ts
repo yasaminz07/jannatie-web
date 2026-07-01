@@ -4,6 +4,7 @@ import { collection, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { sendMail } from "@/lib/mailer";
 import { newsletterWelcomeEmailHtml } from "@/lib/email-templates";
+import { buildUnsubscribeUrl } from "@/app/api/unsubscribe/route";
 
 export async function POST(request: NextRequest) {
   const { email } = await request.json() as { email?: string };
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
       await sendMail({
         to: normalised,
         subject: "Welcome to Jannatie — you're subscribed 🌙",
-        html: newsletterWelcomeEmailHtml({ email: normalised }),
+        html: newsletterWelcomeEmailHtml({ email: normalised, unsubscribeUrl: buildUnsubscribeUrl(normalised) }),
         from: "Jannatie",
       });
     } catch (err) {
