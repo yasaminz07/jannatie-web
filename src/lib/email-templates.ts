@@ -252,6 +252,46 @@ export function newsletterWelcomeEmailHtml(opts: { email: string; unsubscribeUrl
   return emailWrapper("Welcome to Jannatie", body, opts.unsubscribeUrl);
 }
 
+export function passwordResetEmailHtml(opts: { greeting: string; resetUrl: string }): string {
+  const body = `
+    <p style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 10px;">${opts.greeting}</p>
+    <p style="font-size:15px;color:#475569;line-height:1.7;margin:0 0 28px;">
+      We received a request to reset the password for your Jannatie account.
+      Click the button below to choose a new password.
+    </p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+      style="margin:0 0 28px;">
+      <tr>
+        <td style="text-align:center;padding:4px 0;">
+          <a href="${opts.resetUrl}"
+            style="display:inline-block;background-color:#1d4ed8;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:16px 36px;border-radius:12px;">
+            Reset my password
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+      style="background-color:#fff7ed;border:1px solid #fed7aa;border-radius:12px;margin:0 0 0;">
+      <tr>
+        <td style="padding:18px 22px;">
+          <p style="font-size:13px;color:#92400e;margin:0;line-height:1.7;">
+            <strong style="color:#78350f;">Didn't request this?</strong>
+            If you didn't ask to reset your password, you can safely ignore this email —
+            your account has not been changed.
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="font-size:12px;color:#94a3b8;margin:20px 0 0;text-align:center;">
+      This link expires in 1 hour.
+    </p>`;
+
+  return emailWrapper("Password Reset", body);
+}
+
 export function newsletterEmailHtml(opts: {
   subject: string;
   body: string;

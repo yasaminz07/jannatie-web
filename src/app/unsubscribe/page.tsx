@@ -9,6 +9,20 @@ export default function UnsubscribePage() {
   const params = useSearchParams();
   const [state, setState] = useState<"loading" | "done" | "error">("loading");
   const [message, setMessage] = useState("");
+  const [resubState, setResubState] = useState<"idle" | "loading" | "done">("idle");
+
+  function handleResubscribe() {
+    const email = params.get("e");
+    if (!email || resubState !== "idle") return;
+    setResubState("loading");
+    fetch("/api/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    })
+      .then(() => setResubState("done"))
+      .catch(() => setResubState("idle"));
+  }
 
   useEffect(() => {
     const email = params.get("e");
@@ -60,8 +74,26 @@ export default function UnsubscribePage() {
               </svg>
             </div>
             <h1 className="text-xl font-bold text-slate-900 mb-2">Unsubscribed</h1>
-            <p className="text-sm text-slate-500 mb-8">{message}</p>
-            <p className="text-xs text-slate-400 mb-6">You can re-subscribe anytime from the Jannatie website footer.</p>
+            <p className="text-sm text-slate-500 mb-6">{message}</p>
+
+            {resubState === "done" ? (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-6">
+                <p className="text-sm font-semibold text-emerald-700">You&apos;re back on the list!</p>
+                <p className="text-xs text-emerald-600 mt-0.5">We&apos;re glad you changed your mind. JazakAllah Khair.</p>
+              </div>
+            ) : (
+              <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mb-6 text-left">
+                <p className="text-sm text-slate-600 mb-2">Changed your mind?</p>
+                <button
+                  onClick={handleResubscribe}
+                  disabled={resubState === "loading"}
+                  className="text-sm font-semibold text-blue-600 hover:text-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  {resubState === "loading" ? "Re-subscribing…" : "Subscribe again"}
+                </button>
+              </div>
+            )}
+
             <Link
               href="/"
               className="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors"

@@ -17,7 +17,20 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      const res = await fetch("/api/password-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const data = await res.json() as { success?: boolean; fallback?: boolean; error?: string };
+
+      if (data.fallback) {
+        // Admin SDK not yet configured — use Firebase's built-in reset email
+        await sendPasswordResetEmail(auth, email.trim());
+      } else if (!res.ok) {
+        throw new Error(data.error ?? "failed");
+      }
+
       setSent(true);
     } catch {
       toast.error("No account found with that email address.");
