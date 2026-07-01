@@ -134,5 +134,13 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.token.email == "jannatieteam@gmail.com";
       allow delete: if false;
     }
+
+    // Newsletter subscribers — anyone can subscribe (write own doc keyed by email);
+    // only the admin can read the full list.
+    match /newsletterSubscribers/{email} {
+      allow create: if true;
+      allow read: if request.auth != null && request.auth.token.email == "jannatieteam@gmail.com";
+      allow update, delete: if false;
+    }
   }
 }

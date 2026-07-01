@@ -211,3 +211,42 @@ export function supportConfirmEmailHtml(opts: {
 
   return emailWrapper("Support Request Received", body);
 }
+
+export function newsletterWelcomeEmailHtml(opts: { email: string }): string {
+  const body = `
+    <p style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 10px;">Assalamu Alaykum 🌙</p>
+    <p style="font-size:15px;color:#475569;line-height:1.7;margin:0 0 28px;">
+      JazakAllah Khair for subscribing to Jannatie! You're now on the list for
+      Islamic tips, new features, and updates — sent straight to your inbox.
+    </p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+      style="background-color:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;margin:0 0 28px;">
+      <tr>
+        <td style="padding:24px 28px;">
+          <p style="font-size:13px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 12px;">What to expect</p>
+          <p style="font-size:14px;color:#334155;line-height:1.8;margin:0 0 6px;">🤲 &nbsp;Weekly Islamic reminders and tips</p>
+          <p style="font-size:14px;color:#334155;line-height:1.8;margin:0 0 6px;">✨ &nbsp;New features and app updates</p>
+          <p style="font-size:14px;color:#334155;line-height:1.8;margin:0;">🌍 &nbsp;Community highlights and events</p>
+        </td>
+      </tr>
+    </table>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+      style="margin:0 0 24px;">
+      <tr>
+        <td style="text-align:center;padding:4px 0;">
+          <a href="${SITE_URL}" style="display:inline-block;background-color:#1d4ed8;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:12px;">
+            Open Jannatie
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <p style="font-size:13px;color:#94a3b8;text-align:center;margin:0;">
+      You subscribed with <strong style="color:#64748b;">${opts.email}</strong>.
+      If this wasn't you, ignore this email.
+    </p>`;
+
+  return emailWrapper("Welcome to Jannatie", body);
+}
