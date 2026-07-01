@@ -8,8 +8,10 @@ const withPWA = require("next-pwa")({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Prevent Next.js from bundling firebase-admin — it must load via Node require
-  serverExternalPackages: ["firebase-admin"],
+  experimental: {
+    // Prevent Next.js from bundling firebase-admin — must load via Node require
+    serverComponentsExternalPackages: ["firebase-admin"],
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "firebasestorage.googleapis.com" },

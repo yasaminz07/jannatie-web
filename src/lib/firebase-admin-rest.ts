@@ -38,19 +38,24 @@ async function getGoogleAccessToken(clientEmail: string, privateKey: string): Pr
 export async function generatePasswordResetLink(email: string): Promise<string> {
   const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL?.trim();
   const rawKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
-  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  // Project-scoped admin endpoint — requires NEXT_PUBLIC_FIREBASE_PROJECT_ID
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
 
-  if (!clientEmail || !rawKey || !apiKey) {
-    throw new Error("Missing Firebase admin credentials (FIREBASE_ADMIN_CLIENT_EMAIL / FIREBASE_ADMIN_PRIVATE_KEY / NEXT_PUBLIC_FIREBASE_API_KEY)");
+  if (!clientEmail || !rawKey || !projectId) {
+    throw new Error(
+      "Missing Firebase admin credentials (FIREBASE_ADMIN_CLIENT_EMAIL / FIREBASE_ADMIN_PRIVATE_KEY / NEXT_PUBLIC_FIREBASE_PROJECT_ID)"
+    );
   }
 
-  // Strip surrounding quotes (common copy-paste issue), then convert literal \n to real newlines
+  // Strip surrounding quotes (copy-paste issue) then convert literal \n to real newlines
   const privateKey = rawKey.replace(/^["']|["']$/g, "").replace(/\\n/g, "\n");
 
   const accessToken = await getGoogleAccessToken(clientEmail, privateKey);
 
+  // Must use the project-scoped admin URL — the non-admin /accounts:sendOobCode
+  // endpoint ignores returnOobLink and sends Firebase's own email instead
   const res = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`,
+    `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:sendOobCode`,
     {
       method: "POST",
       headers: {
@@ -69,6 +74,7 @@ export async function generatePasswordResetLink(email: string): Promise<string> 
 
   if (!res.ok || !data.oobLink) {
     const msg = data.error?.message ?? "unknown error";
+    console.error("[firebase-admin-rest] sendOobCode failed:", msg);
     if (msg === "EMAIL_NOT_FOUND") {
       throw Object.assign(new Error("user not found"), { code: "auth/user-not-found" });
     }
