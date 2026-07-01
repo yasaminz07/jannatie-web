@@ -13,8 +13,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
   }
 
+  console.log("[password-reset] apps initialised:", getApps().length, "| env vars present:", {
+    clientEmail: !!process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+    privateKey: !!process.env.FIREBASE_ADMIN_PRIVATE_KEY,
+    projectId: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  });
+
   if (!getApps().length) {
-    // Admin SDK not configured — tell the client to fall back to Firebase default
+    console.warn("[password-reset] Admin SDK not initialised — falling back to Firebase default email");
     return NextResponse.json({ fallback: true });
   }
 
