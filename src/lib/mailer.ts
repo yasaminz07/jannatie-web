@@ -1,21 +1,5 @@
 import nodemailer from "nodemailer";
-
-// Gmail SMTP via App Password — set GMAIL_USER and GMAIL_APP_PASSWORD in env
-function createTransporter() {
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
-
-  if (!user || !pass) {
-    throw new Error("GMAIL_USER and GMAIL_APP_PASSWORD environment variables are required.");
-  }
-
-  return nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    auth: { user, pass },
-  });
-}
+import { Resend } from "resend";
 
 export interface MailOptions {
   to: string | string[];
@@ -25,14 +9,44 @@ export interface MailOptions {
   from?: string;
 }
 
+// Use Resend when API key is set (better deliverability, sends from @jannatie.com)
+// Falls back to Gmail SMTP for local dev without a Resend key
 export async function sendMail(opts: MailOptions) {
-  const transporter = createTransporter();
+  const resendKey = process.env.RESEND_API_KEY;
   const fromName = opts.from ?? "Jannatie";
-  const fromAddress = process.env.GMAIL_USER!;
+  const toArray = Array.isArray(opts.to) ? opts.to : [opts.to];
+
+  if (resendKey) {
+    const resend = new Resend(resendKey);
+    const fromAddress = process.env.RESEND_FROM_EMAIL ?? "noreply@jannatie.com";
+
+    const { error } = await resend.emails.send({
+      from: `${fromName} <${fromAddress}>`,
+      to: toArray,
+      replyTo: opts.replyTo,
+      subject: opts.subject,
+      html: opts.html,
+    });
+
+    if (error) throw new Error(`Resend error: ${error.message}`);
+    return;
+  }
+
+  // Gmail SMTP fallback
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  if (!user || !pass) throw new Error("No email provider configured (RESEND_API_KEY or GMAIL_USER/GMAIL_APP_PASSWORD).");
+
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: { user, pass },
+  });
 
   await transporter.sendMail({
-    from: `${fromName} <${fromAddress}>`,
-    to: Array.isArray(opts.to) ? opts.to.join(", ") : opts.to,
+    from: `${fromName} <${user}>`,
+    to: toArray.join(", "),
     replyTo: opts.replyTo,
     subject: opts.subject,
     html: opts.html,
