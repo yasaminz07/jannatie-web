@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
-import admin from "@/lib/firebase-admin";
+import { getApps } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import "@/lib/firebase-admin";
 import { sendMail } from "@/lib/mailer";
 import { passwordResetEmailHtml } from "@/lib/email-templates";
 
@@ -11,13 +13,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
   }
 
-  if (!admin.apps.length) {
-    // Admin SDK not configured — fall back to client-side Firebase reset
+  if (!getApps().length) {
+    // Admin SDK not configured — tell the client to fall back to Firebase default
     return NextResponse.json({ fallback: true });
   }
 
   try {
-    const resetUrl = await admin.auth().generatePasswordResetLink(email.trim().toLowerCase());
+    const resetUrl = await getAuth().generatePasswordResetLink(email.trim().toLowerCase());
 
     await sendMail({
       to: email.trim().toLowerCase(),

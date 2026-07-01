@@ -3,8 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { doc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { makeUnsubscribeToken } from "@/lib/newsletter-utils";
+import { getApps } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+import "@/lib/firebase-admin";
 
-// GET — verify token then unsubscribe (one-click from email link)
+// GET — verify HMAC token then unsubscribe (one-click from email link)
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const email = searchParams.get("e");
@@ -19,24 +22,45 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid or expired link." }, { status: 403 });
   }
 
-  await removeSubscriber(email.toLowerCase());
+  const normalised = email.toLowerCase();
+
+  // Use Admin SDK Firestore when available — bypasses security rules so we
+  // can check existence and distinguish "just removed" vs "already gone"
+  if (getApps().length) {
+    const adminDb = getFirestore();
+    const snap = await adminDb.doc(`newsletterSubscribers/${normalised}`).get();
+    if (!snap.exists) {
+      return NextResponse.json({ alreadyUnsubscribed: true });
+    }
+    await adminDb.doc(`newsletterSubscribers/${normalised}`).delete();
+    return NextResponse.json({ success: true });
+  }
+
+  // Fallback: client SDK deleteDoc (no auth needed; can't detect already-removed)
+  await removeSubscriberClientSdk(normalised);
   return NextResponse.json({ success: true });
 }
 
-// POST — unsubscribe from settings page (user is authenticated client-side)
+// POST — unsubscribe from settings page button
 export async function POST(request: NextRequest) {
   const { email } = await request.json() as { email?: string };
   if (!email?.trim()) {
     return NextResponse.json({ error: "Email required." }, { status: 400 });
   }
-  await removeSubscriber(email.trim().toLowerCase());
+  const normalised = email.trim().toLowerCase();
+
+  if (getApps().length) {
+    const adminDb = getFirestore();
+    await adminDb.doc(`newsletterSubscribers/${normalised}`).delete();
+  } else {
+    await removeSubscriberClientSdk(normalised);
+  }
+
   return NextResponse.json({ success: true });
 }
 
-async function removeSubscriber(email: string) {
+async function removeSubscriberClientSdk(email: string) {
   try {
-    // deleteDoc on a non-existent doc is a no-op; no need to getDoc first
-    // (getDoc would fail server-side — no auth context, rule requires read auth)
     await deleteDoc(doc(db, "newsletterSubscribers", email));
   } catch (err) {
     console.error("Unsubscribe Firestore error:", err);
