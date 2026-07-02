@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { Toaster } from "react-hot-toast";
@@ -62,9 +63,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const nonce = headers().get("x-nonce") ?? undefined;
+
   return (
     <html lang="en">
-      <body>
+      <body nonce={nonce}>
         <AuthProvider>
           <AnalyticsTracker />
           {children}
