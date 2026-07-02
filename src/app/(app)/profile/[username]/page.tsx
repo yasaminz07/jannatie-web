@@ -206,6 +206,8 @@ export default function ProfilePage({ params }: { params: { username: string } }
   const isFollowing = myProfile?.following?.includes(profileData?.uid ?? "") ?? false;
   const isCommunityProfile = profileData?.accountType === "community";
   const isCommunityViewer = myProfile?.accountType === "community";
+  const profileUid = profileData?.uid ?? null;
+  const profileAccountType = profileData?.accountType ?? null;
 
   useEffect(() => {
     async function loadProfile() {
@@ -258,9 +260,9 @@ export default function ProfilePage({ params }: { params: { username: string } }
   }, [username]);
 
   useEffect(() => {
-    if (!profileData || profileData.accountType !== "community") { setEventsLoading(false); return; }
+    if (!profileUid || profileAccountType !== "community") { setEventsLoading(false); return; }
     setEventsLoading(true);
-    getDocs(query(collection(db, "communityEvents"), where("communityUid", "==", profileData.uid))).then(snap => {
+    getDocs(query(collection(db, "communityEvents"), where("communityUid", "==", profileUid))).then(snap => {
       setCommunityEvents(
         snap.docs
           .map(d => ({ id: d.id, ...d.data() } as CommunityEvent))
@@ -268,7 +270,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
       );
       setEventsLoading(false);
     });
-  }, [profileData?.uid, profileData?.accountType]);
+  }, [profileUid, profileAccountType]);
 
   async function handleFollowToggle() {
     if (!user || !profileData) return;

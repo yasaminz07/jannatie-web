@@ -150,7 +150,7 @@ export default function CommunityFeedPage() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [cityDropdownOpen]);
 
-  const followingUids: string[] = profile?.following ?? [];
+  const followingUids = useMemo(() => profile?.following ?? [], [profile?.following]);
   // profile.following also includes followed friends (normal users), so intersect
   // with known community uids to get the count of communities actually followed.
   const followingCommunityUids = useMemo(() => {
@@ -175,21 +175,28 @@ export default function CommunityFeedPage() {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  function filterEvents(evts: CommunityEvent[]) {
-    return evts.filter(e => {
-      if (cityFilter && e.city !== cityFilter) return false;
-      if (search) {
-        const t = search.toLowerCase();
-        if (!e.title.toLowerCase().includes(t) &&
-          !e.communityName.toLowerCase().includes(t) &&
-          !e.description.toLowerCase().includes(t)) return false;
-      }
-      return true;
-    });
-  }
+  const filtered = useMemo(() => events.filter(e => {
+    if (cityFilter && e.city !== cityFilter) return false;
+    if (search) {
+      const t = search.toLowerCase();
+      if (!e.title.toLowerCase().includes(t) &&
+        !e.communityName.toLowerCase().includes(t) &&
+        !e.description.toLowerCase().includes(t)) return false;
+    }
+    return true;
+  }), [events, search, cityFilter]);
 
-  const filtered = useMemo(() => filterEvents(events), [events, search, cityFilter]);
-  const followingEvents = useMemo(() => filterEvents(events.filter(e => followingUids.includes(e.communityUid))), [events, followingUids, search, cityFilter]);
+  const followingEvents = useMemo(() => events.filter(e => {
+    if (!followingUids.includes(e.communityUid)) return false;
+    if (cityFilter && e.city !== cityFilter) return false;
+    if (search) {
+      const t = search.toLowerCase();
+      if (!e.title.toLowerCase().includes(t) &&
+        !e.communityName.toLowerCase().includes(t) &&
+        !e.description.toLowerCase().includes(t)) return false;
+    }
+    return true;
+  }), [events, followingUids, search, cityFilter]);
 
   const upcoming = filtered.filter(e => e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
   const past = filtered.filter(e => e.date < today);
