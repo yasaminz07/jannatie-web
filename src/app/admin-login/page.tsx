@@ -53,9 +53,9 @@ export default function AdminLoginPage() {
 
   async function handleForgotSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const email = resolveAdminEmail(resetUsername);
-    if (!email) {
-      toast.error("Invalid admin username.");
+    const trimmed = resetUsername.trim().toLowerCase();
+    if (!isAdminEmail(trimmed)) {
+      toast.error("That email is not linked to an admin account.");
       return;
     }
 
@@ -64,7 +64,7 @@ export default function AdminLoginPage() {
       const res = await fetch("/api/password-reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: trimmed }),
       });
       if (!res.ok) throw new Error("failed");
       setMode("forgot-sent");
@@ -87,15 +87,15 @@ export default function AdminLoginPage() {
                 </div>
                 <h1 className="text-2xl font-bold text-slate-900">Reset admin password</h1>
                 <p className="text-sm text-slate-500 mt-1 text-center">
-                  Enter your admin username and we&apos;ll email a reset link to the linked account.
+                  Enter your admin email and we&apos;ll send a reset link.
                 </p>
               </div>
 
               <form onSubmit={handleForgotSubmit} className="space-y-4">
                 <input
-                  type="text"
-                  autoComplete="username"
-                  placeholder="Admin username"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="Admin email address"
                   value={resetUsername}
                   onChange={(e) => setResetUsername(e.target.value)}
                   className={inputCls}

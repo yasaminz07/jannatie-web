@@ -12,7 +12,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const resetUrl = await generatePasswordResetLink(email.trim().toLowerCase());
+    const firebaseUrl = await generatePasswordResetLink(email.trim().toLowerCase());
+
+    // Rewrite the Firebase-hosted action URL to our own branded page
+    const oobCode = new URL(firebaseUrl).searchParams.get("oobCode");
+    const baseUrl = new URL(request.url).origin;
+    const resetUrl = `${baseUrl}/reset-password?oobCode=${oobCode}`;
 
     await sendMail({
       to: email.trim().toLowerCase(),
