@@ -4,6 +4,26 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20",
 });
 
+// Used by /api/checkout/session
+export const PRICE_IDS: Record<string, Record<string, string>> = {
+  premium: {
+    monthly: process.env.STRIPE_PRICE_PREMIUM_MONTHLY ?? "",
+    annual:  process.env.STRIPE_PRICE_PREMIUM_ANNUAL  ?? "",
+  },
+  family: {
+    monthly: process.env.STRIPE_PRICE_FAMILY_MONTHLY ?? "",
+    annual:  process.env.STRIPE_PRICE_FAMILY_ANNUAL  ?? "",
+  },
+};
+
+export function planFromPriceId(priceId: string | undefined | null): "premium" | "family" | "free" {
+  const premiumIds = [process.env.STRIPE_PRICE_PREMIUM_MONTHLY, process.env.STRIPE_PRICE_PREMIUM_ANNUAL];
+  const familyIds  = [process.env.STRIPE_PRICE_FAMILY_MONTHLY,  process.env.STRIPE_PRICE_FAMILY_ANNUAL];
+  if (premiumIds.includes(priceId ?? "")) return "premium";
+  if (familyIds.includes(priceId  ?? "")) return "family";
+  return "free";
+}
+
 export const PLANS = {
   FREE: { name: "Free", price: 0, interval: null },
   PREMIUM_MONTHLY: {
