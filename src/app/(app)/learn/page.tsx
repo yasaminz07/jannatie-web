@@ -38,9 +38,9 @@ interface Unit {
 }
 type LearnView =
   | { kind: "home" }
-  | { kind: "lesson-intro"; topicId: string; lessonIndex: number }
-  | { kind: "quiz"; topicId: string; lessonIndex: number; questions: Question[] }
-  | { kind: "recap"; topicId: string; lessonIndex: number; xpEarned: number; heartsLeft: number }
+  | { kind: "lesson-intro"; topicId: string; lessonIndex: number; isPractice?: boolean }
+  | { kind: "quiz"; topicId: string; lessonIndex: number; questions: Question[]; isPractice?: boolean }
+  | { kind: "recap"; topicId: string; lessonIndex: number; xpEarned: number; heartsLeft: number; isPractice?: boolean }
   | { kind: "exam"; unitId: number }
   | { kind: "exam-results"; unitId: number; score: number; total: number; xpEarned: number };
 
@@ -117,6 +117,30 @@ const glassCard = {
   boxShadow: "0 4px 24px rgba(15, 23, 42, 0.07)",
 } as const;
 
+// ─── Hearts constants ─────────────────────────────────────────────────────────
+const HEARTS_MAX = 5;
+const HEARTS_RECHARGE_MS = 5 * 60 * 60 * 1000; // 1 heart per 5 hours
+const HEARTS_REFILL_COST = 50; // gems to fully refill hearts
+const LESSON_PASS_THRESHOLD = 0.6; // 60% correct required to pass
+
+function computeCurrentHearts(storedHearts: number, rechargeAt?: string): number {
+  if (storedHearts >= HEARTS_MAX) return HEARTS_MAX;
+  if (!rechargeAt) return Math.max(0, storedHearts);
+  const now = Date.now();
+  const rechargeTime = new Date(rechargeAt).getTime();
+  if (now < rechargeTime) return Math.max(0, storedHearts);
+  const recharged = Math.min(HEARTS_MAX - storedHearts, Math.floor((now - rechargeTime) / HEARTS_RECHARGE_MS) + 1);
+  return storedHearts + recharged;
+}
+
+function getNextHeartCountdown(storedHearts: number, rechargeAt?: string): string | null {
+  if (storedHearts >= HEARTS_MAX || !rechargeAt) return null;
+  const diff = new Date(rechargeAt).getTime() - Date.now();
+  if (diff <= 0) return null;
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
 
 // ─── Helper functions ─────────────────────────────────────────────────────────
 function flatLessonsForUnit(unitId: number): FlatLesson[] {
@@ -382,24 +406,30 @@ function HomeView({
   xp,
   streak,
   gems,
+  hearts,
+  heartsRechargeAt,
   streakFreezes,
   streakBrokenAt,
   setView,
   onShowContent,
   onBuyFreeze,
   onRepairStreak,
+  onRefillHearts,
 }: {
   units: Unit[];
   learnProgress: Record<string, number>;
   xp: number;
   streak: number;
   gems: number;
+  hearts: number;
+  heartsRechargeAt?: string;
   streakFreezes: number;
   streakBrokenAt?: string;
   setView: (v: LearnView) => void;
   onShowContent: (topicId: string, lessonIndex: number) => void;
   onBuyFreeze: () => void;
   onRepairStreak: () => void;
+  onRefillHearts: () => void;
 }) {
   const [expanded, setExpanded] = useState<Record<number, boolean>>({ 1: true, 2: false, 3: false, 4: false, 5: false });
   const toggle = (id: number) => setExpanded((p) => ({ ...p, [id]: !p[id] }));
@@ -436,6 +466,11 @@ function HomeView({
             <p className="text-xs text-slate-400 mt-0.5">Bismillah — let us begin</p>
           </div>
           <div className="flex items-center gap-3">
+            {/* Hearts */}
+            <button onClick={() => setShowShop(true)} className="flex items-center gap-1" title="Hearts — refill in shop">
+              <Heart size={15} className={hearts > 0 ? "text-red-400 fill-red-400" : "text-slate-300 fill-slate-300"} />
+              <span className={`text-sm font-bold ${hearts === 0 ? "text-red-400" : "text-slate-700"}`}>{hearts}/{HEARTS_MAX}</span>
+            </button>
             {/* Streak */}
             <button onClick={() => setShowShop(true)} className="flex items-center gap-1 group" title="Streak shop">
               <Flame size={16} className={streak > 0 ? "text-amber-400" : "text-slate-300"} />
@@ -447,7 +482,7 @@ function HomeView({
               )}
             </button>
             {/* Gems */}
-            <button onClick={() => setShowShop(true)} className="flex items-center gap-1" title="Gems — use in streak shop">
+            <button onClick={() => setShowShop(true)} className="flex items-center gap-1" title="Gems — use in shop">
               <span className="text-sm">💎</span>
               <span className="text-sm font-bold text-slate-700">{gems}</span>
             </button>
@@ -499,7 +534,7 @@ function HomeView({
               </div>
 
               {/* Streak Repair */}
-              <div className={`rounded-2xl border p-4 ${canRepair ? "border-amber-200 bg-amber-50" : "border-slate-100 opacity-50"}`}>
+              <div className={`rounded-2xl border p-4 mb-3 ${canRepair ? "border-amber-200 bg-amber-50" : "border-slate-100 opacity-50"}`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-xl">🔧</span>
@@ -517,6 +552,33 @@ function HomeView({
                   </button>
                 </div>
                 {!canRepair && <p className="text-xs text-slate-400 mt-2">Only available within {REPAIR_WINDOW_DAYS} days of losing your streak</p>}
+              </div>
+
+              {/* Hearts Refill */}
+              <div className={`rounded-2xl border p-4 ${hearts < HEARTS_MAX ? "border-red-200 bg-red-50" : "border-slate-100 opacity-50"}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">❤️</span>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">Hearts Refill</p>
+                      <p className="text-xs text-slate-400">
+                        {hearts < HEARTS_MAX
+                          ? (() => { const cd = getNextHeartCountdown(hearts, heartsRechargeAt); return `${hearts}/${HEARTS_MAX} · ${cd ? `next in ${cd}` : "recharging"}`; })()
+                          : "Hearts are full"}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { onRefillHearts(); setShowShop(false); }}
+                    disabled={hearts >= HEARTS_MAX || gems < HEARTS_REFILL_COST}
+                    className="flex items-center gap-1 bg-red-500 hover:bg-red-600 disabled:opacity-40 text-white text-xs font-bold rounded-xl px-3 py-1.5 transition-colors"
+                  >
+                    <span>💎 {HEARTS_REFILL_COST}</span>
+                  </button>
+                </div>
+                {hearts < HEARTS_MAX && (
+                  <p className="text-xs text-blue-600 font-medium mt-2">Tip: complete a practice lesson to earn +1 heart free</p>
+                )}
               </div>
             </div>
           </div>
@@ -634,14 +696,20 @@ function HomeView({
                             />
                           )}
                           <button
-                            onClick={() =>
-                              status !== "locked" &&
-                              setView({ kind: "lesson-intro", topicId: lesson.topicId, lessonIndex: lesson.lessonIndex })
-                            }
+                            onClick={() => {
+                              if (status === "locked") return;
+                              if (status === "available" && hearts === 0) {
+                                toast.error("No hearts left! Wait for recharge or refill in the shop.");
+                                return;
+                              }
+                              setView({ kind: "lesson-intro", topicId: lesson.topicId, lessonIndex: lesson.lessonIndex, isPractice: isDone });
+                            }}
                             disabled={status === "locked"}
                             className={`relative w-full h-full flex flex-col items-center justify-center gap-1.5 rounded-2xl border-2 p-2 text-center transition-all ${
                               isDone
                                 ? "bg-emerald-50 border-emerald-200"
+                                : isAvail && hearts === 0
+                                ? "bg-red-50 border-red-200 opacity-70"
                                 : isAvail
                                 ? "bg-white border-blue-400 shadow-md shadow-blue-100/60"
                                 : "bg-white/60 border-slate-200/70 cursor-not-allowed"
@@ -840,14 +908,20 @@ function HomeView({
                                       transition={{ delay: Math.min(i * 0.015, 0.25) }}
                                       whileHover={status !== "locked" ? { y: -3, scale: 1.05 } : {}}
                                       whileTap={status !== "locked" ? { scale: 0.94 } : {}}
-                                      onClick={() =>
-                                        status !== "locked" &&
-                                        setView({ kind: "lesson-intro", topicId: lesson.topicId, lessonIndex: lesson.lessonIndex })
-                                      }
+                                      onClick={() => {
+                                        if (status === "locked") return;
+                                        if (status === "available" && hearts === 0) {
+                                          toast.error("No hearts left! Wait for recharge or refill in the shop.");
+                                          return;
+                                        }
+                                        setView({ kind: "lesson-intro", topicId: lesson.topicId, lessonIndex: lesson.lessonIndex, isPractice: isDone });
+                                      }}
                                       disabled={status === "locked"}
                                       className={`relative z-10 w-[84px] flex flex-col items-center pt-3 pb-2.5 px-2 rounded-2xl border-2 transition-all ${
                                         isDone
                                           ? "bg-emerald-50 border-emerald-300 shadow-sm"
+                                          : isAvail && hearts === 0
+                                          ? "bg-red-50 border-red-200 opacity-70"
                                           : isAvail
                                           ? "bg-white border-blue-400 shadow-lg shadow-blue-100/60"
                                           : "bg-white/60 border-slate-200/70 cursor-not-allowed"
@@ -925,11 +999,15 @@ function HomeView({
 function LessonIntroView({
   topicId,
   lessonIndex,
+  isPractice = false,
+  hearts,
   onShowContent,
   setView,
 }: {
   topicId: string;
   lessonIndex: number;
+  isPractice?: boolean;
+  hearts: number;
   onShowContent: (topicId: string, lessonIndex: number) => void;
   setView: (v: LearnView) => void;
 }) {
@@ -965,6 +1043,11 @@ function LessonIntroView({
           </div>
 
           <h1 className="text-2xl font-bold text-slate-900 mb-3 leading-tight">{lesson?.title}</h1>
+          {isPractice && (
+            <div className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-full mb-3">
+              <Check size={11} /> Practice Mode — no hearts cost · complete to earn +1 heart
+            </div>
+          )}
           <p className="text-slate-500 text-sm leading-relaxed mb-8">{lesson?.objective}</p>
 
           <div className="rounded-2xl p-5 mb-6" style={glassCard}>
@@ -992,9 +1075,15 @@ function LessonIntroView({
             <div className="flex items-center gap-1.5 text-xs text-slate-400">
               <Zap size={13} className="text-blue-400" /> +{questions.reduce((s, q) => s + q.xp, 0)} XP
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-400">
-              <Heart size={13} className="text-red-400" /> 5 hearts
-            </div>
+            {isPractice ? (
+              <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
+                <Heart size={13} className="text-emerald-500" /> No heart cost
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                <Heart size={13} className="text-red-400" /> {hearts}/{HEARTS_MAX} hearts
+              </div>
+            )}
           </div>
 
           <div className="space-y-3">
@@ -1005,12 +1094,10 @@ function LessonIntroView({
               <BookMarked size={16} /> Study material first
             </button>
             <button
-              onClick={() =>
-                setView({ kind: "quiz", topicId, lessonIndex, questions })
-              }
+              onClick={() => setView({ kind: "quiz", topicId, lessonIndex, questions, isPractice })}
               className="w-full flex items-center justify-center gap-2 py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-sm transition-colors"
             >
-              <Play size={15} className="fill-white" /> Start lesson
+              <Play size={15} className="fill-white" /> {isPractice ? "Start practice" : "Start lesson"}
             </button>
           </div>
         </motion.div>
@@ -1024,27 +1111,125 @@ function QuizView({
   topicId,
   lessonIndex,
   questions,
+  initialHearts,
+  isPractice = false,
   onClose,
   onComplete,
+  onFailed,
+  onHeartsEmpty,
 }: {
   topicId: string;
   lessonIndex: number;
   questions: Question[];
+  initialHearts: number;
+  isPractice?: boolean;
   onClose: () => void;
   onComplete: (xpEarned: number, heartsLeft: number) => void;
+  onFailed: (heartsLeft: number) => void;
+  onHeartsEmpty: (heartsLeft: number) => void;
 }) {
+  // Shuffle answer options once on mount so the correct answer isn't predictable
+  const [shuffledQuestions] = useState(() =>
+    questions.map((q) => {
+      const perm = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+      return {
+        ...q,
+        options: perm.map((i) => q.options[i]),
+        correct: perm.indexOf(q.correct),
+        optionsArabic: q.optionsArabic?.length ? perm.map((i) => q.optionsArabic![i]) : undefined,
+        optionsPhonetic: q.optionsPhonetic?.length ? perm.map((i) => q.optionsPhonetic![i]) : undefined,
+        optionsMeaning: q.optionsMeaning?.length ? perm.map((i) => q.optionsMeaning![i]) : undefined,
+      };
+    })
+  );
+
   const [qIndex, setQIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [showExp, setShowExp] = useState(false);
   const [xpEarned, setXpEarned] = useState(0);
-  const [hearts, setHearts] = useState(5);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [hearts, setHearts] = useState(isPractice ? HEARTS_MAX : initialHearts);
   const [showXpPop, setShowXpPop] = useState(false);
   const [shake, setShake] = useState(false);
   const [showPhonetics, setShowPhonetics] = useState(false);
+  const [heartsEmpty, setHeartsEmpty] = useState(false);
+  const [failedLesson, setFailedLesson] = useState(false);
 
   const lesson = TOPIC_LESSONS[topicId]?.[lessonIndex];
   const topicCfg = UNIT_CONFIG.flatMap((u) => u.topics).find((t) => t.id === topicId);
-  const q = questions[qIndex];
+  const q = shuffledQuestions[qIndex];
+
+  // Hearts-empty screen — force quit mid-lesson
+  if (heartsEmpty) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-5">
+        <div className="max-w-sm w-full text-center">
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.1, type: "spring", stiffness: 220 }}>
+            <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-5">
+              <div className="flex gap-0.5">
+                {Array.from({ length: HEARTS_MAX }).map((_, i) => (
+                  <Heart key={i} size={14} className="text-slate-200 fill-slate-200" />
+                ))}
+              </div>
+            </div>
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Hearts Empty!</h2>
+            <p className="text-slate-400 text-sm mb-2 leading-relaxed">
+              You have run out of hearts. Come back later to refill them, or do a practice session on a completed lesson.
+            </p>
+            <p className="text-xs text-slate-300 mb-8">Hearts refill 1 per 5 hours, or spend 💎 {HEARTS_REFILL_COST} gems to refill now.</p>
+            <button
+              onClick={() => onHeartsEmpty(0)}
+              className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-sm transition-colors"
+            >
+              Back to lessons
+            </button>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  // Failed mastery screen — shown after all questions if score < 60%
+  if (failedLesson) {
+    const pct = Math.round((correctCount / shuffledQuestions.length) * 100);
+    return (
+      <div className="min-h-screen flex items-center justify-center px-5">
+        <div className="max-w-sm w-full text-center">
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.1, type: "spring", stiffness: 220 }}>
+            <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-5">
+              <X size={36} className="text-red-400" />
+            </div>
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Keep Studying!</h2>
+            <p className="text-slate-400 text-sm mb-3 leading-relaxed">
+              You need at least 60% correct to master this lesson. Study the material and try again.
+            </p>
+            <p className="text-lg font-bold text-slate-700 mb-8">
+              Your score: {correctCount}/{shuffledQuestions.length} ({pct}%)
+            </p>
+            <div className="space-y-2.5">
+              <button
+                onClick={() => onFailed(hearts)}
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-sm transition-colors"
+              >
+                Try again
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full py-3.5 border border-slate-200 text-slate-600 font-bold rounded-2xl text-sm hover:bg-slate-50 transition-colors"
+              >
+                Back to lessons
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
   if (!q) return null;
 
   function handleAnswer(idx: number) {
@@ -1052,23 +1237,34 @@ function QuizView({
     setSelected(idx);
     setShowExp(true);
     if (idx === q.correct) {
+      setCorrectCount((c) => c + 1);
       setXpEarned((x) => x + q.xp);
       setShowXpPop(true);
       setTimeout(() => setShowXpPop(false), 850);
+    } else if (!isPractice) {
+      const newHearts = Math.max(0, hearts - 1);
+      setHearts(newHearts);
+      if (newHearts === 0) setHeartsEmpty(true);
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
     } else {
-      setHearts((h) => Math.max(0, h - 1));
       setShake(true);
       setTimeout(() => setShake(false), 500);
     }
   }
 
   function next() {
-    if (qIndex + 1 < questions.length) {
+    if (qIndex + 1 < shuffledQuestions.length) {
       setQIndex((i) => i + 1);
       setSelected(null);
       setShowExp(false);
     } else {
-      onComplete(xpEarned, hearts);
+      const passed = isPractice || correctCount >= Math.ceil(shuffledQuestions.length * LESSON_PASS_THRESHOLD);
+      if (passed) {
+        onComplete(xpEarned, hearts);
+      } else {
+        setFailedLesson(true);
+      }
     }
   }
 
@@ -1086,7 +1282,7 @@ function QuizView({
             <div className="h-2.5 rounded-full overflow-hidden bg-slate-200">
               <motion.div
                 className="h-full bg-blue-500 rounded-full"
-                animate={{ width: `${((qIndex + 1) / questions.length) * 100}%` }}
+                animate={{ width: `${((qIndex + 1) / shuffledQuestions.length) * 100}%` }}
                 transition={{ duration: 0.4 }}
               />
             </div>
@@ -1105,19 +1301,23 @@ function QuizView({
           >
             Phonetics
           </button>
-          <div className="flex gap-0.5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Heart
-                key={i}
-                size={15}
-                className={i < hearts ? "text-red-400 fill-red-400" : "text-slate-200 fill-slate-200"}
-              />
-            ))}
-          </div>
+          {isPractice ? (
+            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full">Practice</span>
+          ) : (
+            <div className="flex gap-0.5">
+              {Array.from({ length: HEARTS_MAX }).map((_, i) => (
+                <Heart
+                  key={i}
+                  size={15}
+                  className={i < hearts ? "text-red-400 fill-red-400" : "text-slate-200 fill-slate-200"}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         <p className="text-xs text-slate-400 mb-6 pl-8">
-          {topicCfg?.name} · {lesson?.title} · Q{qIndex + 1} of {questions.length}
+          {topicCfg?.name} · {lesson?.title} · Q{qIndex + 1} of {shuffledQuestions.length}
         </p>
 
         <motion.div
@@ -1269,7 +1469,7 @@ function QuizView({
               onClick={next}
               className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-colors text-sm"
             >
-              {qIndex + 1 < questions.length ? "Next question →" : "Finish lesson →"}
+              {qIndex + 1 < shuffledQuestions.length ? "Next question →" : "See results →"}
             </motion.button>
           )}
         </motion.div>
@@ -1284,12 +1484,14 @@ function RecapView({
   lessonIndex,
   xpEarned,
   heartsLeft,
+  isPractice = false,
   setView,
 }: {
   topicId: string;
   lessonIndex: number;
   xpEarned: number;
   heartsLeft: number;
+  isPractice?: boolean;
   setView: (v: LearnView) => void;
 }) {
   const lesson = TOPIC_LESSONS[topicId]?.[lessonIndex];
@@ -1304,7 +1506,7 @@ function RecapView({
           animate={{ scale: 1 }}
           transition={{ delay: 0.1, type: "spring", stiffness: 220 }}
         >
-          <Star size={60} className="text-amber-400 mx-auto mb-5 fill-amber-400" />
+          <Star size={60} className={`mx-auto mb-5 ${isPractice ? "text-emerald-400 fill-emerald-400" : "text-amber-400 fill-amber-400"}`} />
         </motion.div>
 
         <motion.div
@@ -1312,7 +1514,9 @@ function RecapView({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
         >
-          <h2 className="text-2xl font-bold text-slate-900 mb-1">Lesson Complete!</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-1">
+            {isPractice ? "Practice Complete!" : "Lesson Complete!"}
+          </h2>
           <p className="text-slate-400 text-sm mb-6">
             Masha&apos;Allah — {lesson?.title}
           </p>
@@ -1323,17 +1527,17 @@ function RecapView({
               <span className="font-bold text-slate-800 text-sm">+{xpEarned} XP</span>
             </div>
             <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl" style={glassCard}>
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Heart
-                  key={i}
-                  size={13}
-                  className={
-                    i < heartsLeft
-                      ? "text-red-400 fill-red-400"
-                      : "text-slate-200 fill-slate-200"
-                  }
-                />
-              ))}
+              {isPractice ? (
+                <span className="text-sm font-semibold text-emerald-600">+1 ❤️ earned</span>
+              ) : (
+                Array.from({ length: HEARTS_MAX }).map((_, i) => (
+                  <Heart
+                    key={i}
+                    size={13}
+                    className={i < heartsLeft ? "text-red-400 fill-red-400" : "text-slate-200 fill-slate-200"}
+                  />
+                ))
+              )}
             </div>
           </div>
 
@@ -1353,7 +1557,7 @@ function RecapView({
           </div>
 
           <div className="space-y-2.5">
-            {next && (
+            {!isPractice && next && (
               <button
                 onClick={() =>
                   setView({
@@ -1370,7 +1574,7 @@ function RecapView({
             <button
               onClick={() => setView({ kind: "home" })}
               className={`w-full py-3.5 font-bold rounded-2xl text-sm transition-colors border ${
-                next
+                !isPractice && next
                   ? "border-slate-200 text-slate-600 hover:bg-slate-50"
                   : "bg-blue-600 hover:bg-blue-500 text-white border-transparent"
               }`}
@@ -1698,67 +1902,109 @@ export default function LearnPage() {
 
   const learnProgress: Record<string, number> =
     (profile as unknown as { learnProgress?: Record<string, number> })?.learnProgress ?? {};
-  const isPremium =
-    (profile as unknown as { plan?: string })?.plan === "premium";
+  const isPremium = (profile as unknown as { plan?: string })?.plan === "premium";
   const streak = profile?.streak ?? 0;
   const xp = profile?.xp ?? 0;
   const gems = profile?.gems ?? 0;
   const streakFreezes = profile?.streakFreezes ?? 0;
   const streakBrokenAt = profile?.streakBrokenAt;
+  const profileHearts: number = (profile as unknown as { hearts?: number })?.hearts ?? HEARTS_MAX;
+  const heartsRechargeAt: string | undefined = (profile as unknown as { heartsRechargeAt?: string })?.heartsRechargeAt;
+  const currentHearts = computeCurrentHearts(profileHearts, heartsRechargeAt);
   const units = buildUnits(learnProgress);
 
   function openContent(topicId: string, lessonIndex: number) {
     setContentModal({ topicId, lessonIndex });
   }
 
-  async function handleLessonComplete(topicId: string, xpEarned: number) {
+  // Save hearts changes to Firestore (called when quiz ends without full lesson save)
+  async function handleHeartsUpdate(heartsLeft: number) {
+    if (!user?.uid || heartsLeft === currentHearts) return;
+    const updates: Record<string, unknown> = { hearts: heartsLeft };
+    if (heartsLeft >= HEARTS_MAX) {
+      updates.heartsRechargeAt = null;
+    } else if (currentHearts >= HEARTS_MAX) {
+      updates.heartsRechargeAt = new Date(Date.now() + HEARTS_RECHARGE_MS).toISOString();
+    }
+    await updateDoc(doc(db, "users", user.uid), updates).catch(() => {});
+  }
+
+  async function handleRefillHearts() {
+    if (!user?.uid || gems < HEARTS_REFILL_COST) {
+      toast.error("Not enough gems!");
+      return;
+    }
+    await updateDoc(doc(db, "users", user.uid), {
+      hearts: HEARTS_MAX,
+      heartsRechargeAt: null,
+      gems: gems - HEARTS_REFILL_COST,
+    });
+    toast.success("❤️ Hearts fully refilled!");
+  }
+
+  async function handleLessonComplete(topicId: string, xpEarned: number, heartsLeft: number, isPractice: boolean) {
     if (!user?.uid || saving) return;
     setSaving(true);
     try {
-      const currentProgress = learnProgress[topicId] ?? 0;
-      const topicMeta = UNIT_CONFIG.flatMap((u) => u.topics).find((t) => t.id === topicId);
-      const max = topicMeta?.lessons ?? 1;
-      const newProgress = Math.min(currentProgress + 1, max);
-      const todayStr = new Date().toLocaleDateString("en-CA");
+      const updates: Record<string, unknown> = {};
 
-      const newXp = (profile?.xp ?? 0) + xpEarned;
-      const newLevel = calcLevel(newXp);
-      const newGems = (profile?.gems ?? 0) + GEMS_PER_LESSON;
-
-      const streakResult = calcStreakUpdate({
-        streak: profile?.streak ?? 0,
-        lastActiveDate: profile?.lastActiveDate,
-        streakFreezes: profile?.streakFreezes ?? 0,
-      });
-
-      const updates: Record<string, unknown> = {
-        [`learnProgress.${topicId}`]: newProgress,
-        xp: newXp,
-        level: newLevel,
-        gems: newGems,
-        streak: streakResult.newStreak,
-        lastActiveDate: streakResult.newLastActive,
-        streakFreezes: streakResult.newFreezes,
-      };
-
-      if (streakResult.streakBroken) {
-        updates.streakBrokenAt = profile?.lastActiveDate ?? null;
-        updates.streakBeforeBreak = profile?.streak ?? 0;
-      }
-      if (streakResult.clearBrokenAt) {
-        updates.streakBrokenAt = null;
-        updates.streakBeforeBreak = null;
+      // Hearts: save any heart changes; practice earns +1 heart back
+      const newHearts = isPractice ? Math.min(HEARTS_MAX, heartsLeft + 1) : heartsLeft;
+      updates.hearts = newHearts;
+      if (newHearts >= HEARTS_MAX) {
+        updates.heartsRechargeAt = null;
+      } else if (currentHearts >= HEARTS_MAX && newHearts < HEARTS_MAX) {
+        updates.heartsRechargeAt = new Date(Date.now() + HEARTS_RECHARGE_MS).toISOString();
       }
 
-      const userHabits = profile?.habits as string[] | undefined;
-      if (userHabits?.includes("Learn an Islamic topic daily")) {
-        updates[`habitLog.${todayStr}.Learn an Islamic topic daily`] = true;
+      if (isPractice) {
+        // Practice session: no progress update, no gems, just heart refill + XP
+        const newXp = (profile?.xp ?? 0) + xpEarned;
+        updates.xp = newXp;
+        updates.level = calcLevel(newXp);
+      } else {
+        // Normal lesson: advance progress + full rewards
+        const currentProgress = learnProgress[topicId] ?? 0;
+        const topicMeta = UNIT_CONFIG.flatMap((u) => u.topics).find((t) => t.id === topicId);
+        const max = topicMeta?.lessons ?? 1;
+        updates[`learnProgress.${topicId}`] = Math.min(currentProgress + 1, max);
+
+        const newXp = (profile?.xp ?? 0) + xpEarned;
+        const newLevel = calcLevel(newXp);
+        const newGems = (profile?.gems ?? 0) + GEMS_PER_LESSON;
+        updates.xp = newXp;
+        updates.level = newLevel;
+        updates.gems = newGems;
+
+        const todayStr = new Date().toLocaleDateString("en-CA");
+        const streakResult = calcStreakUpdate({
+          streak: profile?.streak ?? 0,
+          lastActiveDate: profile?.lastActiveDate,
+          streakFreezes: profile?.streakFreezes ?? 0,
+        });
+        updates.streak = streakResult.newStreak;
+        updates.lastActiveDate = streakResult.newLastActive;
+        updates.streakFreezes = streakResult.newFreezes;
+
+        if (streakResult.streakBroken) {
+          updates.streakBrokenAt = profile?.lastActiveDate ?? null;
+          updates.streakBeforeBreak = profile?.streak ?? 0;
+        }
+        if (streakResult.clearBrokenAt) {
+          updates.streakBrokenAt = null;
+          updates.streakBeforeBreak = null;
+        }
+
+        const userHabits = profile?.habits as string[] | undefined;
+        if (userHabits?.includes("Learn an Islamic topic daily")) {
+          updates[`habitLog.${todayStr}.Learn an Islamic topic daily`] = true;
+        }
+
+        if (streakResult.freezeUsed) toast("❄️ Streak freeze used — keep going!");
+        else if (streakResult.streakBroken) toast("🔥 Streak reset — start a new one today!");
       }
 
       await updateDoc(doc(db, "users", user.uid), updates);
-
-      if (streakResult.freezeUsed) toast("❄️ Streak freeze used — keep going!");
-      else if (streakResult.streakBroken) toast("🔥 Streak reset — start a new one today!");
     } finally {
       setSaving(false);
     }
@@ -1836,12 +2082,15 @@ export default function LearnPage() {
           xp={xp}
           streak={streak}
           gems={gems}
+          hearts={currentHearts}
+          heartsRechargeAt={heartsRechargeAt}
           streakFreezes={streakFreezes}
           streakBrokenAt={streakBrokenAt}
           setView={setView}
           onShowContent={openContent}
           onBuyFreeze={handleBuyFreeze}
           onRepairStreak={handleRepairStreak}
+          onRefillHearts={handleRefillHearts}
         />
         {modal}
       </>
@@ -1854,6 +2103,8 @@ export default function LearnPage() {
         <LessonIntroView
           topicId={view.topicId}
           lessonIndex={view.lessonIndex}
+          isPractice={view.isPractice ?? false}
+          hearts={currentHearts}
           onShowContent={openContent}
           setView={setView}
         />
@@ -1869,16 +2120,27 @@ export default function LearnPage() {
           topicId={view.topicId}
           lessonIndex={view.lessonIndex}
           questions={view.questions}
+          initialHearts={currentHearts}
+          isPractice={view.isPractice ?? false}
           onClose={() => setView({ kind: "home" })}
           onComplete={(xpEarned, heartsLeft) => {
-            handleLessonComplete(view.topicId, xpEarned);
+            handleLessonComplete(view.topicId, xpEarned, heartsLeft, view.isPractice ?? false);
             setView({
               kind: "recap",
               topicId: view.topicId,
               lessonIndex: view.lessonIndex,
               xpEarned,
               heartsLeft,
+              isPractice: view.isPractice,
             });
+          }}
+          onFailed={(heartsLeft) => {
+            handleHeartsUpdate(heartsLeft);
+            setView({ kind: "lesson-intro", topicId: view.topicId, lessonIndex: view.lessonIndex, isPractice: false });
+          }}
+          onHeartsEmpty={(heartsLeft) => {
+            handleHeartsUpdate(heartsLeft);
+            setView({ kind: "home" });
           }}
         />
         {modal}
@@ -1894,6 +2156,7 @@ export default function LearnPage() {
           lessonIndex={view.lessonIndex}
           xpEarned={view.xpEarned}
           heartsLeft={view.heartsLeft}
+          isPractice={view.isPractice ?? false}
           setView={setView}
         />
         {modal}
