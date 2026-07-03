@@ -85,6 +85,16 @@ service cloud.firestore {
         allow read: if request.auth != null;
         allow update, delete: if false;
       }
+
+      // RSVP subcollection — users can mark themselves as attending an event.
+      // Read is open to all authenticated users so getCountFromServer works in EventCard
+      // and insights. Individual docs contain uid, name, username — not sensitive.
+      match /rsvps/{rsvpUid} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null && request.auth.uid == rsvpUid;
+        allow delete: if request.auth != null && request.auth.uid == rsvpUid;
+        allow update: if false;
+      }
     }
 
     // Collaboration requests between community accounts

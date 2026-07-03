@@ -29,6 +29,7 @@ interface CommunityProfile {
   communityCategory?: string;
   city?: string;
   bio?: string;
+  communityPlan?: string; // "premium" for verified/featured communities
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -41,6 +42,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 function CommunityCard({ c, followerCount }: { c: CommunityProfile; followerCount: number | undefined }) {
   const initials = (c.displayName ?? c.username).slice(0, 2).toUpperCase();
+  const isPremium = c.communityPlan === "premium";
   return (
     <Link href={`/profile/${c.username}`}
       className="flex items-center gap-3.5 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-100 transition-all group">
@@ -54,15 +56,22 @@ function CommunityCard({ c, followerCount }: { c: CommunityProfile; followerCoun
             {initials}
           </div>
         )}
-        <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded-full p-0.5 shadow-sm">
-          <VerifiedBadge size={11} />
-        </div>
+        {isPremium && (
+          <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded-full p-0.5 shadow-sm">
+            <VerifiedBadge size={11} />
+          </div>
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-0.5">
           <p className="text-sm font-semibold text-slate-900 truncate group-hover:text-blue-700 transition-colors">
             {c.displayName ?? c.username}
           </p>
+          {isPremium && (
+            <span className="flex-shrink-0 text-[9px] font-bold bg-amber-100 text-amber-700 rounded-full px-1.5 py-0.5 border border-amber-200">
+              Featured
+            </span>
+          )}
         </div>
         <p className="text-xs text-slate-400 truncate">
           @{c.username}
@@ -113,7 +122,7 @@ export default function CommunityFeedPage() {
       where("applicationStatus", "==", "approved")
     );
     const unsub = onSnapshot(q, snap => {
-      setCommunities(snap.docs.map(d => {
+      const profiles = snap.docs.map(d => {
         const data = d.data();
         return {
           uid: data.uid,
@@ -123,8 +132,16 @@ export default function CommunityFeedPage() {
           communityCategory: data.communityCategory,
           city: data.city,
           bio: data.bio,
+          communityPlan: data.communityPlan,
         } as CommunityProfile;
-      }));
+      });
+      // Sort premium (featured) communities first
+      profiles.sort((a, b) => {
+        if (a.communityPlan === "premium" && b.communityPlan !== "premium") return -1;
+        if (a.communityPlan !== "premium" && b.communityPlan === "premium") return 1;
+        return 0;
+      });
+      setCommunities(profiles);
       setCommunitiesLoading(false);
     });
     return unsub;
@@ -151,8 +168,6 @@ export default function CommunityFeedPage() {
   }, [cityDropdownOpen]);
 
   const followingUids = useMemo(() => profile?.following ?? [], [profile?.following]);
-  // profile.following also includes followed friends (normal users), so intersect
-  // with known community uids to get the count of communities actually followed.
   const followingCommunityUids = useMemo(() => {
     const communityUids = new Set(communities.map(c => c.uid));
     return followingUids.filter(uid => communityUids.has(uid));
@@ -198,9 +213,25 @@ export default function CommunityFeedPage() {
     return true;
   }), [events, followingUids, search, cityFilter]);
 
-  const upcoming = filtered.filter(e => e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+  // Sort: premium (communityIsPremium) first, then by date ascending
+  const upcoming = useMemo(() => filtered
+    .filter(e => e.date >= today)
+    .sort((a, b) => {
+      if (a.communityIsPremium && !b.communityIsPremium) return -1;
+      if (!a.communityIsPremium && b.communityIsPremium) return 1;
+      return a.date.localeCompare(b.date);
+    }), [filtered, today]);
+
   const past = filtered.filter(e => e.date < today);
-  const followingUpcoming = followingEvents.filter(e => e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+
+  const followingUpcoming = useMemo(() => followingEvents
+    .filter(e => e.date >= today)
+    .sort((a, b) => {
+      if (a.communityIsPremium && !b.communityIsPremium) return -1;
+      if (!a.communityIsPremium && b.communityIsPremium) return 1;
+      return a.date.localeCompare(b.date);
+    }), [followingEvents, today]);
+
   const followingPast = followingEvents.filter(e => e.date < today);
 
   const showCityFilter = (tab === "discover" || tab === "following") && cities.length > 0;
@@ -437,7 +468,6 @@ export default function CommunityFeedPage() {
                   </div>
                 </div>
               )}
-              {/* Prompt to follow communities */}
               {followingCommunityUids.length === 0 && upcoming.length > 0 && (
                 <div className="rounded-2xl p-4 text-center" style={{ ...glass, background: "rgba(239,246,255,0.70)" }}>
                   <p className="text-xs text-slate-600 mb-2">

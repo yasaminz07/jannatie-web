@@ -5,7 +5,7 @@ import Link from "next/link";
 import { collection, query, where, onSnapshot, getCountFromServer, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
-import { CommunityEvent, EventComment } from "@/lib/community-utils";
+import { CommunityEvent, EventComment, isCommunityPremium } from "@/lib/community-utils";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { Users, CalendarDays, Heart, MessageCircle, Share2, Plus, Clock, MapPin, BarChart2 } from "lucide-react";
 
@@ -122,12 +122,13 @@ export default function CommunityHubDashboard() {
   }, [recentEvents]);
 
   const name = profile?.displayName ?? "Community";
+  const isPremium = isCommunityPremium(profile);
 
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
       <div className="flex items-center gap-2 mb-1">
         <h1 className="text-2xl font-bold text-slate-900">{name}</h1>
-        <VerifiedBadge size={18} />
+        {isPremium && <VerifiedBadge size={18} />}
       </div>
       <p className="text-slate-500 text-sm mb-8">@{profile?.username} · Community account</p>
 

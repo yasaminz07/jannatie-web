@@ -11,6 +11,7 @@ export interface CommunityEvent {
   communityName: string;
   communityUsername: string;
   communityPhotoURL: string | null;
+  communityIsPremium?: boolean; // true when the community had premium at time of posting
   title: string;
   description: string;
   photoURL: string | null;
@@ -22,6 +23,7 @@ export interface CommunityEvent {
   city: string;
   externalLink?: string;
   pinnedCommentId?: string;
+  notifiedFollowersAt?: string; // ISO timestamp when followers were last notified
   createdAt: unknown;
 }
 
@@ -44,6 +46,14 @@ export interface EventComment {
   likedBy?: Record<string, CommentLiker>;
   createdAt: unknown;
 }
+
+// ── Premium detection helper ──────────────────────────────────────────────────
+
+export function isCommunityPremium(profile: { communityPlan?: string } | null | undefined): boolean {
+  return profile?.communityPlan === "premium";
+}
+
+// ── Event CRUD ────────────────────────────────────────────────────────────────
 
 export async function createEvent(data: Omit<CommunityEvent, "id" | "createdAt">) {
   return addDoc(collection(db, "communityEvents"), { ...data, createdAt: serverTimestamp() });
@@ -119,6 +129,8 @@ export async function reportComment(params: {
   });
 }
 
+// ── Follow / unfollow ─────────────────────────────────────────────────────────
+
 export async function followCommunity(myUid: string, communityUid: string) {
   await updateDoc(doc(db, "users", myUid), { following: arrayUnion(communityUid) });
 }
@@ -139,6 +151,8 @@ export async function isFollowingCommunity(myUid: string, communityUid: string):
   const following: string[] = snap.data().following ?? [];
   return following.includes(communityUid);
 }
+
+// ── Notifications ─────────────────────────────────────────────────────────────
 
 // Community accounts only get notified about engagement from other community accounts
 // (not every normal-user like/comment), to keep their inbox focused on what matters to a business.
@@ -164,8 +178,18 @@ export async function notifyCommunityInteraction(params: {
   });
 }
 
-export async function notifyFollowersOfEvent(event: { id: string; communityName: string; communityUsername: string; title: string; communityUid: string }) {
-  const followersSnap = await getDocs(query(collection(db, "users"), where("following", "array-contains", event.communityUid)));
+// Notify all followers of a new event (premium feature — called manually).
+// Also writes notifiedFollowersAt back to the event document.
+export async function notifyFollowersOfEvent(event: {
+  id: string;
+  communityName: string;
+  communityUsername: string;
+  title: string;
+  communityUid: string;
+}) {
+  const followersSnap = await getDocs(
+    query(collection(db, "users"), where("following", "array-contains", event.communityUid))
+  );
   await Promise.all(
     followersSnap.docs.map((d) =>
       addDoc(collection(db, "notifications", d.id, "items"), {
@@ -179,4 +203,32 @@ export async function notifyFollowersOfEvent(event: { id: string; communityName:
       })
     )
   );
+  // Track that this event has been notified so the button is disabled afterwards
+  await updateDoc(doc(db, "communityEvents", event.id), {
+    notifiedFollowersAt: new Date().toISOString(),
+  });
+}
+
+// ── RSVP system (premium communities) ────────────────────────────────────────
+
+export async function toggleRsvp(
+  eventId: string,
+  uid: string,
+  name: string,
+  username: string,
+  currentlyGoing: boolean
+) {
+  const ref = doc(db, "communityEvents", eventId, "rsvps", uid);
+  if (currentlyGoing) {
+    await deleteDoc(ref);
+  } else {
+    const { setDoc, serverTimestamp: ts } = await import("firebase/firestore");
+    await setDoc(ref, { uid, name, username, rsvpAt: ts() });
+  }
+}
+
+export async function getRsvpCount(eventId: string): Promise<number> {
+  const { getCountFromServer } = await import("firebase/firestore");
+  const snap = await getCountFromServer(collection(db, "communityEvents", eventId, "rsvps"));
+  return snap.data().count;
 }

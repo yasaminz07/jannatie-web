@@ -3,14 +3,15 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
-  collection, onSnapshot, orderBy, query,
+  collection, onSnapshot, orderBy, query, doc, getDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
 import {
   CommunityEvent, EventComment, toggleEventLike, addEventComment,
   deleteEventComment, reportComment, followCommunity, unfollowCommunity,
-  toggleCommentLike, pinComment, unpinComment, notifyCommunityInteraction, logEventShare,
+  toggleCommentLike, pinComment, unpinComment, notifyCommunityInteraction,
+  logEventShare, updateEvent, notifyFollowersOfEvent, toggleRsvp, getRsvpCount,
 } from "@/lib/community-utils";
 import type { CommentLiker } from "@/lib/community-utils";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
@@ -18,6 +19,7 @@ import toast from "react-hot-toast";
 import {
   Heart, MessageCircle, Share2, MapPin, Calendar, Clock,
   ExternalLink, Pencil, Trash2, Flag, X, Send, ChevronDown, Pin, Copy,
+  Users, Bell,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -47,12 +49,14 @@ function formatEventDate(dateStr: string) {
 export default function EventCard({
   event,
   mode = "public",
+  isPremiumCommunity,
   onEdit,
   onDelete,
   onDuplicate,
 }: {
   event: CommunityEvent;
   mode?: "owner" | "public";
+  isPremiumCommunity?: boolean; // owner mode: enables notify/RSVP count; public mode: falls back to event.communityIsPremium
   onEdit?: (event: CommunityEvent) => void;
   onDelete?: (eventId: string) => void;
   onDuplicate?: (event: CommunityEvent) => void;
@@ -70,6 +74,29 @@ export default function EventCard({
   const [replyText, setReplyText] = useState("");
   const [postingReply, setPostingReply] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // RSVP state
+  const [rsvpCount, setRsvpCount] = useState<number>(0);
+  const [isGoing, setIsGoing] = useState<boolean>(false);
+  const [rsvpLoading, setRsvpLoading] = useState(false);
+
+  // Notify followers state (owner mode only)
+  const [notifying, setNotifying] = useState(false);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const isUpcoming = event.date >= today;
+
+  // Determine if we should show verified badge
+  // In owner mode: use the passed isPremiumCommunity prop
+  // In public mode: use the stored communityIsPremium field on the event
+  const showVerifiedBadge = mode === "owner"
+    ? (isPremiumCommunity ?? false)
+    : (event.communityIsPremium ?? false);
+
+  // Whether to show RSVP features
+  const showRsvpButton = mode === "public" && isUpcoming;
+  const showRsvpCountOwner = mode === "owner" && (isPremiumCommunity ?? false);
+  const needsRsvpData = showRsvpButton || showRsvpCountOwner;
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "communityEvents", event.id, "likes"), snap => {
@@ -91,11 +118,22 @@ export default function EventCard({
     setFollowing(profile.following.includes(event.communityUid));
   }, [profile?.following, event.communityUid]);
 
+  // Load RSVP data when needed
+  useEffect(() => {
+    if (!needsRsvpData) return;
+    getRsvpCount(event.id).then(count => setRsvpCount(count)).catch(() => {});
+    if (user?.uid) {
+      getDoc(doc(db, "communityEvents", event.id, "rsvps", user.uid))
+        .then(snap => setIsGoing(snap.exists()))
+        .catch(() => {});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event.id, needsRsvpData, user?.uid]);
+
   const liked = !!user && likeUids.includes(user.uid);
   const isOwnEvent = user?.uid === event.communityUid;
   const isCommunityViewer = profile?.accountType === "community";
 
-  // Separate top-level comments and replies
   const topLevelComments = comments.filter(c => !c.parentId);
   const allReplies = comments.filter(c => !!c.parentId);
   const pinnedComment = event.pinnedCommentId
@@ -153,6 +191,39 @@ export default function EventCard({
     }
     if (shared && user) {
       logEventShare(event.id, user.uid).catch(() => {});
+    }
+  }
+
+  async function handleRsvp() {
+    if (!user) { toast.error("Sign in to RSVP for events."); return; }
+    setRsvpLoading(true);
+    try {
+      await toggleRsvp(
+        event.id,
+        user.uid,
+        profile?.displayName ?? "User",
+        profile?.username ?? "",
+        isGoing
+      );
+      setIsGoing(prev => !prev);
+      setRsvpCount(c => isGoing ? Math.max(0, c - 1) : c + 1);
+    } catch {
+      toast.error("Couldn't update RSVP.");
+    } finally {
+      setRsvpLoading(false);
+    }
+  }
+
+  async function handleNotifyFollowers() {
+    if (notifying) return;
+    setNotifying(true);
+    try {
+      await notifyFollowersOfEvent(event);
+      toast.success("Followers notified!");
+    } catch {
+      toast.error("Couldn't notify followers.");
+    } finally {
+      setNotifying(false);
     }
   }
 
@@ -290,6 +361,9 @@ export default function EventCard({
     return `${Math.floor(h / 24)}d ago`;
   }
 
+  // updateEvent is used internally for notifiedFollowersAt tracking (called inside notifyFollowersOfEvent)
+  void updateEvent;
+
   return (
     <div className="rounded-3xl overflow-hidden bg-white border border-slate-100 shadow-sm">
       {/* Header */}
@@ -299,7 +373,7 @@ export default function EventCard({
           <div className="min-w-0">
             <div className="flex items-center gap-1">
               <p className="text-sm font-semibold text-slate-900 truncate leading-tight">{event.communityName}</p>
-              <VerifiedBadge size={13} />
+              {showVerifiedBadge && <VerifiedBadge size={13} />}
             </div>
             <p className="text-xs text-slate-400">@{event.communityUsername}</p>
           </div>
@@ -307,6 +381,25 @@ export default function EventCard({
 
         {mode === "owner" ? (
           <div ref={menuRef} className="flex items-center gap-1 flex-shrink-0">
+            {/* Notify followers button (premium only, not yet notified) */}
+            {isPremiumCommunity && !event.notifiedFollowersAt && (
+              <button
+                onClick={handleNotifyFollowers}
+                disabled={notifying}
+                title="Notify followers about this event"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100 transition-colors disabled:opacity-50"
+              >
+                <Bell size={12} />
+                {notifying ? "…" : "Notify"}
+              </button>
+            )}
+            {/* RSVP count (premium only) */}
+            {showRsvpCountOwner && (
+              <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-500 bg-slate-50 border border-slate-100">
+                <Users size={12} className="text-slate-400" />
+                {rsvpCount} going
+              </div>
+            )}
             {onDuplicate && (
               <button onClick={() => onDuplicate(event)}
                 className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-violet-600 hover:bg-violet-50 transition-colors"
@@ -395,6 +488,28 @@ export default function EventCard({
           {comments.length > 0 && comments.length}
           <ChevronDown size={12} className={`transition-transform ${showComments ? "rotate-180" : ""}`} />
         </button>
+
+        {/* RSVP button — public mode, upcoming events only */}
+        {showRsvpButton && (
+          <button
+            onClick={handleRsvp}
+            disabled={rsvpLoading}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border ${
+              isGoing
+                ? "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                : "border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+            } disabled:opacity-50`}
+          >
+            <Users size={13} className={isGoing ? "text-emerald-600" : "text-slate-400"} />
+            {isGoing ? "Going" : "I’m Going"}
+            {rsvpCount > 0 && (
+              <span className={`ml-0.5 text-[10px] font-bold ${isGoing ? "text-emerald-600" : "text-slate-400"}`}>
+                {rsvpCount}
+              </span>
+            )}
+          </button>
+        )}
+
         <button onClick={handleShare}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-50 transition-colors ml-auto">
           <Share2 size={14} /> Share
@@ -444,7 +559,7 @@ export default function EventCard({
                             <p className="text-sm text-slate-700 leading-snug">{c.text}</p>
                           </div>
 
-                          {/* Community-account liked indicator (only visible when a community liked the comment) */}
+                          {/* Community-account liked indicator */}
                           {communityLiker && (
                             <div className="flex items-center gap-1.5 mt-1 ml-1">
                               <div className="relative flex-shrink-0">
@@ -461,7 +576,6 @@ export default function EventCard({
                           <div className="flex items-center flex-wrap gap-x-3 gap-y-0.5 mt-1 ml-1">
                             <span className="text-[10px] text-slate-400">{timeAgo(c.createdAt)}</span>
 
-                            {/* Reply */}
                             {user && (
                               <button
                                 onClick={() => { setReplyingTo(replyingTo === c.id ? null : c.id); setReplyText(""); }}
@@ -471,7 +585,6 @@ export default function EventCard({
                               </button>
                             )}
 
-                            {/* Like with count (any signed-in user) */}
                             {user && (
                               <button
                                 onClick={() => handleToggleCommentLike(c.id, isLikedByMe)}
@@ -485,7 +598,6 @@ export default function EventCard({
                               </button>
                             )}
 
-                            {/* Pin (event owner only) */}
                             {isOwnEvent && (
                               <button
                                 onClick={() => handlePin(c.id)}
@@ -498,7 +610,6 @@ export default function EventCard({
                               </button>
                             )}
 
-                            {/* Delete own */}
                             {user && user.uid === c.authorUid && (
                               <button onClick={() => handleDeleteComment(c.id)}
                                 className="text-[10px] text-slate-400 hover:text-red-500 font-medium">
@@ -506,7 +617,6 @@ export default function EventCard({
                               </button>
                             )}
 
-                            {/* Remove (event owner) */}
                             {user && isOwnEvent && user.uid !== c.authorUid && (
                               <button onClick={() => handleDeleteComment(c.id)}
                                 className="text-[10px] text-slate-400 hover:text-red-500 font-medium">
@@ -514,7 +624,6 @@ export default function EventCard({
                               </button>
                             )}
 
-                            {/* Report (non-owner, not own comment) */}
                             {user && user.uid !== c.authorUid && !isOwnEvent && (
                               <button onClick={() => setReportingId(c.id)}
                                 className="text-[10px] text-slate-400 hover:text-amber-600 font-medium flex items-center gap-0.5">
@@ -565,7 +674,6 @@ export default function EventCard({
                                       <p className="text-xs text-slate-700 leading-snug">{reply.text}</p>
                                     </div>
 
-                                    {/* Community-account liked indicator for replies */}
                                     {replyCommunityLiker && (
                                       <div className="flex items-center gap-1.5 mt-1 ml-1">
                                         <div className="relative flex-shrink-0">

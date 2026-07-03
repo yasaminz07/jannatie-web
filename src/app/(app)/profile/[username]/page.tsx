@@ -40,6 +40,7 @@ interface ProfileData {
   phone?: string;
   accountType?: "user" | "community";
   communityCategory?: string;
+  communityPlan?: string;
   bio?: string;
   website?: string;
   city?: string;
@@ -237,6 +238,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
         phone: d.phone as string | undefined,
         accountType: d.accountType,
         communityCategory: d.communityCategory,
+        communityPlan: d.communityPlan,
         bio: d.bio,
         website: d.website,
         city: d.city,
@@ -379,7 +381,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <p className="text-xl font-bold text-slate-900 leading-tight truncate">{profileData.displayName ?? profileData.username}</p>
-                  <VerifiedBadge size={16} />
+                  {profileData.communityPlan === "premium" && <VerifiedBadge size={16} />}
                 </div>
                 <p className="text-sm text-slate-400 mt-0.5 truncate">@{profileData.username}</p>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-slate-500">

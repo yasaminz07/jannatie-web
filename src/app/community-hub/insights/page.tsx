@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   collection, query, where, getDocs, getCountFromServer, orderBy, limit,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
-import { CommunityEvent, EventComment } from "@/lib/community-utils";
+import { CommunityEvent, EventComment, isCommunityPremium, getRsvpCount } from "@/lib/community-utils";
 import {
   Heart, MessageCircle, Share2, Users, TrendingUp, BarChart2,
-  CalendarDays, Clock, MessageSquare,
+  CalendarDays, Clock, MessageSquare, Download, Lock, Crown, CheckCircle2,
 } from "lucide-react";
 
 interface EventStats {
@@ -17,7 +18,9 @@ interface EventStats {
   likes: number;
   comments: number;
   shares: number;
+  rsvps: number;
   total: number;
+  dayOfWeek: string;
 }
 
 interface ActivityItem {
@@ -26,12 +29,23 @@ interface ActivityItem {
   eventTitle: string;
 }
 
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function engagementColor(rate: number) {
+  if (rate >= 10) return "text-emerald-600";
+  if (rate >= 5) return "text-blue-600";
+  if (rate >= 2) return "text-amber-600";
+  return "text-slate-500";
+}
+
 export default function InsightsPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [eventStats, setEventStats] = useState<EventStats[]>([]);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [followerCount, setFollowerCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const isPremium = isCommunityPremium(profile);
 
   useEffect(() => {
     if (!user) return;
@@ -63,9 +77,15 @@ export default function InsightsPage() {
               const shareSnap = await getCountFromServer(collection(db, "communityEvents", event.id, "shares"));
               shares = shareSnap.data().count;
             } catch { /* ignore */ }
+            let rsvps = 0;
+            if (isPremium) {
+              try { rsvps = await getRsvpCount(event.id); } catch { /* ignore */ }
+            }
             const likes = likeSnap.data().count;
             const comments = commentSnap.data().count;
-            return { event, likes, comments, shares, total: likes + comments + shares };
+            const dateObj = new Date(event.date + "T00:00:00");
+            const dayOfWeek = DAYS[dateObj.getDay()] ?? "Unknown";
+            return { event, likes, comments, shares, rsvps, total: likes + comments + shares, dayOfWeek };
           })
         );
         statsArr.sort((a, b) => b.total - a.total);
@@ -107,7 +127,8 @@ export default function InsightsPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isPremium]);
 
   function timeAgo(ts: unknown) {
     const t = ts as { toMillis?: () => number } | null;
@@ -124,17 +145,70 @@ export default function InsightsPage() {
   const totalLikes = eventStats.reduce((s, e) => s + e.likes, 0);
   const totalComments = eventStats.reduce((s, e) => s + e.comments, 0);
   const totalShares = eventStats.reduce((s, e) => s + e.shares, 0);
+  const totalRsvps = eventStats.reduce((s, e) => s + e.rsvps, 0);
   const totalEngagement = totalLikes + totalComments + totalShares;
   const eventCount = eventStats.length;
-  const engagementRate = followerCount && followerCount > 0
-    ? ((totalEngagement / followerCount) * 100).toFixed(1)
+  const engagementRateNum = followerCount && followerCount > 0
+    ? (totalEngagement / followerCount) * 100
     : null;
+  const engagementRate = engagementRateNum !== null ? engagementRateNum.toFixed(1) : null;
+
+  // Best day to post (premium) — which weekday has highest avg engagement
+  const bestDay = (() => {
+    if (!isPremium || eventStats.length === 0) return null;
+    const dayTotals: Record<string, { total: number; count: number }> = {};
+    for (const s of eventStats) {
+      if (!dayTotals[s.dayOfWeek]) dayTotals[s.dayOfWeek] = { total: 0, count: 0 };
+      dayTotals[s.dayOfWeek].total += s.total;
+      dayTotals[s.dayOfWeek].count += 1;
+    }
+    let best = "";
+    let bestAvg = -1;
+    for (const [day, { total, count }] of Object.entries(dayTotals)) {
+      const avg = total / count;
+      if (avg > bestAvg) { bestAvg = avg; best = day; }
+    }
+    return best || null;
+  })();
+
+  function exportCsv() {
+    const header = "Title,Date,Day,Likes,Comments,Shares,RSVPs,Total Engagement\n";
+    const rows = eventStats.map(s =>
+      [
+        `"${s.event.title.replace(/"/g, '""')}"`,
+        s.event.date,
+        s.dayOfWeek,
+        s.likes,
+        s.comments,
+        s.shares,
+        s.rsvps,
+        s.total,
+      ].join(",")
+    ).join("\n");
+    const blob = new Blob([header + rows], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `jannatie-insights-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
-      <div className="flex items-center gap-2 mb-1">
-        <BarChart2 size={20} className="text-blue-600" />
-        <h1 className="text-2xl font-bold text-slate-900">Insights</h1>
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <BarChart2 size={20} className="text-blue-600" />
+          <h1 className="text-2xl font-bold text-slate-900">Insights</h1>
+        </div>
+        {isPremium && eventStats.length > 0 && (
+          <button
+            onClick={exportCsv}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <Download size={14} /> Export CSV
+          </button>
+        )}
       </div>
       <p className="text-slate-500 text-sm mb-8">Performance overview for your community account</p>
 
@@ -168,6 +242,7 @@ export default function InsightsPage() {
                 sub: engagementRate ? `${engagementRate}% engagement rate` : "—",
                 icon: <Users size={14} className="text-violet-500" />,
                 accent: "border-violet-200",
+                subClass: engagementRateNum !== null ? engagementColor(engagementRateNum) : undefined,
               },
               {
                 label: "Total likes",
@@ -183,17 +258,96 @@ export default function InsightsPage() {
                 icon: <MessageCircle size={14} className="text-sky-500" />,
                 accent: "border-sky-200",
               },
-            ].map(({ label, value, sub, icon, accent }) => (
+            ].map(({ label, value, sub, icon, accent, subClass }) => (
               <div key={label} className={`bg-white rounded-2xl border ${accent} p-4`}>
                 <div className="flex items-center gap-1.5 mb-2">
                   {icon}
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">{label}</p>
                 </div>
                 <p className="text-2xl font-bold text-slate-900">{value}</p>
-                <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">{sub}</p>
+                <p className={`text-[11px] mt-0.5 leading-snug font-semibold ${subClass ?? "text-slate-400"}`}>{sub}</p>
               </div>
             ))}
           </div>
+
+          {/* Premium stats row */}
+          {isPremium && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+              {/* RSVPs */}
+              <div className="bg-white rounded-2xl border border-emerald-200 p-4">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <CheckCircle2 size={14} className="text-emerald-500" />
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Total RSVPs</p>
+                </div>
+                <p className="text-2xl font-bold text-slate-900">{totalRsvps}</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {eventCount > 0 ? `${(totalRsvps / eventCount).toFixed(1)} avg / event` : "—"}
+                </p>
+              </div>
+              {/* Engagement rate */}
+              <div className="bg-white rounded-2xl border border-blue-200 p-4">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <TrendingUp size={14} className="text-blue-500" />
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Engagement rate</p>
+                </div>
+                <p className={`text-2xl font-bold ${engagementRateNum !== null ? engagementColor(engagementRateNum) : "text-slate-900"}`}>
+                  {engagementRate !== null ? `${engagementRate}%` : "—"}
+                </p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {engagementRateNum !== null
+                    ? engagementRateNum >= 10 ? "Excellent — keep it up!"
+                      : engagementRateNum >= 5 ? "Good engagement"
+                      : engagementRateNum >= 2 ? "Room to improve"
+                      : "Post more consistently"
+                    : "No follower data"}
+                </p>
+              </div>
+              {/* Best day */}
+              <div className="bg-white rounded-2xl border border-amber-200 p-4">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <CalendarDays size={14} className="text-amber-500" />
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Best day to post</p>
+                </div>
+                <p className="text-2xl font-bold text-slate-900">{bestDay ?? "—"}</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {bestDay ? "Highest avg engagement on this day" : "Post more events to see"}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Locked premium section for free accounts */}
+          {!isPremium && (
+            <div className="relative mb-6 rounded-2xl overflow-hidden border border-slate-200">
+              {/* Blurred mock content behind */}
+              <div className="blur-sm pointer-events-none select-none">
+                <div className="grid grid-cols-3 gap-3 p-4">
+                  {["Total RSVPs", "Engagement rate", "Best day to post"].map(label => (
+                    <div key={label} className="bg-white rounded-2xl border border-slate-200 p-4">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">{label}</p>
+                      <p className="text-2xl font-bold text-slate-900">--</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Overlay */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] gap-3 p-6">
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                  <Lock size={18} className="text-amber-600" />
+                </div>
+                <p className="text-sm font-bold text-slate-800 text-center">Premium Analytics</p>
+                <p className="text-xs text-slate-500 text-center max-w-xs">
+                  Unlock RSVP counts, engagement rate, best day to post and CSV export with Community Premium.
+                </p>
+                <Link
+                  href="/community-hub/upgrade"
+                  className="flex items-center gap-1.5 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 transition-colors rounded-xl px-4 py-2.5"
+                >
+                  <Crown size={12} /> Upgrade to Premium
+                </Link>
+              </div>
+            </div>
+          )}
 
           {/* Top posts */}
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mb-6">
@@ -215,7 +369,7 @@ export default function InsightsPage() {
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-800 truncate">{s.event.title}</p>
-                    <p className="text-xs text-slate-400">{s.event.date}</p>
+                    <p className="text-xs text-slate-400">{s.event.date}{isPremium && ` · ${s.dayOfWeek}`}</p>
                   </div>
                   <div className="flex items-center gap-2.5 flex-shrink-0">
                     <span className="flex items-center gap-1 text-rose-500 text-xs font-semibold">
@@ -227,6 +381,11 @@ export default function InsightsPage() {
                     <span className="flex items-center gap-1 text-slate-400 text-xs font-semibold">
                       <Share2 size={11} /> {s.shares}
                     </span>
+                    {isPremium && (
+                      <span className="flex items-center gap-1 text-emerald-500 text-xs font-semibold">
+                        <CheckCircle2 size={11} /> {s.rsvps}
+                      </span>
+                    )}
                     <span className="text-[10px] bg-slate-100 text-slate-500 rounded-lg px-2 py-0.5 font-bold">
                       {s.total}
                     </span>

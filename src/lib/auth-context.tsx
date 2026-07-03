@@ -67,6 +67,8 @@ interface UserProfile {
   city?: string;
   verificationInfo?: string; // applicant-submitted proof (social link, registration info, etc.)
   applicationStatus?: "pending" | "approved" | "rejected"; // community accounts only
+  communityPlan?: string; // "premium" when set by admin in Firebase Console
+  teamMembers?: string[]; // UIDs of team members (premium only, max 3)
 }
 
 interface AuthContextValue {

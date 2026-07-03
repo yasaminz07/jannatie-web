@@ -5,7 +5,8 @@ import { collection, query, where, onSnapshot, deleteField } from "firebase/fire
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
 import {
-  CommunityEvent, createEvent, updateEvent, deleteEvent, notifyFollowersOfEvent,
+  CommunityEvent, createEvent, updateEvent, deleteEvent,
+  notifyFollowersOfEvent, isCommunityPremium,
 } from "@/lib/community-utils";
 import { compressImage } from "@/lib/image-utils";
 import EventCard from "@/components/community/EventCard";
@@ -13,8 +14,9 @@ import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CalendarDays, Plus, X, Camera, Trash2, Calendar, Clock,
-  ChevronLeft, ChevronRight, Search, MapPin,
+  ChevronLeft, ChevronRight, Search, MapPin, Lock, Crown, Bell,
 } from "lucide-react";
+import Link from "next/link";
 
 const RATIOS = [
   { label: "1:1", w: 1, h: 1 },
@@ -83,11 +85,7 @@ function PlaceAutocomplete({
       setFetching(true);
       try {
         const params = new URLSearchParams({
-          q: val,
-          format: "json",
-          limit: "6",
-          addressdetails: "1",
-          "accept-language": "en",
+          q: val, format: "json", limit: "6", addressdetails: "1", "accept-language": "en",
         });
         const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
           headers: { "User-Agent": "Jannatie/1.0 (jannatie.com)" },
@@ -323,6 +321,8 @@ const emptyForm: FormState = {
 
 type TimeFilter = "all" | "upcoming" | "past";
 
+const FREE_EVENT_LIMIT = 3;
+
 export default function CommunityEventsPage() {
   const { user, profile } = useAuth();
   const [events, setEvents] = useState<CommunityEvent[]>([]);
@@ -336,6 +336,10 @@ export default function CommunityEventsPage() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("upcoming");
   const photoInputRef = useRef<HTMLInputElement>(null);
 
+  // Post-create notify prompt (premium only)
+  const [notifyPromptEvent, setNotifyPromptEvent] = useState<{ id: string; title: string; communityUid: string; communityName: string; communityUsername: string } | null>(null);
+  const [notifyingFollowers, setNotifyingFollowers] = useState(false);
+
   useEffect(() => {
     if (!user) return;
     const q = query(collection(db, "communityEvents"), where("communityUid", "==", user.uid));
@@ -348,6 +352,17 @@ export default function CommunityEventsPage() {
     });
     return unsub;
   }, [user]);
+
+  const isPremium = isCommunityPremium(profile);
+
+  // Count events created this calendar month
+  const thisMonthCount = useMemo(() => events.filter(e => {
+    const d = new Date((e.createdAt as { toDate?: () => Date })?.toDate?.() ?? Date.now());
+    const now = new Date();
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  }).length, [events]);
+
+  const atLimit = !isPremium && thisMonthCount >= FREE_EVENT_LIMIT;
 
   const today = new Date().toISOString().slice(0, 10);
   const upcomingCount = useMemo(() => events.filter(e => e.date >= today).length, [events, today]);
@@ -366,6 +381,10 @@ export default function CommunityEventsPage() {
   }, [events, search, timeFilter, today]);
 
   function openCreate() {
+    if (atLimit) {
+      toast.error("You have reached your 3-event monthly limit. Upgrade to Premium for unlimited events.");
+      return;
+    }
     setEditingId(null);
     setForm(emptyForm);
     setShowForm(true);
@@ -390,12 +409,17 @@ export default function CommunityEventsPage() {
 
   async function handleDuplicate(event: CommunityEvent) {
     if (!user || !profile) return;
+    if (atLimit) {
+      toast.error("You have reached your 3-event monthly limit. Upgrade to Premium for unlimited events.");
+      return;
+    }
     try {
       await createEvent({
         communityUid: user.uid,
         communityName: profile.displayName ?? "Community",
         communityUsername: profile.username ?? "",
         communityPhotoURL: profile.photoURL ?? null,
+        communityIsPremium: isPremium,
         title: `${event.title} (copy)`,
         description: event.description,
         photoURL: event.photoURL,
@@ -455,19 +479,23 @@ export default function CommunityEventsPage() {
           communityName: profile.displayName ?? "Community",
           communityUsername: profile.username ?? "",
           communityPhotoURL: profile.photoURL ?? null,
+          communityIsPremium: isPremium,
           ...baseFields,
           ...(form.time ? { time: form.time } : {}),
           ...(form.venueName.trim() ? { venueName: form.venueName.trim() } : {}),
           ...(form.externalLink.trim() ? { externalLink: form.externalLink.trim() } : {}),
         });
-        notifyFollowersOfEvent({
-          id: ref.id,
-          communityName: profile.displayName ?? "Community",
-          communityUsername: profile.username ?? "",
-          title: form.title.trim(),
-          communityUid: user.uid,
-        }).catch(() => {});
         toast.success("Event posted!");
+        // For premium accounts, show notify prompt
+        if (isPremium) {
+          setNotifyPromptEvent({
+            id: ref.id,
+            title: form.title.trim(),
+            communityUid: user.uid,
+            communityName: profile.displayName ?? "Community",
+            communityUsername: profile.username ?? "",
+          });
+        }
       }
       setShowForm(false);
     } catch {
@@ -489,17 +517,64 @@ export default function CommunityEventsPage() {
     }
   }
 
+  async function handleNotifyFollowers() {
+    if (!notifyPromptEvent) return;
+    setNotifyingFollowers(true);
+    try {
+      await notifyFollowersOfEvent(notifyPromptEvent);
+      toast.success("Followers notified!");
+      setNotifyPromptEvent(null);
+    } catch {
+      toast.error("Couldn't notify followers.");
+    } finally {
+      setNotifyingFollowers(false);
+    }
+  }
+
   return (
     <div className="max-w-2xl mx-auto px-4 md:px-8 py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-2xl font-bold text-slate-900">Events</h1>
-        <button onClick={openCreate}
-          className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl px-4 py-2.5 transition-colors shadow-sm shadow-blue-200">
-          <Plus size={15} /> New event
+        <button
+          onClick={openCreate}
+          disabled={atLimit}
+          title={atLimit ? "Upgrade to Premium for unlimited events" : undefined}
+          className={`flex items-center gap-1.5 text-sm font-semibold rounded-xl px-4 py-2.5 transition-colors shadow-sm ${
+            atLimit
+              ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
+              : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200"
+          }`}
+        >
+          {atLimit ? <Lock size={14} /> : <Plus size={15} />}
+          {atLimit ? "Limit reached" : "New event"}
         </button>
       </div>
-      <p className="text-slate-500 text-sm mb-6">Create and manage the events your followers see.</p>
+      <p className="text-slate-500 text-sm mb-4">Create and manage the events your followers see.</p>
+
+      {/* Event limit banner for free accounts at limit */}
+      {atLimit && !isPremium && (
+        <div className="flex items-center gap-3 mb-5 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+          <Crown size={16} className="text-amber-500 flex-shrink-0" />
+          <p className="text-sm text-amber-800 flex-1">
+            You have used {FREE_EVENT_LIMIT}/{FREE_EVENT_LIMIT} free events this month.
+          </p>
+          <Link href="/community-hub/upgrade" className="text-xs font-bold text-amber-700 hover:text-amber-900 whitespace-nowrap underline">
+            Upgrade to Premium
+          </Link>
+        </div>
+      )}
+
+      {/* Free tier soft nudge (not at limit yet) */}
+      {!isPremium && !atLimit && events.length > 0 && (
+        <div className="flex items-center gap-2 mb-4 text-xs text-slate-400">
+          <CalendarDays size={12} className="text-slate-300" />
+          <span>{thisMonthCount}/{FREE_EVENT_LIMIT} events used this month.</span>
+          <Link href="/community-hub/upgrade" className="text-blue-500 hover:underline font-medium">
+            Upgrade for unlimited
+          </Link>
+        </div>
+      )}
 
       {/* Stats bar */}
       {!loading && events.length > 0 && (
@@ -584,6 +659,7 @@ export default function CommunityEventsPage() {
               key={event.id}
               event={event}
               mode="owner"
+              isPremiumCommunity={isPremium}
               onEdit={openEdit}
               onDelete={setDeleteTarget}
               onDuplicate={handleDuplicate}
@@ -614,7 +690,6 @@ export default function CommunityEventsPage() {
                   boxShadow: "0 24px 60px rgba(15,23,42,0.18)",
                 }}
               >
-                {/* Drag handle (mobile) */}
                 <div className="flex justify-center pt-3 pb-1 sm:hidden">
                   <div className="w-10 h-1 rounded-full bg-slate-200" />
                 </div>
@@ -756,6 +831,45 @@ export default function CommunityEventsPage() {
                 </button>
                 <button onClick={confirmDelete} className="flex-1 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl py-2.5 transition-colors">
                   Delete
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Notify followers prompt (premium only, shown after creating new event) */}
+      <AnimatePresence>
+        {notifyPromptEvent && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[62] bg-black/30" onClick={() => !notifyingFollowers && setNotifyPromptEvent(null)} />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94 }}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[63] w-[90vw] max-w-sm rounded-3xl bg-white p-6 text-center"
+              style={{ boxShadow: "0 24px 60px rgba(15,23,42,0.18)" }}
+            >
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-3">
+                <Bell size={20} className="text-blue-500" />
+              </div>
+              <p className="text-sm font-bold text-slate-900 mb-1">Notify your followers?</p>
+              <p className="text-xs text-slate-500 mb-5">
+                Send a notification to all your followers about &ldquo;{notifyPromptEvent.title}&rdquo;.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setNotifyPromptEvent(null)}
+                  disabled={notifyingFollowers}
+                  className="flex-1 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl py-2.5 transition-colors disabled:opacity-50">
+                  Later
+                </button>
+                <button
+                  onClick={handleNotifyFollowers}
+                  disabled={notifyingFollowers}
+                  className="flex-[2] text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl py-2.5 transition-colors disabled:opacity-50">
+                  {notifyingFollowers ? "Notifying…" : "Notify now"}
                 </button>
               </div>
             </motion.div>
