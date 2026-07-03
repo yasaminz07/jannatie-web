@@ -467,38 +467,38 @@ function HomeView({
             <h1 className="text-xl font-bold text-slate-900">Islamic Learning</h1>
             <p className="text-xs text-slate-400 mt-0.5">Bismillah — let us begin</p>
           </div>
-          <div className="flex items-center gap-3">
+          {/* Stats pill */}
+          <div className="flex items-center bg-white border border-slate-100 shadow-sm rounded-full overflow-hidden">
             {/* Hearts */}
             {isPremium ? (
-              <div className="flex items-center gap-1" title="Premium — unlimited hearts">
-                <Heart size={15} className="text-red-400 fill-red-400" />
-                <Crown size={12} className="text-amber-400" />
+              <div className="flex items-center gap-1 px-3 py-1.5" title="Premium — unlimited hearts">
+                <Heart size={13} className="text-red-400 fill-red-400" />
+                <Crown size={10} className="text-amber-400" />
               </div>
             ) : (
-              <button onClick={() => setShowShop(true)} className="flex items-center gap-1" title="Hearts — refill in shop">
-                <Heart size={15} className={hearts > 0 ? "text-red-400 fill-red-400" : "text-slate-300 fill-slate-300"} />
-                <span className={`text-sm font-bold ${hearts === 0 ? "text-red-400" : "text-slate-700"}`}>{hearts}/{HEARTS_MAX}</span>
+              <button onClick={() => setShowShop(true)} className="flex items-center gap-1 px-3 py-1.5 hover:bg-slate-50 transition-colors" title="Hearts — tap to refill">
+                <Heart size={13} className={hearts > 0 ? "text-red-400 fill-red-400" : "text-slate-300 fill-slate-300"} />
+                <span className={`text-xs font-semibold ${hearts === 0 ? "text-red-500" : "text-slate-600"}`}>{hearts}/{HEARTS_MAX}</span>
               </button>
             )}
+            <div className="w-px h-4 bg-slate-100 flex-shrink-0" />
             {/* Streak */}
-            <button onClick={() => setShowShop(true)} className="flex items-center gap-1 group" title="Streak shop">
-              <Flame size={16} className={streak > 0 ? "text-amber-400" : "text-slate-300"} />
-              <span className="text-sm font-bold text-slate-700">{streak}</span>
-              {streakFreezes > 0 && (
-                <span className="text-[10px] bg-blue-100 text-blue-600 font-bold px-1 rounded-full ml-0.5">
-                  ×{streakFreezes}❄
-                </span>
-              )}
+            <button onClick={() => setShowShop(true)} className="flex items-center gap-1 px-3 py-1.5 hover:bg-slate-50 transition-colors" title="Streak — tap to open shop">
+              <Flame size={13} className={streak > 0 ? "text-amber-400" : "text-slate-300"} />
+              <span className="text-xs font-semibold text-slate-600">{streak}</span>
+              {streakFreezes > 0 && <span className="text-[9px] font-bold text-blue-400 ml-0.5">❄{streakFreezes}</span>}
             </button>
+            <div className="w-px h-4 bg-slate-100 flex-shrink-0" />
             {/* Gems */}
-            <button onClick={() => setShowShop(true)} className="flex items-center gap-1" title="Gems — use in shop">
-              <span className="text-sm">💎</span>
-              <span className="text-sm font-bold text-slate-700">{gems}</span>
+            <button onClick={() => setShowShop(true)} className="flex items-center gap-1 px-3 py-1.5 hover:bg-slate-50 transition-colors" title="Gems — tap to open shop">
+              <span className="text-[13px] leading-none">💎</span>
+              <span className="text-xs font-semibold text-slate-600">{gems}</span>
             </button>
+            <div className="w-px h-4 bg-slate-100 flex-shrink-0" />
             {/* XP */}
-            <div className="flex items-center gap-1.5">
-              <Zap size={15} className="text-blue-500" />
-              <span className="text-sm font-bold text-slate-700">{xp}</span>
+            <div className="flex items-center gap-1 px-3 py-1.5">
+              <Zap size={13} className="text-blue-500 fill-blue-400" />
+              <span className="text-xs font-semibold text-slate-600">{xp}</span>
             </div>
           </div>
         </div>
