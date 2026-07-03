@@ -1,26 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Updates a Firestore document via REST API using the Firebase API key.
-// Ensure your Firestore security rules allow this update for the plan field,
-// OR configure a service account and use firebase-admin instead for production.
-async function updateUserPlan(uid: string, plan: string) {
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
-  if (!projectId || !apiKey || !uid) return;
-
-  await fetch(
-    `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${uid}?key=${apiKey}&updateMask.fieldPaths=plan`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fields: { plan: { stringValue: plan } } }),
-    }
-  );
-}
+import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
+import { updateUserDoc } from "@/lib/firestore-admin";
+import { planFromPriceId } from "@/lib/stripe";
 
 export async function POST(req: NextRequest) {
   const stripeKey = process.env.STRIPE_SECRET_KEY;
@@ -42,29 +26,52 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  switch (event.type) {
-    case "checkout.session.completed": {
-      const session = event.data.object as Stripe.Checkout.Session;
-      const uid = session.metadata?.uid;
-      const plan = session.metadata?.plan ?? "premium";
-      if (uid) await updateUserPlan(uid, plan);
-      break;
-    }
-    case "customer.subscription.deleted": {
-      const sub = event.data.object as Stripe.Subscription;
-      const uid = sub.metadata?.uid;
-      if (uid) await updateUserPlan(uid, "free");
-      break;
-    }
-    case "customer.subscription.updated": {
-      const sub = event.data.object as Stripe.Subscription;
-      const uid = sub.metadata?.uid;
-      if (uid) {
-        const newPlan = sub.status === "active" ? (sub.metadata?.plan ?? "premium") : "free";
-        await updateUserPlan(uid, newPlan);
+  try {
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const uid = session.metadata?.uid;
+        const plan = (session.metadata?.plan ?? "premium") as "premium" | "family";
+        const customerId = typeof session.customer === "string" ? session.customer : null;
+        const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
+
+        if (uid) {
+          await updateUserDoc(uid, {
+            plan,
+            subscriptionStatus: "active",
+            ...(customerId     && { stripeCustomerId:      customerId }),
+            ...(subscriptionId && { stripeSubscriptionId: subscriptionId }),
+          });
+        }
+        break;
       }
-      break;
+
+      case "customer.subscription.updated": {
+        const sub = event.data.object as Stripe.Subscription;
+        const uid = sub.metadata?.uid;
+        if (uid) {
+          const priceId = sub.items.data[0]?.price.id;
+          await updateUserDoc(uid, {
+            plan: planFromPriceId(priceId),
+            stripeSubscriptionId: sub.id,
+            subscriptionStatus: sub.status,
+          });
+        }
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        const sub = event.data.object as Stripe.Subscription;
+        const uid = sub.metadata?.uid;
+        if (uid) {
+          await updateUserDoc(uid, { plan: "free", subscriptionStatus: "cancelled" });
+        }
+        break;
+      }
     }
+  } catch (err) {
+    console.error("[stripe-webhook]", event.type, err);
+    return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 });
   }
 
   return NextResponse.json({ received: true });
