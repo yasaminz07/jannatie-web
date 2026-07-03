@@ -472,7 +472,7 @@ function HomeView({
             {isPremium ? (
               <div className="flex items-center gap-1" title="Premium — unlimited hearts">
                 <Heart size={15} className="text-red-400 fill-red-400" />
-                <span className="text-sm font-bold text-slate-700">♾</span>
+                <Crown size={12} className="text-amber-400" />
               </div>
             ) : (
               <button onClick={() => setShowShop(true)} className="flex items-center gap-1" title="Hearts — refill in shop">
@@ -1110,7 +1110,7 @@ function LessonIntroView({
               </div>
             ) : isPremium ? (
               <div className="flex items-center gap-1.5 text-xs text-blue-600 font-semibold">
-                <Heart size={13} className="text-red-400 fill-red-400" /> ♾ Unlimited hearts
+                <Heart size={13} className="text-red-400 fill-red-400" /> Unlimited hearts
               </div>
             ) : (
               <div className="flex items-center gap-1.5 text-xs text-slate-400">
@@ -1342,7 +1342,7 @@ function QuizView({
           ) : isPremium ? (
             <div className="flex items-center gap-1">
               <Heart size={14} className="text-red-400 fill-red-400" />
-              <span className="text-xs font-bold text-slate-700">♾</span>
+              <Crown size={11} className="text-amber-400" />
             </div>
           ) : (
             <div className="flex gap-0.5">
