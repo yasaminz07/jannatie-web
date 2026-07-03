@@ -7,7 +7,7 @@ import {
   BookOpen, X, Check, Zap, Lock,
   Moon, Scale, Languages, Scroll, Heart, Hand, Building2,
   Flame, Star, ChevronLeft, Play, BookMarked,
-  Award, Download, Crown, Sun, Sparkles, Shield, FileText, Smile,
+  Award, Download, Crown, Sun, Sparkles, Shield, FileText, Smile, RotateCcw,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { doc, updateDoc } from "firebase/firestore";
@@ -408,6 +408,7 @@ function HomeView({
   gems,
   hearts,
   heartsRechargeAt,
+  isPremium,
   streakFreezes,
   streakBrokenAt,
   setView,
@@ -423,6 +424,7 @@ function HomeView({
   gems: number;
   hearts: number;
   heartsRechargeAt?: string;
+  isPremium: boolean;
   streakFreezes: number;
   streakBrokenAt?: string;
   setView: (v: LearnView) => void;
@@ -467,10 +469,17 @@ function HomeView({
           </div>
           <div className="flex items-center gap-3">
             {/* Hearts */}
-            <button onClick={() => setShowShop(true)} className="flex items-center gap-1" title="Hearts — refill in shop">
-              <Heart size={15} className={hearts > 0 ? "text-red-400 fill-red-400" : "text-slate-300 fill-slate-300"} />
-              <span className={`text-sm font-bold ${hearts === 0 ? "text-red-400" : "text-slate-700"}`}>{hearts}/{HEARTS_MAX}</span>
-            </button>
+            {isPremium ? (
+              <div className="flex items-center gap-1" title="Premium — unlimited hearts">
+                <Heart size={15} className="text-red-400 fill-red-400" />
+                <span className="text-sm font-bold text-slate-700">♾</span>
+              </div>
+            ) : (
+              <button onClick={() => setShowShop(true)} className="flex items-center gap-1" title="Hearts — refill in shop">
+                <Heart size={15} className={hearts > 0 ? "text-red-400 fill-red-400" : "text-slate-300 fill-slate-300"} />
+                <span className={`text-sm font-bold ${hearts === 0 ? "text-red-400" : "text-slate-700"}`}>{hearts}/{HEARTS_MAX}</span>
+              </button>
+            )}
             {/* Streak */}
             <button onClick={() => setShowShop(true)} className="flex items-center gap-1 group" title="Streak shop">
               <Flame size={16} className={streak > 0 ? "text-amber-400" : "text-slate-300"} />
@@ -698,23 +707,32 @@ function HomeView({
                           <button
                             onClick={() => {
                               if (status === "locked") return;
-                              if (status === "available" && hearts === 0) {
+                              if (status === "available" && hearts === 0 && !isPremium) {
                                 toast.error("No hearts left! Wait for recharge or refill in the shop.");
                                 return;
                               }
                               setView({ kind: "lesson-intro", topicId: lesson.topicId, lessonIndex: lesson.lessonIndex, isPractice: isDone });
                             }}
                             disabled={status === "locked"}
-                            className={`relative w-full h-full flex flex-col items-center justify-center gap-1.5 rounded-2xl border-2 p-2 text-center transition-all ${
+                            className={`relative w-full h-full flex flex-col items-center justify-center gap-1.5 rounded-2xl border-2 p-2 text-center transition-all group/tile ${
                               isDone
                                 ? "bg-emerald-50 border-emerald-200"
-                                : isAvail && hearts === 0
+                                : isAvail && hearts === 0 && !isPremium
                                 ? "bg-red-50 border-red-200 opacity-70"
                                 : isAvail
                                 ? "bg-white border-blue-400 shadow-md shadow-blue-100/60"
                                 : "bg-white/60 border-slate-200/70 cursor-not-allowed"
                             }`}
                           >
+                            {/* Practice hover overlay for done tiles */}
+                            {isDone && (
+                              <div className="absolute inset-0 rounded-2xl bg-emerald-500/0 group-hover/tile:bg-emerald-500/8 flex items-center justify-center opacity-0 group-hover/tile:opacity-100 transition-all duration-200 pointer-events-none z-10">
+                                <div className="flex items-center gap-1 bg-white rounded-full px-2 py-1 shadow-sm border border-emerald-200">
+                                  <RotateCcw size={9} className="text-emerald-600" />
+                                  <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-wide">Practice</span>
+                                </div>
+                              </div>
+                            )}
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${isDone ? "bg-emerald-100" : isAvail ? "bg-blue-100" : "bg-slate-100"}`}>
                               {isDone ? (
                                 <Check size={17} className="text-emerald-500" />
@@ -910,7 +928,7 @@ function HomeView({
                                       whileTap={status !== "locked" ? { scale: 0.94 } : {}}
                                       onClick={() => {
                                         if (status === "locked") return;
-                                        if (status === "available" && hearts === 0) {
+                                        if (status === "available" && hearts === 0 && !isPremium) {
                                           toast.error("No hearts left! Wait for recharge or refill in the shop.");
                                           return;
                                         }
@@ -920,7 +938,7 @@ function HomeView({
                                       className={`relative z-10 w-[84px] flex flex-col items-center pt-3 pb-2.5 px-2 rounded-2xl border-2 transition-all ${
                                         isDone
                                           ? "bg-emerald-50 border-emerald-300 shadow-sm"
-                                          : isAvail && hearts === 0
+                                          : isAvail && hearts === 0 && !isPremium
                                           ? "bg-red-50 border-red-200 opacity-70"
                                           : isAvail
                                           ? "bg-white border-blue-400 shadow-lg shadow-blue-100/60"
@@ -953,6 +971,15 @@ function HomeView({
                                       >
                                         <BookMarked size={8} className="text-slate-400" />
                                       </button>
+                                    )}
+                                    {/* Practice badge on done tiles */}
+                                    {isDone && (
+                                      <div
+                                        title="Tap to practice"
+                                        className="absolute -bottom-1.5 -right-1.5 w-5 h-5 rounded-full bg-emerald-500 border border-white flex items-center justify-center shadow-sm z-20"
+                                      >
+                                        <RotateCcw size={9} className="text-white" />
+                                      </div>
                                     )}
                                   </div>
                                 </div>
@@ -1001,6 +1028,7 @@ function LessonIntroView({
   lessonIndex,
   isPractice = false,
   hearts,
+  isPremium,
   onShowContent,
   setView,
 }: {
@@ -1008,6 +1036,7 @@ function LessonIntroView({
   lessonIndex: number;
   isPractice?: boolean;
   hearts: number;
+  isPremium: boolean;
   onShowContent: (topicId: string, lessonIndex: number) => void;
   setView: (v: LearnView) => void;
 }) {
@@ -1079,6 +1108,10 @@ function LessonIntroView({
               <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
                 <Heart size={13} className="text-emerald-500" /> No heart cost
               </div>
+            ) : isPremium ? (
+              <div className="flex items-center gap-1.5 text-xs text-blue-600 font-semibold">
+                <Heart size={13} className="text-red-400 fill-red-400" /> ♾ Unlimited hearts
+              </div>
             ) : (
               <div className="flex items-center gap-1.5 text-xs text-slate-400">
                 <Heart size={13} className="text-red-400" /> {hearts}/{HEARTS_MAX} hearts
@@ -1113,6 +1146,7 @@ function QuizView({
   questions,
   initialHearts,
   isPractice = false,
+  isPremium = false,
   onClose,
   onComplete,
   onFailed,
@@ -1123,6 +1157,7 @@ function QuizView({
   questions: Question[];
   initialHearts: number;
   isPractice?: boolean;
+  isPremium?: boolean;
   onClose: () => void;
   onComplete: (xpEarned: number, heartsLeft: number) => void;
   onFailed: (heartsLeft: number) => void;
@@ -1241,13 +1276,14 @@ function QuizView({
       setXpEarned((x) => x + q.xp);
       setShowXpPop(true);
       setTimeout(() => setShowXpPop(false), 850);
-    } else if (!isPractice) {
+    } else if (!isPractice && !isPremium) {
       const newHearts = Math.max(0, hearts - 1);
       setHearts(newHearts);
       if (newHearts === 0) setHeartsEmpty(true);
       setShake(true);
       setTimeout(() => setShake(false), 500);
     } else {
+      // Practice or premium: no heart loss, just shake feedback
       setShake(true);
       setTimeout(() => setShake(false), 500);
     }
@@ -1303,6 +1339,11 @@ function QuizView({
           </button>
           {isPractice ? (
             <span className="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full">Practice</span>
+          ) : isPremium ? (
+            <div className="flex items-center gap-1">
+              <Heart size={14} className="text-red-400 fill-red-400" />
+              <span className="text-xs font-bold text-slate-700">♾</span>
+            </div>
           ) : (
             <div className="flex gap-0.5">
               {Array.from({ length: HEARTS_MAX }).map((_, i) => (
@@ -2084,6 +2125,7 @@ export default function LearnPage() {
           gems={gems}
           hearts={currentHearts}
           heartsRechargeAt={heartsRechargeAt}
+          isPremium={isPremium}
           streakFreezes={streakFreezes}
           streakBrokenAt={streakBrokenAt}
           setView={setView}
@@ -2105,6 +2147,7 @@ export default function LearnPage() {
           lessonIndex={view.lessonIndex}
           isPractice={view.isPractice ?? false}
           hearts={currentHearts}
+          isPremium={isPremium}
           onShowContent={openContent}
           setView={setView}
         />
@@ -2122,6 +2165,7 @@ export default function LearnPage() {
           questions={view.questions}
           initialHearts={currentHearts}
           isPractice={view.isPractice ?? false}
+          isPremium={isPremium}
           onClose={() => setView({ kind: "home" })}
           onComplete={(xpEarned, heartsLeft) => {
             handleLessonComplete(view.topicId, xpEarned, heartsLeft, view.isPractice ?? false);
