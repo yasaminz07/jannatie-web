@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     // Rewrite the Firebase-hosted action URL to our own branded page
     const oobCode = new URL(firebaseUrl).searchParams.get("oobCode");
-    const baseUrl = new URL(request.url).origin;
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? new URL(request.url).origin;
     const resetUrl = `${baseUrl}/reset-password?oobCode=${oobCode}`;
 
     await sendMail({
