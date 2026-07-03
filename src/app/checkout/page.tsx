@@ -42,7 +42,7 @@ const PLANS: Record<string, { name: string; monthly: number; annual: number; ann
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,8 +53,11 @@ function CheckoutContent() {
   const billedAs = interval === "annual" ? `£${plan.annualTotal}/year` : null;
 
   useEffect(() => {
-    if (!user) router.push(`/login?redirect=/checkout?plan=${planKey}&interval=${interval}`);
-  }, [user, router, planKey, interval]);
+    if (!authLoading && !user) {
+      const redirect = encodeURIComponent(`/checkout?plan=${planKey}&interval=${interval}`);
+      router.push(`/login?redirect=${redirect}`);
+    }
+  }, [authLoading, user, router, planKey, interval]);
 
   async function handlePay() {
     if (!user) return;
@@ -75,7 +78,7 @@ function CheckoutContent() {
     }
   }
 
-  if (!user) return null;
+  if (authLoading || !user) return null;
 
   return (
     <div className="min-h-screen bg-[#fafafa]">

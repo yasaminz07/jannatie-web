@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -257,6 +257,8 @@ export default function AuthFlow({
 
   const { signIn, signUp, signInWithGoogle } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") ?? "/dashboard";
 
   const checks = getChecks(pw);
   const allValid = checks.length && checks.upper && checks.symbol;
@@ -301,7 +303,7 @@ export default function AuthFlow({
       }
       await signIn(snap.docs[0].data().email, loginPw);
       toast.success("Welcome back!");
-      router.push("/dashboard");
+      router.push(redirectTo);
     } catch {
       toast.error("Incorrect username or password.");
     } finally {
@@ -320,7 +322,7 @@ export default function AuthFlow({
           return;
         }
       }
-      router.push("/dashboard");
+      router.push(redirectTo);
     } catch {
       toast.error("Google sign-in failed. Please try again.");
     }
@@ -352,7 +354,7 @@ export default function AuthFlow({
       trackFunnelStep("signed_up");
       trackFunnelStep("completed_onboarding");
       toast.success("Username set!");
-      router.push("/dashboard");
+      router.push(redirectTo);
     } catch {
       toast.error("Failed to save username. Please try again.");
     } finally {
@@ -424,7 +426,7 @@ export default function AuthFlow({
       trackFunnelStep("completed_onboarding");
       if (selectedHabits.length > 0) trackFunnelStep("started_habit_plan");
       toast.success("Bismillah! Welcome to Jannatie.");
-      router.push("/dashboard");
+      router.push(redirectTo);
     } catch (err: unknown) {
       toast.error(
         err instanceof Error ? err.message : "Sign up failed. Please try again."
