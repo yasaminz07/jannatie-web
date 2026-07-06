@@ -49,8 +49,8 @@ export interface EventComment {
 
 // ── Premium detection helper ──────────────────────────────────────────────────
 
-export function isCommunityPremium(profile: { communityPlan?: string } | null | undefined): boolean {
-  return profile?.communityPlan === "premium";
+export function isCommunityPremium(profile: { communityPlan?: string; plan?: string } | null | undefined): boolean {
+  return profile?.communityPlan === "premium" || profile?.plan === "premium";
 }
 
 // ── Event CRUD ────────────────────────────────────────────────────────────────
@@ -91,7 +91,7 @@ export async function deleteEventComment(eventId: string, commentId: string) {
 export async function logEventShare(eventId: string, uid: string) {
   const { setDoc, serverTimestamp: ts } = await import("firebase/firestore");
   await setDoc(doc(db, "communityEvents", eventId, "shares", uid), {
-    uid,
+    sharerUid: uid,
     sharedAt: ts(),
   });
 }
