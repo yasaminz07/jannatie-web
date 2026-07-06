@@ -318,34 +318,30 @@ export default function InsightsPage() {
 
           {/* Locked premium section for free accounts */}
           {!isPremium && (
-            <div className="relative mb-6 rounded-2xl overflow-hidden border border-slate-200">
-              {/* Blurred mock content behind */}
-              <div className="blur-sm pointer-events-none select-none">
-                <div className="grid grid-cols-3 gap-3 p-4">
-                  {["Total RSVPs", "Engagement rate", "Best day to post"].map(label => (
-                    <div key={label} className="bg-white rounded-2xl border border-slate-200 p-4">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">{label}</p>
-                      <p className="text-2xl font-bold text-slate-900">--</p>
-                    </div>
-                  ))}
-                </div>
+            <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-8 flex flex-col items-center text-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                <Lock size={20} className="text-amber-600" />
               </div>
-              {/* Overlay */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] gap-3 p-6">
-                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                  <Lock size={18} className="text-amber-600" />
-                </div>
-                <p className="text-sm font-bold text-slate-800 text-center">Premium Analytics</p>
-                <p className="text-xs text-slate-500 text-center max-w-xs">
-                  Unlock RSVP counts, engagement rate, best day to post and CSV export with Community Premium.
+              <div>
+                <p className="text-base font-bold text-slate-800 mb-1">Premium Analytics</p>
+                <p className="text-sm text-slate-500 max-w-sm">
+                  Unlock RSVP counts per event, engagement rate, best day to post, and CSV export with Community Premium.
                 </p>
-                <Link
-                  href="/community-hub/upgrade"
-                  className="flex items-center gap-1.5 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 transition-colors rounded-xl px-4 py-2.5"
-                >
-                  <Crown size={12} /> Upgrade to Premium
-                </Link>
               </div>
+              <div className="grid grid-cols-3 gap-3 w-full max-w-sm pointer-events-none select-none opacity-40">
+                {["Total RSVPs", "Engagement rate", "Best day"].map(label => (
+                  <div key={label} className="bg-white rounded-xl border border-slate-200 p-3">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">{label}</p>
+                    <p className="text-lg font-bold text-slate-300">--</p>
+                  </div>
+                ))}
+              </div>
+              <Link
+                href="/community-hub/upgrade"
+                className="flex items-center gap-1.5 text-sm font-bold text-white bg-amber-500 hover:bg-amber-600 transition-colors rounded-xl px-5 py-2.5"
+              >
+                <Crown size={13} /> Upgrade to Premium
+              </Link>
             </div>
           )}
 
