@@ -318,30 +318,45 @@ export default function InsightsPage() {
 
           {/* Locked premium section for free accounts */}
           {!isPremium && (
-            <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-8 flex flex-col items-center text-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
-                <Lock size={20} className="text-amber-600" />
+            <div className="relative mb-6 rounded-2xl overflow-hidden border border-slate-200">
+              {/* Blurred mock content — sized tall enough that the overlay never clips */}
+              <div className="blur-sm pointer-events-none select-none p-4 space-y-3">
+                <div className="grid grid-cols-3 gap-3">
+                  {["Total RSVPs", "Engagement rate", "Best day to post"].map(label => (
+                    <div key={label} className="bg-white rounded-2xl border border-slate-200 p-4">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">{label}</p>
+                      <p className="text-2xl font-bold text-slate-900">--</p>
+                      <p className="text-xs text-slate-300 mt-1">per event</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="bg-white rounded-xl border border-slate-100 p-4">
+                  <div className="h-2.5 w-1/3 bg-slate-100 rounded mb-4" />
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="flex items-center gap-3 mb-3">
+                      <div className="w-7 h-7 rounded-lg bg-slate-100 flex-shrink-0" />
+                      <div className="flex-1 h-2.5 bg-slate-50 rounded" />
+                      <div className="w-8 h-2.5 bg-slate-100 rounded" />
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div>
-                <p className="text-base font-bold text-slate-800 mb-1">Premium Analytics</p>
-                <p className="text-sm text-slate-500 max-w-sm">
-                  Unlock RSVP counts per event, engagement rate, best day to post, and CSV export with Community Premium.
+              {/* Overlay */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 backdrop-blur-[6px] gap-3 p-6">
+                <div className="w-11 h-11 rounded-full bg-white border border-slate-100 shadow-sm flex items-center justify-center">
+                  <Lock size={18} className="text-slate-500" />
+                </div>
+                <p className="text-sm font-bold text-slate-800">Premium Analytics</p>
+                <p className="text-xs text-slate-500 text-center max-w-xs leading-relaxed">
+                  Unlock RSVP counts, engagement rate, best day to post and CSV export with Community Premium.
                 </p>
+                <Link
+                  href="/community-hub/upgrade"
+                  className="flex items-center gap-1.5 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 transition-colors rounded-xl px-4 py-2.5 shadow-sm"
+                >
+                  <Crown size={12} /> Upgrade to Premium
+                </Link>
               </div>
-              <div className="grid grid-cols-3 gap-3 w-full max-w-sm pointer-events-none select-none opacity-40">
-                {["Total RSVPs", "Engagement rate", "Best day"].map(label => (
-                  <div key={label} className="bg-white rounded-xl border border-slate-200 p-3">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">{label}</p>
-                    <p className="text-lg font-bold text-slate-300">--</p>
-                  </div>
-                ))}
-              </div>
-              <Link
-                href="/community-hub/upgrade"
-                className="flex items-center gap-1.5 text-sm font-bold text-white bg-amber-500 hover:bg-amber-600 transition-colors rounded-xl px-5 py-2.5"
-              >
-                <Crown size={13} /> Upgrade to Premium
-              </Link>
             </div>
           )}
 
