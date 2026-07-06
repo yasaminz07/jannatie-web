@@ -5,7 +5,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import {
   BadgeCheck, Calendar, Bell, Users, Sparkles, BarChart2,
-  UserPlus, LifeBuoy, Check, X, Crown, ArrowLeft,
+  LifeBuoy, Check, X, Crown, ArrowLeft,
 } from "lucide-react";
 
 const PREMIUM_FEATURES = [
@@ -40,11 +40,6 @@ const PREMIUM_FEATURES = [
     desc: "Engagement rates, best day to post, RSVP counts, CSV export",
   },
   {
-    icon: <UserPlus size={18} className="text-slate-500" />,
-    label: "Up to 3 team members",
-    desc: "Invite team members to your community account",
-  },
-  {
     icon: <LifeBuoy size={18} className="text-rose-500" />,
     label: "Priority support",
     desc: "Direct email support with faster response times",
@@ -58,7 +53,6 @@ const FREE_LIMITS = [
   { label: "Follower notifications", included: false },
   { label: "RSVP system", included: false },
   { label: "Featured placement", included: false },
-  { label: "Team members", included: false },
 ];
 
 export default function UpgradePage() {
@@ -73,7 +67,7 @@ export default function UpgradePage() {
     setTimeout(() => {
       setLoading(false);
       toast.success(
-        "Our team will contact you shortly to set up your premium account. Email: hello@jannatie.com",
+        "Our team will contact you shortly to set up your premium account. Email: jannatieteam@gmail.com",
         { duration: 8000 }
       );
     }, 600);
@@ -236,10 +230,10 @@ export default function UpgradePage() {
           Our team handles all community premium accounts manually to ensure the best onboarding experience.
         </p>
         <a
-          href="mailto:hello@jannatie.com"
+          href="mailto:jannatieteam@gmail.com"
           className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
         >
-          Contact us at hello@jannatie.com
+          Contact us at jannatieteam@gmail.com
         </a>
       </div>
     </div>
