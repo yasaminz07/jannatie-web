@@ -25,17 +25,26 @@ export async function POST(request: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const uid = session.metadata?.uid;
-        const plan = (session.metadata?.plan ?? "premium") as "premium" | "family";
+        const plan = session.metadata?.plan ?? "premium";
         const customerId = typeof session.customer === "string" ? session.customer : null;
         const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
 
         if (uid) {
-          await updateUserDoc(uid, {
-            plan,
-            subscriptionStatus: "active",
-            ...(customerId    && { stripeCustomerId:      customerId }),
-            ...(subscriptionId && { stripeSubscriptionId: subscriptionId }),
-          });
+          if (plan === "community_premium") {
+            await updateUserDoc(uid, {
+              communityPlan: "premium",
+              communitySubscriptionStatus: "active",
+              ...(customerId     && { stripeCustomerId:      customerId }),
+              ...(subscriptionId && { stripeSubscriptionId: subscriptionId }),
+            });
+          } else {
+            await updateUserDoc(uid, {
+              plan: plan as "premium" | "family",
+              subscriptionStatus: "active",
+              ...(customerId     && { stripeCustomerId:      customerId }),
+              ...(subscriptionId && { stripeSubscriptionId: subscriptionId }),
+            });
+          }
         }
         break;
       }
@@ -45,11 +54,20 @@ export async function POST(request: NextRequest) {
         const uid = sub.metadata?.uid;
         if (uid) {
           const priceId = sub.items.data[0]?.price.id;
-          await updateUserDoc(uid, {
-            plan: planFromPriceId(priceId),
-            stripeSubscriptionId: sub.id,
-            subscriptionStatus: sub.status,
-          });
+          const resolvedPlan = planFromPriceId(priceId);
+          if (resolvedPlan === "community_premium") {
+            await updateUserDoc(uid, {
+              communityPlan: "premium",
+              stripeSubscriptionId: sub.id,
+              communitySubscriptionStatus: sub.status,
+            });
+          } else {
+            await updateUserDoc(uid, {
+              plan: resolvedPlan,
+              stripeSubscriptionId: sub.id,
+              subscriptionStatus: sub.status,
+            });
+          }
         }
         break;
       }
@@ -58,7 +76,13 @@ export async function POST(request: NextRequest) {
         const sub = event.data.object as Stripe.Subscription;
         const uid = sub.metadata?.uid;
         if (uid) {
-          await updateUserDoc(uid, { plan: "free", subscriptionStatus: "cancelled" });
+          const priceId = sub.items.data[0]?.price.id;
+          const resolvedPlan = planFromPriceId(priceId);
+          if (resolvedPlan === "community_premium") {
+            await updateUserDoc(uid, { communityPlan: "free", communitySubscriptionStatus: "cancelled" });
+          } else {
+            await updateUserDoc(uid, { plan: "free", subscriptionStatus: "cancelled" });
+          }
         }
         break;
       }

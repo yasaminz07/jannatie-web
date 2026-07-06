@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { useAuth } from "@/lib/auth-context";
 import {
   BadgeCheck, Calendar, Bell, Users, Sparkles, BarChart2,
   LifeBuoy, Check, X, Crown, ArrowLeft,
@@ -57,20 +58,30 @@ const FREE_LIMITS = [
 
 export default function UpgradePage() {
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const price = billing === "monthly" ? "14.99" : "9.99";
   const annualSaving = billing === "annual" ? "Save 33%" : null;
 
-  function handleGetPremium() {
+  async function handleGetPremium() {
+    if (!user) { toast.error("Please sign in first."); return; }
     setLoading(true);
-    setTimeout(() => {
+    setError(null);
+    try {
+      const res = await fetch("/api/checkout/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: "community_premium", interval: billing, uid: user.uid, email: user.email }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not create checkout session");
+      window.location.href = data.url;
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
       setLoading(false);
-      toast.success(
-        "Our team will contact you shortly to set up your premium account. Email: jannatieteam@gmail.com",
-        { duration: 8000 }
-      );
-    }, 600);
+    }
   }
 
   return (
@@ -197,10 +208,13 @@ export default function UpgradePage() {
             disabled={loading}
             className="w-full py-3 rounded-xl bg-white text-blue-700 font-semibold text-sm hover:bg-blue-50 transition-colors disabled:opacity-70 shadow-sm"
           >
-            {loading ? "Processing..." : "Get Community Premium"}
+            {loading ? "Redirecting to payment…" : `Pay £${price}/mo — Secure checkout`}
           </button>
+          {error && (
+            <p className="text-center text-red-200 text-xs mt-2">{error}</p>
+          )}
           <p className="text-center text-blue-200 text-xs mt-2">
-            No card required · We will contact you
+            Powered by Stripe · Cancel anytime
           </p>
         </div>
       </div>

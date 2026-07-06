@@ -14,13 +14,19 @@ export const PRICE_IDS: Record<string, Record<string, string>> = {
     monthly: process.env.STRIPE_PRICE_FAMILY_MONTHLY ?? "",
     annual:  process.env.STRIPE_PRICE_FAMILY_ANNUAL  ?? "",
   },
+  community_premium: {
+    monthly: process.env.STRIPE_PRICE_COMMUNITY_MONTHLY ?? "",
+    annual:  process.env.STRIPE_PRICE_COMMUNITY_ANNUAL  ?? "",
+  },
 };
 
-export function planFromPriceId(priceId: string | undefined | null): "premium" | "family" | "free" {
-  const premiumIds = [process.env.STRIPE_PRICE_PREMIUM_MONTHLY, process.env.STRIPE_PRICE_PREMIUM_ANNUAL];
-  const familyIds  = [process.env.STRIPE_PRICE_FAMILY_MONTHLY,  process.env.STRIPE_PRICE_FAMILY_ANNUAL];
-  if (premiumIds.includes(priceId ?? "")) return "premium";
-  if (familyIds.includes(priceId  ?? "")) return "family";
+export function planFromPriceId(priceId: string | undefined | null): "premium" | "family" | "community_premium" | "free" {
+  const premiumIds   = [process.env.STRIPE_PRICE_PREMIUM_MONTHLY,   process.env.STRIPE_PRICE_PREMIUM_ANNUAL];
+  const familyIds    = [process.env.STRIPE_PRICE_FAMILY_MONTHLY,     process.env.STRIPE_PRICE_FAMILY_ANNUAL];
+  const communityIds = [process.env.STRIPE_PRICE_COMMUNITY_MONTHLY,  process.env.STRIPE_PRICE_COMMUNITY_ANNUAL];
+  if (premiumIds.includes(priceId   ?? "")) return "premium";
+  if (familyIds.includes(priceId    ?? "")) return "family";
+  if (communityIds.includes(priceId ?? "")) return "community_premium";
   return "free";
 }
 

@@ -8,7 +8,7 @@ import { CheckCircle, Zap } from "lucide-react";
 import { trackFunnelStep } from "@/lib/analytics-tracker";
 
 function SuccessContent() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
 
@@ -48,10 +48,10 @@ function SuccessContent() {
 
         {user ? (
           <Link
-            href="/dashboard"
+            href={profile?.accountType === "community" ? "/community-hub" : "/dashboard"}
             className="block w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-sm transition-colors mb-3"
           >
-            Go to my Dashboard →
+            {profile?.accountType === "community" ? "Go to my Community Hub →" : "Go to my Dashboard →"}
           </Link>
         ) : (
           <Link
