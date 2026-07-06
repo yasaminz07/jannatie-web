@@ -12,12 +12,11 @@ import { auth, db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
 import { compressImage } from "@/lib/image-utils";
 import { sendSecurityEmail } from "@/lib/security-email";
-import { isCommunityPremium } from "@/lib/community-utils";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Camera, ChevronRight, Eye, EyeOff, Check, X, Shield,
-  LifeBuoy, Trash2, AlertTriangle, Store, UserPlus, Crown, Lock,
+  LifeBuoy, Trash2, AlertTriangle, Store,
 } from "lucide-react";
 
 const inputCls =
@@ -31,8 +30,6 @@ const CATEGORIES: { value: "business" | "influencer" | "coffee_shop" | "organiza
   { value: "other", label: "Other" },
 ];
 
-const MAX_TEAM_MEMBERS = 3;
-
 function getPwChecks(pw: string) {
   return {
     length: pw.length >= 8,
@@ -42,41 +39,6 @@ function getPwChecks(pw: string) {
 }
 
 type EditSection = "username" | "email" | "password" | null;
-
-interface TeamMemberInfo {
-  uid: string;
-  displayName: string | null;
-  username: string;
-  photoURL: string | null;
-}
-
-function TeamMemberRow({ info, onRemove }: { info: TeamMemberInfo; onRemove: () => void }) {
-  const initials = (info.displayName ?? info.username).split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
-  return (
-    <div className="flex items-center gap-3 py-2.5 px-4 rounded-xl bg-slate-50 border border-slate-100">
-      {info.photoURL ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={info.photoURL} alt={info.displayName ?? info.username} width={32} height={32}
-          className="rounded-full object-cover flex-shrink-0" style={{ width: 32, height: 32 }} />
-      ) : (
-        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-          {initials}
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-800 truncate">{info.displayName ?? info.username}</p>
-        <p className="text-xs text-slate-400">@{info.username}</p>
-      </div>
-      <button
-        onClick={onRemove}
-        className="flex-shrink-0 text-slate-300 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50"
-        title="Remove member"
-      >
-        <Trash2 size={14} />
-      </button>
-    </div>
-  );
-}
 
 export default function CommunitySettingsPage() {
   const { user, profile, logOut } = useAuth();
@@ -119,14 +81,6 @@ export default function CommunitySettingsPage() {
   const [showDeletePw, setShowDeletePw] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // Team members
-  const isPremium = isCommunityPremium(profile);
-  const [teamMembers, setTeamMembers] = useState<string[]>(profile?.teamMembers ?? []);
-  const [teamMemberInfos, setTeamMemberInfos] = useState<TeamMemberInfo[]>([]);
-  const [teamUsername, setTeamUsername] = useState("");
-  const [addingMember, setAddingMember] = useState(false);
-  const [removingUid, setRemovingUid] = useState<string | null>(null);
-
   useEffect(() => {
     if (!profile) return;
     setDisplayName(profile.displayName ?? "");
@@ -135,7 +89,6 @@ export default function CommunitySettingsPage() {
     setWebsite(profile.website ?? "");
     setCity(profile.city ?? "");
     setPhotoURL(profile.photoURL ?? null);
-    setTeamMembers(profile.teamMembers ?? []);
   }, [profile]);
 
   useEffect(() => {
@@ -145,26 +98,6 @@ export default function CommunitySettingsPage() {
   useEffect(() => {
     setNewUsername(profile?.username ?? "");
   }, [profile?.username]);
-
-  // Load team member display info
-  useEffect(() => {
-    if (teamMembers.length === 0) { setTeamMemberInfos([]); return; }
-    let cancelled = false;
-    Promise.all(teamMembers.map(async uid => {
-      const snap = await getDocs(query(collection(db, "users"), where("uid", "==", uid), limit(1)));
-      if (snap.empty) return null;
-      const d = snap.docs[0].data();
-      return {
-        uid,
-        displayName: d.displayName ?? null,
-        username: d.username ?? uid,
-        photoURL: d.photoURL ?? null,
-      } as TeamMemberInfo;
-    })).then(results => {
-      if (!cancelled) setTeamMemberInfos(results.filter(Boolean) as TeamMemberInfo[]);
-    });
-    return () => { cancelled = true; };
-  }, [teamMembers]);
 
   function toggleSection(section: EditSection) {
     setExpandedSection((prev) => (prev === section ? null : section));
@@ -314,48 +247,6 @@ export default function CommunitySettingsPage() {
     }
   }
 
-  async function handleAddMember() {
-    if (!user || !teamUsername.trim()) return;
-    const handle = teamUsername.trim().toLowerCase();
-    if (handle === profile?.username) { toast.error("You cannot add yourself."); return; }
-    if (teamMembers.length >= MAX_TEAM_MEMBERS) {
-      toast.error(`Premium accounts can have up to ${MAX_TEAM_MEMBERS} team members.`);
-      return;
-    }
-    setAddingMember(true);
-    try {
-      const snap = await getDocs(query(collection(db, "users"), where("username", "==", handle), limit(1)));
-      if (snap.empty) { toast.error("No user found with that username."); return; }
-      const d = snap.docs[0].data();
-      const uid = d.uid as string;
-      if (teamMembers.includes(uid)) { toast.error("This user is already a team member."); return; }
-      const newList = [...teamMembers, uid];
-      await updateDoc(doc(db, "users", user.uid), { teamMembers: newList });
-      setTeamMembers(newList);
-      setTeamUsername("");
-      toast.success("Team member added!");
-    } catch {
-      toast.error("Failed to add team member.");
-    } finally {
-      setAddingMember(false);
-    }
-  }
-
-  async function handleRemoveMember(uid: string) {
-    if (!user) return;
-    setRemovingUid(uid);
-    try {
-      const newList = teamMembers.filter(m => m !== uid);
-      await updateDoc(doc(db, "users", user.uid), { teamMembers: newList });
-      setTeamMembers(newList);
-      toast.success("Team member removed.");
-    } catch {
-      toast.error("Failed to remove team member.");
-    } finally {
-      setRemovingUid(null);
-    }
-  }
-
   return (
     <div className="max-w-2xl mx-auto px-4 md:px-8 py-8">
       <h1 className="text-2xl font-bold text-slate-900 mb-1">Settings</h1>
@@ -432,97 +323,6 @@ export default function CommunitySettingsPage() {
         >
           {saving ? "Saving..." : "Save changes"}
         </button>
-      </div>
-
-      {/* Team Members */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-4">
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-2">
-            <UserPlus size={17} className="text-blue-600" />
-            <h2 className="font-semibold text-slate-800">Team Members</h2>
-          </div>
-          {isPremium && (
-            <span className="text-[11px] font-semibold text-slate-400">{teamMembers.length}/{MAX_TEAM_MEMBERS}</span>
-          )}
-        </div>
-        <p className="text-xs text-slate-400 mb-4">Invite up to {MAX_TEAM_MEMBERS} users to help manage your community.</p>
-
-        {isPremium ? (
-          <div className="space-y-3">
-            {teamMemberInfos.length > 0 && (
-              <div className="space-y-2">
-                {teamMemberInfos.map(info => (
-                  <div key={info.uid} className={removingUid === info.uid ? "opacity-50" : ""}>
-                    <TeamMemberRow
-                      info={info}
-                      onRemove={() => !removingUid && handleRemoveMember(info.uid)}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-            {teamMembers.length < MAX_TEAM_MEMBERS && (
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={teamUsername}
-                  onChange={e => setTeamUsername(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && !addingMember && handleAddMember()}
-                  placeholder="Add by username…"
-                  className={inputCls + " flex-1"}
-                />
-                <button
-                  onClick={handleAddMember}
-                  disabled={addingMember || !teamUsername.trim()}
-                  className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-colors disabled:opacity-50 flex-shrink-0"
-                >
-                  {addingMember ? "Adding…" : "Add"}
-                </button>
-              </div>
-            )}
-            {teamMembers.length === MAX_TEAM_MEMBERS && (
-              <p className="text-xs text-slate-400 text-center py-1">
-                Maximum {MAX_TEAM_MEMBERS} team members reached.
-              </p>
-            )}
-          </div>
-        ) : (
-          /* Locked state for free accounts */
-          <div className="relative rounded-2xl overflow-hidden border border-slate-200">
-            {/* Blurred mock content */}
-            <div className="blur-sm pointer-events-none select-none p-4 space-y-2">
-              {["teamuser1", "teamuser2"].map(u => (
-                <div key={u} className="flex items-center gap-3 py-2.5 px-4 rounded-xl bg-slate-50 border border-slate-100">
-                  <div className="w-8 h-8 rounded-full bg-slate-200 flex-shrink-0" />
-                  <div className="flex-1 space-y-1">
-                    <div className="h-3 w-24 bg-slate-200 rounded" />
-                    <div className="h-2.5 w-16 bg-slate-100 rounded" />
-                  </div>
-                </div>
-              ))}
-              <div className="flex gap-2">
-                <div className="flex-1 h-12 bg-slate-50 border border-slate-200 rounded-xl" />
-                <div className="w-16 h-12 bg-blue-100 rounded-xl" />
-              </div>
-            </div>
-            {/* Overlay */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] gap-3 p-6">
-              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                <Lock size={18} className="text-amber-600" />
-              </div>
-              <p className="text-sm font-bold text-slate-800">Premium Feature</p>
-              <p className="text-xs text-slate-500 text-center max-w-xs">
-                Add up to 3 team members to manage your community account with Community Premium.
-              </p>
-              <Link
-                href="/community-hub/upgrade"
-                className="flex items-center gap-1.5 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 transition-colors rounded-xl px-4 py-2.5"
-              >
-                <Crown size={12} /> Upgrade to Premium
-              </Link>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Account */}
