@@ -148,8 +148,8 @@ export default function InsightsPage() {
   const totalRsvps = eventStats.reduce((s, e) => s + e.rsvps, 0);
   const totalEngagement = totalLikes + totalComments + totalShares;
   const eventCount = eventStats.length;
-  const engagementRateNum = followerCount && followerCount > 0
-    ? (totalEngagement / followerCount) * 100
+  const engagementRateNum = followerCount && followerCount > 0 && eventCount > 0
+    ? (totalEngagement / eventCount / followerCount) * 100
     : null;
   const engagementRate = engagementRateNum !== null ? engagementRateNum.toFixed(1) : null;
 

@@ -23,6 +23,39 @@ interface HifzPlan {
   log?: Record<string, boolean>;
 }
 
+const HADITHS = [
+  { text: "The best of you are those who learn the Quran and teach it.", source: "Sahih al-Bukhari 5027" },
+  { text: "Actions are judged by intentions, and every person will get what they intended.", source: "Sahih al-Bukhari 1" },
+  { text: "None of you truly believes until he loves for his brother what he loves for himself.", source: "Sahih al-Bukhari 13" },
+  { text: "The strong person is not the one who can wrestle someone else down. The strong person is the one who can control himself when he is angry.", source: "Sahih al-Bukhari 6114" },
+  { text: "Whoever believes in Allah and the Last Day should speak good or keep silent.", source: "Sahih al-Bukhari 6018" },
+  { text: "Make things easy and do not make them difficult, cheer people up and do not drive them away.", source: "Sahih al-Bukhari 69" },
+  { text: "The world is a prison for the believer and a paradise for the disbeliever.", source: "Sahih Muslim 2956" },
+  { text: "Remove harm from the road. That is charity.", source: "Sahih Muslim 1009" },
+  { text: "Smiling in the face of your brother is charity.", source: "Jami at-Tirmidhi 1956" },
+  { text: "Seek knowledge from the cradle to the grave.", source: "Ibn Abd al-Barr, Jami Bayan al-Ilm" },
+  { text: "He who does not thank people, does not thank Allah.", source: "Sunan Abu Dawud 4811" },
+  { text: "Speak the truth even if it is bitter.", source: "Ibn Hibban 5763" },
+  { text: "Whoever is not merciful to others will not be treated mercifully.", source: "Sahih al-Bukhari 6013" },
+  { text: "The best among you is the one who has the best manners and character.", source: "Sahih al-Bukhari 3559" },
+  { text: "Do not waste water even if you are at a flowing river.", source: "Sunan Ibn Majah 425" },
+  { text: "Allah does not look at your appearance or your wealth, but He looks at your heart and your deeds.", source: "Sahih Muslim 2564" },
+  { text: "Verily, with hardship comes ease.", source: "Quran 94:5 — also Jami at-Tirmidhi 2346" },
+  { text: "Feed the hungry, visit the sick, and free the captive.", source: "Sahih al-Bukhari 5373" },
+  { text: "The most beloved of deeds to Allah are those done consistently, even if they are small.", source: "Sahih al-Bukhari 6464" },
+  { text: "Every act of kindness is charity.", source: "Sahih al-Bukhari 6021" },
+];
+
+function getDailyHadith(uid: string): { text: string; source: string } {
+  const date = new Date().toISOString().slice(0, 10);
+  let hash = 0;
+  const seed = uid + date;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash + seed.charCodeAt(i)) >>> 0;
+  }
+  return HADITHS[hash % HADITHS.length];
+}
+
 function getGreeting(name: string) {
   const hour = new Date().getHours();
   if (hour < 12) return `Good morning, ${name}`;
@@ -592,13 +625,18 @@ export default function DashboardPage() {
                     All lessons
                   </Link>
                 </div>
-                <div className="bg-blue-50 rounded-xl px-4 py-4 text-center mb-4 border border-blue-100">
-                  <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-2">Hadith of the Day</p>
-                  <p className="text-xs text-slate-600 leading-relaxed mb-2">
-                    &ldquo;The best of you are those who learn the Quran and teach it.&rdquo;
-                  </p>
-                  <p className="text-[10px] text-slate-400">Sahih al-Bukhari 5027</p>
-                </div>
+                {(() => {
+                  const hadith = user ? getDailyHadith(user.uid) : HADITHS[0];
+                  return (
+                    <div className="bg-blue-50 rounded-xl px-4 py-4 text-center mb-4 border border-blue-100">
+                      <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-2">Hadith of the Day</p>
+                      <p className="text-xs text-slate-600 leading-relaxed mb-2">
+                        &ldquo;{hadith.text}&rdquo;
+                      </p>
+                      <p className="text-[10px] text-slate-400">{hadith.source}</p>
+                    </div>
+                  );
+                })()}
                 <Link
                   href="/learn"
                   className="flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 rounded-xl text-xs transition-colors"

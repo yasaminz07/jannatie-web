@@ -9,7 +9,7 @@ export function middleware(request: NextRequest) {
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""} https://apis.google.com https://accounts.google.com`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https://*.googleusercontent.com https://firebasestorage.googleapis.com",
-    "connect-src 'self' https://*.googleapis.com https://*.firebase.com https://*.firebaseio.com wss://*.firebaseio.com https://api.resend.com",
+    "connect-src 'self' https://*.googleapis.com https://*.firebase.com https://*.firebaseio.com wss://*.firebaseio.com https://api.resend.com https://api.aladhan.com https://nominatim.openstreetmap.org https://overpass-api.de https://js.stripe.com",
     "font-src 'self'",
     "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com",
     "object-src 'none'",

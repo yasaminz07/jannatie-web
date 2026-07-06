@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -108,30 +109,33 @@ export default function UpgradePage() {
       </div>
 
       {/* Billing toggle */}
-      <div className="flex items-center justify-center gap-2 mb-8">
-        <button
-          onClick={() => setBilling("monthly")}
-          className={`px-5 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
-            billing === "monthly"
-              ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-              : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-          }`}
-        >
-          Monthly
-        </button>
-        <button
-          onClick={() => setBilling("annual")}
-          className={`px-5 py-2.5 rounded-xl text-sm font-semibold border transition-all flex items-center gap-2 ${
-            billing === "annual"
-              ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-              : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-          }`}
-        >
-          Annual
-          <span className="text-[11px] font-bold bg-emerald-100 text-emerald-700 rounded-full px-2 py-0.5">
-            Save 33%
-          </span>
-        </button>
+      <div className="flex items-center justify-center mb-8">
+        <div className="relative inline-flex bg-slate-100 rounded-full p-1">
+          {(["monthly", "annual"] as const).map((b) => (
+            <button
+              key={b}
+              onClick={() => setBilling(b)}
+              className="relative z-10 px-5 py-2.5 rounded-full text-sm font-semibold flex items-center gap-2 transition-colors duration-200"
+              style={{ color: billing === b ? "#0f172a" : "#64748b" }}
+            >
+              {billing === b && (
+                <motion.span
+                  layoutId="billing-pill"
+                  className="absolute inset-0 bg-white rounded-full shadow-sm"
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.35 }}
+                />
+              )}
+              <span className="relative z-10">
+                {b === "monthly" ? "Monthly" : "Annual"}
+              </span>
+              {b === "annual" && (
+                <span className="relative z-10 text-[11px] font-bold bg-emerald-100 text-emerald-700 rounded-full px-2 py-0.5">
+                  Save 33%
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Pricing cards */}
