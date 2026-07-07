@@ -49,6 +49,7 @@ interface UserProfile {
     log?: Record<string, boolean>; // { "2026-06-25": true }
     surahStatus?: Record<string, "memorised" | "in-progress">;  // surah number as string key
     notes?: Record<string, string>; // YYYY-MM-DD -> note text
+    surahDates?: Record<string, { startedAt?: string; memorisedAt?: string }>; // surah number -> dates
   };
   habitLog?: Record<string, Record<string, boolean>>; // { "2026-06-26": { "Pray all 5 Salah on time": true } }
   adhkarLog?: Record<string, { morning?: boolean; evening?: boolean }>; // { "2026-06-26": { morning: true } }

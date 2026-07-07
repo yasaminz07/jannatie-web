@@ -105,7 +105,11 @@ export default function Navbar() {
                   className="flex items-center gap-2.5 pl-1 pr-3 py-1.5 rounded-full hover:bg-slate-100 transition-colors"
                 >
                   {/* Avatar */}
-                  {photoURL ? (
+                  {user?.email === "jannatieteam+admin@gmail.com" ? (
+                    <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      <Image src="/images/logo-white.PNG" width={20} height={20} alt="Jannatie" className="object-contain" />
+                    </div>
+                  ) : photoURL ? (
                     <Image
                       src={photoURL}
                       width={32}
@@ -221,7 +225,11 @@ export default function Navbar() {
                 <>
                   {/* Mobile: user info */}
                   <div className="flex items-center gap-3 px-1 py-2 mb-1">
-                    {photoURL ? (
+                    {user?.email === "jannatieteam+admin@gmail.com" ? (
+                      <div className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        <Image src="/images/logo-white.PNG" width={24} height={24} alt="Jannatie" className="object-contain" />
+                      </div>
+                    ) : photoURL ? (
                       <Image src={photoURL} width={40} height={40} alt={displayName} className="rounded-full object-cover w-10 h-10" />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">

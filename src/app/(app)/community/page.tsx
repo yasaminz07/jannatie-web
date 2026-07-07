@@ -80,12 +80,12 @@ function CommunityCard({ c, followerCount }: { c: CommunityProfile; followerCoun
         </p>
         {c.bio && <p className="text-xs text-slate-500 mt-1 line-clamp-1">{c.bio}</p>}
       </div>
-      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-        <div className="flex items-center gap-1 text-xs text-slate-400">
-          <Users size={11} className="text-slate-300" />
-          <span className="font-semibold text-slate-600">{followerCount ?? "…"}</span>
+      <div className="flex flex-col items-center gap-0 flex-shrink-0">
+        <span className="text-base font-bold text-slate-700 leading-none">{followerCount ?? "…"}</span>
+        <div className="flex items-center gap-0.5 mt-0.5">
+          <Users size={10} className="text-slate-400" />
+          <span className="text-[10px] text-slate-400">{followerCount === 1 ? "follower" : "followers"}</span>
         </div>
-        <span className="text-[10px] text-slate-300">{followerCount === 1 ? "follower" : "followers"}</span>
       </div>
     </Link>
   );

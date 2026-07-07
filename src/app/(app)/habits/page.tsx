@@ -7,6 +7,7 @@ import {
   BookMarked, GraduationCap, Building2, ArrowLeft, ChevronRight,
   Bell, Check, ExternalLink,
 } from "lucide-react";
+import TimePickerPopup from "@/components/ui/TimePickerPopup";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { doc, updateDoc } from "firebase/firestore";
@@ -40,13 +41,26 @@ const PRESET_HABITS = [
   { name: "Learn an Islamic topic daily", category: "Study", Icon: GraduationCap },
 ];
 
+const TOTAL_AYAT = 6236;
+const TOTAL_PAGES = 604;
+
 const HIFZ_PRESETS = [
-  { id: "gentle",    name: "Gentle",    subtitle: "5 ayat per day",    detail: "~3.5 years to complete Hifz", recommended: false, amount: 5,    unit: "ayat"  },
-  { id: "steady",    name: "Steady",    subtitle: "10 ayat per day",   detail: "~1.7 years to complete Hifz", recommended: true,  amount: 10,   unit: "ayat"  },
-  { id: "committed", name: "Committed", subtitle: "1 page per day",    detail: "~20 months to complete Hifz", recommended: false, amount: 1,    unit: "pages" },
-  { id: "intensive", name: "Intensive", subtitle: "2 pages per day",   detail: "~10 months to complete Hifz", recommended: false, amount: 2,    unit: "pages" },
-  { id: "custom",    name: "Custom",    subtitle: "Set your own pace", detail: "Choose the amount that suits you", recommended: false, amount: null, unit: null },
+  { id: "gentle",    name: "Gentle",    subtitle: "5 ayat per session",    recommended: false, amount: 5,    unit: "ayat",  sessions: Math.ceil(TOTAL_AYAT / 5)   },
+  { id: "steady",    name: "Steady",    subtitle: "10 ayat per session",   recommended: true,  amount: 10,   unit: "ayat",  sessions: Math.ceil(TOTAL_AYAT / 10)  },
+  { id: "committed", name: "Committed", subtitle: "1 page per session",    recommended: false, amount: 1,    unit: "pages", sessions: TOTAL_PAGES                  },
+  { id: "intensive", name: "Intensive", subtitle: "2 pages per session",   recommended: false, amount: 2,    unit: "pages", sessions: Math.ceil(TOTAL_PAGES / 2)  },
+  { id: "custom",    name: "Custom",    subtitle: "Set your own pace",     recommended: false, amount: null, unit: null,    sessions: null                         },
 ];
+
+function calcCompletion(presetId: string, daysPerWeek: number): string {
+  const preset = HIFZ_PRESETS.find(p => p.id === presetId);
+  if (!preset?.sessions || daysPerWeek === 0) return "";
+  const weeks = preset.sessions / daysPerWeek;
+  const months = Math.round(weeks * 12 / 52);
+  if (months < 12) return `~${months} month${months !== 1 ? "s" : ""} to complete Hifz`;
+  const years = Math.round((weeks / 52) * 10) / 10;
+  return `~${years} year${years !== 1 ? "s" : ""} to complete Hifz`;
+}
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
@@ -634,7 +648,7 @@ export default function HabitsPage() {
                         Cancel
                       </button>
                       <button
-                        onClick={() => hasHifz ? setModalStep("hifz") : saveFinal()}
+                        onClick={() => hasHifz ? setModalStep("schedule") : saveFinal()}
                         disabled={selectedPresets.length === 0}
                         className="flex-[2] bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl text-sm transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5"
                       >
@@ -644,98 +658,12 @@ export default function HabitsPage() {
                   </>
                 )}
 
-                {/* ---- STEP 2: Hifz plan ---- */}
-                {modalStep === "hifz" && (
-                  <>
-                    <div className="flex items-center gap-3 mb-5">
-                      <button
-                        onClick={() => setModalStep("select")}
-                        className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors flex-shrink-0"
-                      >
-                        <ArrowLeft size={16} />
-                      </button>
-                      <div>
-                        <h2 className="text-lg font-bold text-slate-900">Choose your Hifz plan</h2>
-                        <p className="text-xs text-slate-400 mt-0.5">Pick a pace that works for your life.</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2.5 mb-6">
-                      {HIFZ_PRESETS.map((preset) => {
-                        const active = hifzPresetId === preset.id;
-                        return (
-                          <button
-                            key={preset.id}
-                            onClick={() => setHifzPresetId(preset.id)}
-                            className="w-full text-left rounded-2xl p-4 transition-all relative"
-                            style={
-                              active
-                                ? { background: "rgba(37,99,235,0.08)", border: "1.5px solid rgba(59,130,246,0.40)" }
-                                : { background: "rgba(248,250,252,0.80)", border: "1.5px solid rgba(226,232,240,0.80)" }
-                            }
-                          >
-                            {preset.recommended && (
-                              <span className="absolute top-3 right-3 text-[9px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
-                                Recommended
-                              </span>
-                            )}
-                            <p className={`text-sm font-bold ${active ? "text-blue-700" : "text-slate-800"}`}>{preset.name}</p>
-                            <p className={`text-xs mt-0.5 ${active ? "text-blue-600" : "text-slate-500"}`}>{preset.subtitle}</p>
-                            <p className={`text-[10px] mt-0.5 ${active ? "text-blue-400" : "text-slate-400"}`}>{preset.detail}</p>
-                          </button>
-                        );
-                      })}
-
-                      {hifzPresetId === "custom" && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          className="rounded-2xl p-4"
-                          style={{ background: "rgba(248,250,252,0.80)", border: "1px solid rgba(226,232,240,0.80)" }}
-                        >
-                          <p className="text-xs font-semibold text-slate-600 mb-3">Set your custom target</p>
-                          <div className="flex gap-3">
-                            <input
-                              type="number"
-                              placeholder="Amount"
-                              value={customAmount}
-                              onChange={(e) => setCustomAmount(e.target.value)}
-                              className="flex-1 rounded-xl px-3 py-2.5 text-sm text-slate-800 border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                            />
-                            <select
-                              value={customUnit}
-                              onChange={(e) => setCustomUnit(e.target.value as "ayat" | "pages")}
-                              className="rounded-xl px-3 py-2.5 text-sm text-slate-700 border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                            >
-                              <option value="ayat">Ayat per day</option>
-                              <option value="pages">Pages per day</option>
-                            </select>
-                          </div>
-                        </motion.div>
-                      )}
-                    </div>
-
-                    <div className="flex gap-3">
-                      <button onClick={() => setModalStep("select")} className="flex-1 border border-slate-200 text-slate-500 font-semibold py-3 rounded-xl text-sm hover:bg-slate-50 transition-colors">
-                        Back
-                      </button>
-                      <button
-                        onClick={() => setModalStep("schedule")}
-                        disabled={!hifzPresetId || (hifzPresetId === "custom" && !customAmount)}
-                        className="flex-[2] bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl text-sm transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5"
-                      >
-                        Next: Set schedule <ChevronRight size={15} />
-                      </button>
-                    </div>
-                  </>
-                )}
-
-                {/* ---- STEP 3: Schedule ---- */}
+                {/* ---- STEP 2: Schedule (days + time — before pace so completion can be calculated) ---- */}
                 {modalStep === "schedule" && (
                   <>
                     <div className="flex items-center gap-3 mb-5">
                       <button
-                        onClick={() => setModalStep("hifz")}
+                        onClick={() => setModalStep("select")}
                         className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors flex-shrink-0"
                       >
                         <ArrowLeft size={16} />
@@ -786,54 +714,7 @@ export default function HabitsPage() {
                       <p className="text-xs text-slate-400 mb-3">
                         We will notify you at this time on your chosen days if you have not yet memorised.
                       </p>
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={(() => { const h = parseInt(notifTime.split(":")[0]); return String(h % 12 || 12); })()}
-                          onChange={e => {
-                            const [, m] = notifTime.split(":");
-                            const h24old = parseInt(notifTime.split(":")[0]);
-                            const ispm = h24old >= 12;
-                            let h = parseInt(e.target.value) % 12;
-                            if (ispm) h += 12;
-                            setNotifTime(`${String(h).padStart(2,"0")}:${m}`);
-                          }}
-                          className="flex-1 rounded-xl px-3 py-3 text-sm font-semibold text-slate-800 border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 appearance-none text-center cursor-pointer"
-                        >
-                          {Array.from({length: 12}, (_,i) => i+1).map(h => (
-                            <option key={h} value={h}>{String(h).padStart(2,"0")}</option>
-                          ))}
-                        </select>
-                        <span className="text-slate-400 font-bold text-lg">:</span>
-                        <select
-                          value={notifTime.split(":")[1]}
-                          onChange={e => setNotifTime(`${notifTime.split(":")[0]}:${e.target.value}`)}
-                          className="flex-1 rounded-xl px-3 py-3 text-sm font-semibold text-slate-800 border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 appearance-none text-center cursor-pointer"
-                        >
-                          {Array.from({length: 60}, (_,i) => String(i).padStart(2,"0")).map(m => (
-                            <option key={m} value={m}>{m}</option>
-                          ))}
-                        </select>
-                        {(() => {
-                          const h24 = parseInt(notifTime.split(":")[0]);
-                          const ispm = h24 >= 12;
-                          return (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const [hStr, mStr] = notifTime.split(":");
-                                let h = parseInt(hStr);
-                                h = ispm ? h - 12 : h + 12;
-                                if (h < 0) h += 24;
-                                if (h >= 24) h -= 24;
-                                setNotifTime(`${String(h).padStart(2,"0")}:${mStr}`);
-                              }}
-                              className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 transition-colors flex-shrink-0 min-w-[52px]"
-                            >
-                              {ispm ? "PM" : "AM"}
-                            </button>
-                          );
-                        })()}
-                      </div>
+                      <TimePickerPopup value={notifTime} onChange={setNotifTime} />
                       {notifTime && (
                         <p className="text-xs text-slate-400 mt-1.5">
                           You will be reminded at {formatTime(notifTime)}.
@@ -841,32 +722,118 @@ export default function HabitsPage() {
                       )}
                     </div>
 
-                    {/* Summary */}
-                    <div
-                      className="rounded-2xl p-4 mb-6"
-                      style={{ background: "rgba(219,234,254,0.50)", border: "1px solid rgba(147,197,253,0.50)" }}
-                    >
-                      <p className="text-xs font-semibold text-blue-700 mb-1">Your plan</p>
-                      <p className="text-sm text-slate-700">
-                        <span className="font-bold">
-                          {HIFZ_PRESETS.find(p => p.id === hifzPresetId)?.subtitle ??
-                            (customAmount ? `${customAmount} ${customUnit} per day` : "")}
-                        </span>
-                        {" on "}
-                        {selectedDays.length === 7
-                          ? "every day"
-                          : selectedDays.map(d => DAY_LABELS[d]).join(", ")}
-                        {notifTime && ` · Reminder at ${formatTime(notifTime)}`}
-                      </p>
+                    {/* Schedule summary */}
+                    {selectedDays.length > 0 && (
+                      <div
+                        className="rounded-2xl p-4 mb-6"
+                        style={{ background: "rgba(219,234,254,0.50)", border: "1px solid rgba(147,197,253,0.50)" }}
+                      >
+                        <p className="text-xs font-semibold text-blue-700 mb-1">Your schedule</p>
+                        <p className="text-sm text-slate-700">
+                          <span className="font-bold">
+                            {selectedDays.length === 7 ? "Every day" : selectedDays.map(d => DAY_LABELS[d]).join(", ")}
+                          </span>
+                          {notifTime && ` · Reminder at ${formatTime(notifTime)}`}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex gap-3">
+                      <button onClick={() => setModalStep("select")} className="flex-1 border border-slate-200 text-slate-500 font-semibold py-3 rounded-xl text-sm hover:bg-slate-50 transition-colors">
+                        Back
+                      </button>
+                      <button
+                        onClick={() => setModalStep("hifz")}
+                        disabled={selectedDays.length === 0}
+                        className="flex-[2] bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl text-sm transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5"
+                      >
+                        Next: Choose pace <ChevronRight size={15} />
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {/* ---- STEP 3: Hifz plan (after schedule so completion times are accurate) ---- */}
+                {modalStep === "hifz" && (
+                  <>
+                    <div className="flex items-center gap-3 mb-5">
+                      <button
+                        onClick={() => setModalStep("schedule")}
+                        className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors flex-shrink-0"
+                      >
+                        <ArrowLeft size={16} />
+                      </button>
+                      <div>
+                        <h2 className="text-lg font-bold text-slate-900">Choose your Hifz plan</h2>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Based on {selectedDays.length === 7 ? "every day" : `${selectedDays.length} day${selectedDays.length !== 1 ? "s" : ""} per week`} — pick a pace that works.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2.5 mb-6">
+                      {HIFZ_PRESETS.map((preset) => {
+                        const active = hifzPresetId === preset.id;
+                        const detail = calcCompletion(preset.id, selectedDays.length);
+                        return (
+                          <button
+                            key={preset.id}
+                            onClick={() => setHifzPresetId(preset.id)}
+                            className="w-full text-left rounded-2xl p-4 transition-all relative"
+                            style={
+                              active
+                                ? { background: "rgba(37,99,235,0.08)", border: "1.5px solid rgba(59,130,246,0.40)" }
+                                : { background: "rgba(248,250,252,0.80)", border: "1.5px solid rgba(226,232,240,0.80)" }
+                            }
+                          >
+                            {preset.recommended && (
+                              <span className="absolute top-3 right-3 text-[9px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
+                                Recommended
+                              </span>
+                            )}
+                            <p className={`text-sm font-bold ${active ? "text-blue-700" : "text-slate-800"}`}>{preset.name}</p>
+                            <p className={`text-xs mt-0.5 ${active ? "text-blue-600" : "text-slate-500"}`}>{preset.subtitle}</p>
+                            {detail && <p className={`text-[10px] mt-0.5 ${active ? "text-blue-400" : "text-slate-400"}`}>{detail}</p>}
+                          </button>
+                        );
+                      })}
+
+                      {hifzPresetId === "custom" && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          className="rounded-2xl p-4"
+                          style={{ background: "rgba(248,250,252,0.80)", border: "1px solid rgba(226,232,240,0.80)" }}
+                        >
+                          <p className="text-xs font-semibold text-slate-600 mb-3">Set your custom target</p>
+                          <div className="flex gap-3">
+                            <input
+                              type="number"
+                              placeholder="Amount"
+                              value={customAmount}
+                              onChange={(e) => setCustomAmount(e.target.value)}
+                              className="flex-1 rounded-xl px-3 py-2.5 text-sm text-slate-800 border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                            />
+                            <select
+                              value={customUnit}
+                              onChange={(e) => setCustomUnit(e.target.value as "ayat" | "pages")}
+                              className="rounded-xl px-3 py-2.5 text-sm text-slate-700 border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                            >
+                              <option value="ayat">Ayat per session</option>
+                              <option value="pages">Pages per session</option>
+                            </select>
+                          </div>
+                        </motion.div>
+                      )}
                     </div>
 
                     <div className="flex gap-3">
-                      <button onClick={() => setModalStep("hifz")} className="flex-1 border border-slate-200 text-slate-500 font-semibold py-3 rounded-xl text-sm hover:bg-slate-50 transition-colors">
+                      <button onClick={() => setModalStep("schedule")} className="flex-1 border border-slate-200 text-slate-500 font-semibold py-3 rounded-xl text-sm hover:bg-slate-50 transition-colors">
                         Back
                       </button>
                       <button
                         onClick={saveFinal}
-                        disabled={selectedDays.length === 0}
+                        disabled={!hifzPresetId || (hifzPresetId === "custom" && !customAmount)}
                         className="flex-[2] bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl text-sm transition-colors disabled:opacity-40"
                       >
                         Save my plan

@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  BookMarked, ChevronLeft, ChevronRight, Check, CheckCircle2,
-  Clock, Settings2, X, Bell,
-  Pencil, StickyNote, Search,
+  BookMarked, ChevronLeft, ChevronRight, ChevronDown, Check, CheckCircle2,
+  Clock, Settings2, X, Bell, Calendar,
+  Pencil, StickyNote, Search, Bold, Italic, List,
 } from "lucide-react";
+import TimePickerPopup from "@/components/ui/TimePickerPopup";
+import DatePicker from "@/components/ui/DatePicker";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { doc, updateDoc } from "firebase/firestore";
@@ -159,6 +161,7 @@ interface HifzPlan {
   log?: Record<string, boolean>;
   surahStatus?: SurahStatusMap;
   notes?: Record<string, string>;
+  surahDates?: Record<string, { startedAt?: string; memorisedAt?: string }>;
 }
 
 const todayStr = new Date().toISOString().slice(0, 10);
@@ -192,13 +195,43 @@ export default function HifzPage() {
   const [surahFilter, setSurahFilter] = useState<SurahFilter>("all");
   const [surahSearch, setSurahSearch] = useState("");
   const [saving, setSaving] = useState(false);
+  const [expandedSurah, setExpandedSurah] = useState<number | null>(null);
 
   // Calendar
   const today = new Date();
   const [calYear, setCalYear] = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
-  const [noteModal, setNoteModal] = useState<{ date: string; text: string } | null>(null);
+  const [calSelected, setCalSelected] = useState<string>(todayStr);
   const [noteText, setNoteText] = useState("");
+  const noteRef = useRef<HTMLTextAreaElement>(null);
+
+  function insertFormat(before: string, after: string) {
+    const el = noteRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const selected = noteText.slice(start, end);
+    const newText = noteText.slice(0, start) + before + selected + after + noteText.slice(end);
+    setNoteText(newText);
+    setTimeout(() => { el.focus(); el.setSelectionRange(start + before.length, end + before.length); }, 0);
+  }
+
+  function insertBullet() {
+    const el = noteRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const lineStart = noteText.lastIndexOf("\n", start - 1) + 1;
+    const linePrefix = noteText.slice(lineStart, lineStart + 2);
+    if (linePrefix === "• ") {
+      const newText = noteText.slice(0, lineStart) + noteText.slice(lineStart + 2);
+      setNoteText(newText);
+      setTimeout(() => { el.focus(); el.setSelectionRange(Math.max(lineStart, start - 2), Math.max(lineStart, start - 2)); }, 0);
+    } else {
+      const newText = noteText.slice(0, lineStart) + "• " + noteText.slice(lineStart);
+      setNoteText(newText);
+      setTimeout(() => { el.focus(); el.setSelectionRange(start + 2, start + 2); }, 0);
+    }
+  }
 
   // Plan edit
   const [editingPlan, setEditingPlan] = useState(false);
@@ -224,6 +257,23 @@ export default function HifzPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [JSON.stringify(hifzPlan?.log)]
   );
+  const surahDates = useMemo<Record<string, { startedAt?: string; memorisedAt?: string }>>(
+    () => (hifzPlan?.surahDates ?? {}) as Record<string, { startedAt?: string; memorisedAt?: string }>,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(hifzPlan?.surahDates)]
+  );
+
+  const memorisedByDate = useMemo<Record<string, string[]>>(() => {
+    const map: Record<string, string[]> = {};
+    Object.entries(surahDates).forEach(([num, d]) => {
+      if (d.memorisedAt) {
+        if (!map[d.memorisedAt]) map[d.memorisedAt] = [];
+        const s = SURAHS.find(s => String(s.n) === num);
+        if (s) map[d.memorisedAt].push(s.en);
+      }
+    });
+    return map;
+  }, [surahDates]);
 
   const memorisedCount = useMemo(
     () => SURAHS.filter(s => surahStatus[String(s.n)] === "memorised").length,
@@ -267,12 +317,11 @@ export default function HifzPage() {
   }
 
   async function saveNote() {
-    if (!user?.uid || !noteModal) return;
+    if (!user?.uid || !calSelected) return;
     const updated = { ...notes };
-    if (noteText.trim()) updated[noteModal.date] = noteText.trim();
-    else delete updated[noteModal.date];
+    if (noteText.trim()) updated[calSelected] = noteText.trim();
+    else delete updated[calSelected];
     await updateDoc(doc(db, "users", user.uid), { "hifzPlan.notes": updated });
-    setNoteModal(null);
   }
 
   async function savePlan() {
@@ -371,7 +420,7 @@ export default function HifzPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-3xl mx-auto px-5 py-8">
+      <div className="max-w-5xl mx-auto px-5 py-8">
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
@@ -582,71 +631,155 @@ export default function HifzPage() {
                   </div>
                 )}
                 {filteredSurahs.map(s => {
-                  const status = surahStatus[String(s.n)];
+                  const key = String(s.n);
+                  const status = surahStatus[key];
+                  const dates = surahDates[key] ?? {};
+                  const isExpanded = expandedSurah === s.n;
+
+                  function saveSurahDate(field: "startedAt" | "memorisedAt", value: string) {
+                    const existing = surahDates[key] ?? {};
+                    const updatedEntry = { ...existing, [field]: value || undefined };
+                    if (!value) delete updatedEntry[field];
+                    const updatedDates = { ...surahDates, [key]: updatedEntry };
+                    if (!user?.uid) return;
+                    const writes: Record<string, unknown> = { "hifzPlan.surahDates": updatedDates };
+                    // Auto-set status when a date is added
+                    if (value && field === "startedAt" && status !== "memorised" && status !== "in-progress") {
+                      writes["hifzPlan.surahStatus"] = { ...surahStatus, [key]: "in-progress" };
+                    }
+                    if (value && field === "memorisedAt" && status !== "memorised") {
+                      writes["hifzPlan.surahStatus"] = { ...surahStatus, [key]: "memorised" };
+                    }
+                    updateDoc(doc(db, "users", user.uid), writes);
+                  }
+
                   return (
                     <motion.div
                       key={s.n}
                       layout
-                      className="rounded-xl px-4 py-3 flex items-center gap-3 transition-all"
+                      className="rounded-xl overflow-hidden transition-all"
                       style={glassCard}
                     >
-                      {/* Number badge */}
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${
-                        status === "memorised" ? "bg-blue-600 text-white"
-                        : status === "in-progress" ? "bg-amber-400 text-white"
-                        : "bg-slate-100 text-slate-500"
-                      }`}>
-                        {s.n}
-                      </div>
-
-                      {/* Names */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-slate-800">{s.en}</span>
-                          <span className="text-slate-400 text-sm font-medium" dir="rtl">{s.ar}</span>
+                      {/* Main row */}
+                      <div className="px-4 py-3 flex items-center gap-3">
+                        {/* Number badge */}
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${
+                          status === "memorised" ? "bg-blue-600 text-white"
+                          : status === "in-progress" ? "bg-amber-400 text-white"
+                          : "bg-slate-100 text-slate-500"
+                        }`}>
+                          {s.n}
                         </div>
-                        <p className="text-[11px] text-slate-400">{s.v} verses · {s.meaning}</p>
+
+                        {/* Names */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-slate-800">{s.en}</span>
+                            <span className="text-slate-400 text-sm font-medium" dir="rtl">{s.ar}</span>
+                          </div>
+                          <p className="text-[11px] text-slate-400">{s.v} verses · {s.meaning}</p>
+                        </div>
+
+                        {/* Details toggle + status buttons */}
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <button
+                            onClick={() => setExpandedSurah(isExpanded ? null : s.n)}
+                            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-all ${
+                              isExpanded
+                                ? "bg-slate-800 border-slate-800 text-white"
+                                : (dates.startedAt || dates.memorisedAt)
+                                  ? "bg-blue-50 border-blue-200 text-blue-600"
+                                  : "border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600"
+                            }`}
+                          >
+                            Details
+                            <ChevronDown size={11} className={`transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              const next = status === "in-progress" ? null : "in-progress";
+                              const updated: Record<string, SurahStatus> = next === null
+                                ? Object.fromEntries(Object.entries(surahStatus).filter(([k]) => k !== key))
+                                : { ...surahStatus, [key]: next };
+                              if (user?.uid) updateDoc(doc(db, "users", user.uid), { "hifzPlan.surahStatus": updated });
+                            }}
+                            title="In Progress"
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all ${
+                              status === "in-progress"
+                                ? "bg-amber-400 border-amber-400 text-white"
+                                : "border-slate-200 text-slate-300 hover:border-amber-300 hover:text-amber-400"
+                            }`}
+                          >
+                            <Clock size={13} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              const next = status === "memorised" ? null : "memorised";
+                              const updated: Record<string, SurahStatus> = next === null
+                                ? Object.fromEntries(Object.entries(surahStatus).filter(([k]) => k !== key))
+                                : { ...surahStatus, [key]: next };
+                              if (user?.uid) updateDoc(doc(db, "users", user.uid), { "hifzPlan.surahStatus": updated });
+                            }}
+                            title="Memorised"
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all ${
+                              status === "memorised"
+                                ? "bg-blue-600 border-blue-600 text-white"
+                                : "border-slate-200 text-slate-300 hover:border-blue-300 hover:text-blue-500"
+                            }`}
+                          >
+                            <Check size={13} />
+                          </button>
+                        </div>
                       </div>
 
-                      {/* Two direct status buttons */}
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <button
-                          onClick={() => {
-                            const key = String(s.n);
-                            const next = status === "in-progress" ? null : "in-progress";
-                            const updated: Record<string, SurahStatus> = next === null
-                              ? Object.fromEntries(Object.entries(surahStatus).filter(([k]) => k !== key))
-                              : { ...surahStatus, [key]: next };
-                            if (user?.uid) updateDoc(doc(db, "users", user.uid), { "hifzPlan.surahStatus": updated });
-                          }}
-                          title="In Progress"
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all ${
-                            status === "in-progress"
-                              ? "bg-amber-400 border-amber-400 text-white"
-                              : "border-slate-200 text-slate-300 hover:border-amber-300 hover:text-amber-400"
-                          }`}
-                        >
-                          <Clock size={13} />
-                        </button>
-                        <button
-                          onClick={() => {
-                            const key = String(s.n);
-                            const next = status === "memorised" ? null : "memorised";
-                            const updated: Record<string, SurahStatus> = next === null
-                              ? Object.fromEntries(Object.entries(surahStatus).filter(([k]) => k !== key))
-                              : { ...surahStatus, [key]: next };
-                            if (user?.uid) updateDoc(doc(db, "users", user.uid), { "hifzPlan.surahStatus": updated });
-                          }}
-                          title="Memorised"
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all ${
-                            status === "memorised"
-                              ? "bg-blue-600 border-blue-600 text-white"
-                              : "border-slate-200 text-slate-300 hover:border-blue-300 hover:text-blue-500"
-                          }`}
-                        >
-                          <Check size={13} />
-                        </button>
-                      </div>
+                      {/* Expandable details panel */}
+                      <AnimatePresence initial={false}>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2, ease: "easeInOut" }}
+                            className="overflow-hidden"
+                          >
+                            <div className="px-4 pb-4 pt-0 border-t border-slate-100 mt-0">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 mt-3">
+                                <Calendar size={9} className="inline mr-1" />Dates
+                              </p>
+                              <div className="grid grid-cols-2 gap-3">
+                                {/* Started memorising */}
+                                <div>
+                                  <label className="text-[11px] font-semibold text-slate-500 flex items-center gap-1 mb-1.5">
+                                    <Clock size={10} className="text-amber-400" />
+                                    Started memorising
+                                  </label>
+                                  <DatePicker
+                                    value={dates.startedAt ?? ""}
+                                    max={dates.memorisedAt || undefined}
+                                    onChange={v => saveSurahDate("startedAt", v)}
+                                    placeholder="Pick a date"
+                                    accent="amber"
+                                  />
+                                </div>
+                                {/* Memorised on */}
+                                <div>
+                                  <label className="text-[11px] font-semibold text-slate-500 flex items-center gap-1 mb-1.5">
+                                    <Check size={10} className="text-blue-500" />
+                                    Memorised on
+                                  </label>
+                                  <DatePicker
+                                    value={dates.memorisedAt ?? ""}
+                                    min={dates.startedAt || undefined}
+                                    onChange={v => saveSurahDate("memorisedAt", v)}
+                                    placeholder="Pick a date"
+                                    accent="blue"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   );
                 })}
@@ -661,116 +794,208 @@ export default function HifzPage() {
           {/* ───── CALENDAR ───── */}
           {tab === "calendar" && (
             <motion.div key="calendar" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
+              <div className="flex flex-col md:flex-row gap-4 items-stretch">
 
-              {/* Month nav */}
-              <div className="rounded-2xl p-5 mb-4" style={glassCard}>
-                <div className="flex items-center justify-between mb-4">
-                  <button
-                    onClick={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1); } else setCalMonth(m => m - 1); }}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                  >
-                    <ChevronLeft size={16} />
-                  </button>
-                  <h2 className="text-sm font-bold text-slate-800">{MONTH_NAMES[calMonth]} {calYear}</h2>
-                  <button
-                    onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1); } else setCalMonth(m => m + 1); }}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                  >
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
+                {/* ── Left panel: date info + legend + notes ── */}
+                <div className="w-full md:w-80 md:flex-shrink-0 space-y-3">
 
-                {/* Day headers */}
-                <div className="grid grid-cols-7 gap-1 mb-1">
-                  {["Mo","Tu","We","Th","Fr","Sa","Su"].map(d => (
-                    <div key={d} className="text-center text-[10px] font-semibold text-slate-400 py-1">{d}</div>
-                  ))}
-                </div>
-
-                {/* Day cells */}
-                <div className="grid grid-cols-7 gap-1">
-                  {calDays.map((cell, idx) => {
-                    if (!cell.day || !cell.ds) {
-                      return <div key={`empty-${idx}`} />;
-                    }
-                    const ds = cell.ds;
-                    const done = !!log[ds];
-                    const hasNote = !!notes[ds];
-                    const isToday = ds === todayStr;
-                    const dayOfWeek = (new Date(ds).getDay() + 6) % 7;
-                    const scheduled = hifzPlan.days ? hifzPlan.days.includes(dayOfWeek) : true;
-                    const isPast = ds < todayStr;
-                    const isMissed = scheduled && isPast && !done;
-                    const isFuture = ds > todayStr;
-
-                    return (
-                      <button
-                        key={ds}
-                        onClick={() => {
-                          setNoteModal({ date: ds, text: notes[ds] ?? "" });
-                          setNoteText(notes[ds] ?? "");
-                        }}
-                        className={`relative aspect-square rounded-lg flex flex-col items-center justify-center text-xs font-semibold transition-all hover:scale-105 ${
-                          isToday && done ? "bg-blue-600 text-white shadow-sm"
-                          : isToday ? "bg-white border-2 border-blue-400 text-blue-600"
-                          : done ? "bg-blue-500 text-white"
-                          : isMissed ? "bg-red-50 border border-red-200 text-red-400"
-                          : isFuture && scheduled ? "bg-white/60 border border-slate-100 text-slate-400"
-                          : !scheduled ? "bg-slate-50 text-slate-300"
-                          : "bg-slate-100 text-slate-400"
-                        }`}
-                      >
-                        {cell.day}
-                        {done && !isToday && <Check size={8} className="absolute bottom-0.5" />}
-                        {hasNote && (
-                          <div className={`absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full ${done ? "bg-amber-300" : "bg-amber-400"}`} />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Legend */}
-                <div className="flex gap-4 mt-4 flex-wrap">
-                  {[
-                    { color: "bg-blue-500", label: "Done" },
-                    { color: "bg-red-100 border border-red-200", label: "Missed" },
-                    { color: "bg-slate-100", label: "Rest / future" },
-                    { color: "bg-amber-400", label: "Has note", dot: true },
-                  ].map(item => (
-                    <div key={item.label} className="flex items-center gap-1.5">
-                      {item.dot
-                        ? <div className="w-2 h-2 rounded-full bg-amber-400" />
-                        : <div className={`w-3 h-3 rounded ${item.color}`} />
-                      }
-                      <span className="text-[10px] text-slate-400">{item.label}</span>
+                  {/* Selected date card */}
+                  <div className="rounded-2xl p-4 space-y-3" style={glassCard}>
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
+                        {new Date(calSelected + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long" })}
+                      </p>
+                      <p className="text-sm font-bold text-slate-800">
+                        {new Date(calSelected + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+                      </p>
                     </div>
-                  ))}
+
+                    {/* Session status */}
+                    {(() => {
+                      const done = !!log[calSelected];
+                      const isToday = calSelected === todayStr;
+                      const isFuture = calSelected > todayStr;
+                      const dayOfWeek = (new Date(calSelected + "T00:00:00").getDay() + 6) % 7;
+                      const scheduled = hifzPlan.days ? hifzPlan.days.includes(dayOfWeek) : true;
+                      const isMissed = scheduled && calSelected < todayStr && !done;
+                      let label = "", cls = "";
+                      if (done) { label = "Session done ✓"; cls = "text-emerald-600 bg-emerald-50"; }
+                      else if (isToday) { label = "Today"; cls = "text-blue-600 bg-blue-50"; }
+                      else if (isMissed) { label = "Session missed"; cls = "text-red-500 bg-red-50"; }
+                      else if (isFuture && scheduled) { label = "Upcoming session"; cls = "text-slate-500 bg-slate-50"; }
+                      else { label = "Rest day"; cls = "text-slate-400 bg-slate-50"; }
+                      return <span className={`text-[11px] font-semibold px-2 py-1 rounded-lg ${cls}`}>{label}</span>;
+                    })()}
+
+                    {/* Surahs memorised on this date */}
+                    {memorisedByDate[calSelected] && (
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Memorised this day</p>
+                        <div className="space-y-1">
+                          {memorisedByDate[calSelected].map(name => (
+                            <div key={name} className="flex items-center gap-1.5 text-xs text-slate-700 bg-blue-50 rounded-lg px-2 py-1">
+                              <Check size={9} className="text-blue-500 flex-shrink-0" />
+                              {name}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Note editor */}
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Note</p>
+                      {/* Formatting toolbar */}
+                      <div className="flex items-center gap-1 mb-1.5 px-1">
+                        <button
+                          type="button"
+                          onClick={() => insertFormat("**", "**")}
+                          title="Bold"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                        >
+                          <Bold size={13} strokeWidth={2.5} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => insertFormat("_", "_")}
+                          title="Italic"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                        >
+                          <Italic size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={insertBullet}
+                          title="Bullet"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                        >
+                          <List size={13} />
+                        </button>
+                      </div>
+                      <textarea
+                        ref={noteRef}
+                        value={noteText}
+                        onChange={e => setNoteText(e.target.value)}
+                        placeholder="What you memorised, how it went…"
+                        rows={5}
+                        className="w-full rounded-xl px-3 py-2.5 text-sm text-slate-700 border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none font-mono"
+                      />
+                      {noteText.trim() !== (notes[calSelected] ?? "") && (
+                        <button onClick={saveNote}
+                          className="w-full mt-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 rounded-xl text-xs transition-colors">
+                          {noteText.trim() ? "Save note" : "Delete note"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Legend */}
+                  <div className="rounded-2xl px-4 py-3" style={glassCard}>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Legend</p>
+                    <div className="space-y-1.5">
+                      {[
+                        { cls: "bg-blue-500", label: "Done" },
+                        { cls: "bg-red-100 border border-red-200", label: "Missed" },
+                        { cls: "bg-slate-100", label: "Rest / future" },
+                        { cls: "bg-amber-400 rounded-full", label: "Has note", dot: true },
+                        { cls: "bg-blue-200 border border-blue-300 rounded-full", label: "Surah memorised", dot: true },
+                      ].map(item => (
+                        <div key={item.label} className="flex items-center gap-2">
+                          <div className={`flex-shrink-0 ${item.dot ? "w-2 h-2 rounded-full" : "w-3 h-3 rounded"} ${item.cls}`} />
+                          <span className="text-[10px] text-slate-500">{item.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                 </div>
+
+                {/* ── Right panel: calendar ── */}
+                <div className="flex-1 rounded-2xl p-5" style={glassCard}>
+                  <div className="flex items-center justify-between mb-4">
+                    <button onClick={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1); } else setCalMonth(m => m - 1); }}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
+                      <ChevronLeft size={16} />
+                    </button>
+                    <h2 className="text-base font-bold text-slate-800">{MONTH_NAMES[calMonth]} {calYear}</h2>
+                    <button onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1); } else setCalMonth(m => m + 1); }}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1.5 mb-1">
+                    {["Mo","Tu","We","Th","Fr","Sa","Su"].map(d => (
+                      <div key={d} className="text-center text-xs font-bold text-slate-400 py-1">{d}</div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {calDays.map((cell, idx) => {
+                      if (!cell.day || !cell.ds) return <div key={`empty-${idx}`} />;
+                      const ds = cell.ds;
+                      const done = !!log[ds];
+                      const hasNote = !!notes[ds];
+                      const hasMemorised = !!memorisedByDate[ds];
+                      const isToday = ds === todayStr;
+                      const isSelected = ds === calSelected;
+                      const dayOfWeek = (new Date(ds).getDay() + 6) % 7;
+                      const scheduled = hifzPlan.days ? hifzPlan.days.includes(dayOfWeek) : true;
+                      const isMissed = scheduled && ds < todayStr && !done;
+                      const isFuture = ds > todayStr;
+
+                      return (
+                        <button
+                          key={ds}
+                          onClick={() => { setCalSelected(ds); setNoteText(notes[ds] ?? ""); }}
+                          className={`relative h-12 rounded-xl flex flex-col items-center justify-center text-sm font-semibold transition-all hover:scale-105 ${
+                            isSelected
+                              ? done ? "ring-2 ring-offset-1 ring-blue-500 bg-blue-600 text-white"
+                                : "ring-2 ring-offset-1 ring-blue-400 bg-white text-blue-700"
+                              : isToday && done ? "bg-blue-600 text-white shadow-sm"
+                              : isToday ? "bg-white border-2 border-blue-400 text-blue-600"
+                              : done ? "bg-blue-500 text-white"
+                              : isMissed ? "bg-red-50 border border-red-200 text-red-400"
+                              : isFuture && scheduled ? "bg-white/60 border border-slate-100 text-slate-400"
+                              : !scheduled ? "bg-slate-50 text-slate-300"
+                              : "bg-slate-100 text-slate-400"
+                          }`}
+                        >
+                          <span className="leading-none">{cell.day}</span>
+                          {(hasNote || hasMemorised) && (
+                            <div className="flex items-center gap-0.5 mt-0.5">
+                              {hasNote && <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${done ? "bg-amber-300" : "bg-amber-400"}`} />}
+                              {hasMemorised && <Check size={8} className={done ? "text-amber-200" : "text-blue-400"} strokeWidth={3} />}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
               </div>
 
-              {/* Recent notes */}
+              {/* Recent notes — full width below calendar */}
               {Object.keys(notes).length > 0 && (
-                <div className="rounded-2xl p-5" style={glassCard}>
+                <div className="mt-4 rounded-2xl p-5" style={glassCard}>
                   <p className="text-xs font-semibold text-slate-500 mb-3 flex items-center gap-1.5">
-                    <StickyNote size={13} /> Recent notes
+                    <StickyNote size={12} /> Recent notes
                   </p>
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {Object.entries(notes)
                       .sort(([a], [b]) => b.localeCompare(a))
-                      .slice(0, 5)
+                      .slice(0, 6)
                       .map(([date, text]) => (
                         <button
                           key={date}
-                          onClick={() => { setNoteModal({ date, text }); setNoteText(text); }}
-                          className="w-full text-left rounded-xl px-3 py-2.5 hover:bg-slate-50 transition-colors"
-                          style={{ border: "1px solid rgba(226,232,240,0.6)" }}
+                          onClick={() => { setCalSelected(date); setNoteText(text); }}
+                          className={`text-left rounded-xl px-3 py-2.5 transition-colors ${calSelected === date ? "bg-blue-50 border border-blue-100" : "hover:bg-slate-50 border border-slate-100"}`}
                         >
-                          <p className="text-[11px] text-slate-400 mb-0.5">{date}</p>
-                          <p className="text-xs text-slate-600 line-clamp-2">{text}</p>
+                          <p className="text-[10px] text-slate-400 mb-0.5">{date}</p>
+                          <p className="text-xs text-slate-600 line-clamp-2">{text.replace(/\*\*(.*?)\*\*/g, "$1").replace(/_(.*?)_/g, "$1").replace(/^• /gm, "· ")}</p>
                         </button>
-                      ))
-                    }
+                      ))}
                   </div>
                 </div>
               )}
@@ -900,59 +1125,8 @@ export default function HifzPage() {
                   <p className="text-xs font-semibold text-slate-600 mb-2 mt-4">
                     <Bell size={11} className="inline mr-1 text-blue-600" />Reminder time
                   </p>
-                  <div className="flex items-center gap-2 mb-5">
-                    {/* Hour */}
-                    <select
-                      value={(() => { const h = parseInt(editTime.split(":")[0]); return String(h % 12 || 12); })()}
-                      onChange={e => {
-                        const [, m] = editTime.split(":");
-                        const h24old = parseInt(editTime.split(":")[0]);
-                        const ispm = h24old >= 12;
-                        let h = parseInt(e.target.value) % 12;
-                        if (ispm) h += 12;
-                        setEditTime(`${String(h).padStart(2,"0")}:${m}`);
-                      }}
-                      className="flex-1 rounded-xl px-3 py-3 text-sm font-semibold text-slate-800 border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 appearance-none text-center cursor-pointer"
-                    >
-                      {Array.from({length: 12}, (_,i) => i+1).map(h => (
-                        <option key={h} value={h}>{String(h).padStart(2,"0")}</option>
-                      ))}
-                    </select>
-                    <span className="text-slate-400 font-bold text-lg">:</span>
-                    {/* Minute */}
-                    <select
-                      value={editTime.split(":")[1]}
-                      onChange={e => {
-                        const h = editTime.split(":")[0];
-                        setEditTime(`${h}:${e.target.value}`);
-                      }}
-                      className="flex-1 rounded-xl px-3 py-3 text-sm font-semibold text-slate-800 border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 appearance-none text-center cursor-pointer"
-                    >
-                      {Array.from({length: 60}, (_,i) => String(i).padStart(2,"0")).map(m => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
-                    {/* AM / PM toggle */}
-                    {(() => {
-                      const h24 = parseInt(editTime.split(":")[0]);
-                      const ispm = h24 >= 12;
-                      return (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const [hStr, mStr] = editTime.split(":");
-                            let h = parseInt(hStr);
-                            h = ispm ? h - 12 : h + 12;
-                            if (h < 0) h += 24;
-                            if (h >= 24) h -= 24;
-                            setEditTime(`${String(h).padStart(2,"0")}:${mStr}`);
-                          }}
-                          className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 transition-colors flex-shrink-0 min-w-[52px]"
-                        >
-                          {ispm ? "PM" : "AM"}
-                        </button>
-                      );
-                    })()}
+                  <div className="mb-5">
+                    <TimePickerPopup value={editTime} onChange={setEditTime} />
                   </div>
 
                   <div className="flex gap-3">
@@ -975,63 +1149,6 @@ export default function HifzPage() {
         </AnimatePresence>
       </div>
 
-      {/* ── Note modal ── */}
-      <AnimatePresence>
-        {noteModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
-            onClick={e => e.target === e.currentTarget && setNoteModal(null)}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 24, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 24, scale: 0.97 }}
-              className="rounded-3xl p-6 w-full max-w-md"
-              style={{
-                background: "rgba(255,255,255,0.96)",
-                backdropFilter: "blur(32px)",
-                border: "1px solid rgba(255,255,255,0.95)",
-                boxShadow: "0 20px 60px rgba(15,23,42,0.14)",
-              }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-[11px] text-slate-400 font-medium">{noteModal.date}</p>
-                  <h3 className="text-base font-bold text-slate-900">
-                    {log[noteModal.date] ? "Session done ✓" : noteModal.date === todayStr ? "Today" : noteModal.date > todayStr ? "Upcoming" : "Missed session"}
-                  </h3>
-                </div>
-                <button onClick={() => setNoteModal(null)} className="text-slate-400 hover:text-slate-700 transition-colors">
-                  <X size={18} />
-                </button>
-              </div>
-              <textarea
-                value={noteText}
-                onChange={e => setNoteText(e.target.value)}
-                placeholder="Add a note for this day — what you memorised, how it went, what to review…"
-                rows={5}
-                className="w-full rounded-xl px-4 py-3 text-sm text-slate-700 border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/30 resize-none mb-4"
-              />
-              <div className="flex gap-3">
-                <button onClick={() => setNoteModal(null)} className="flex-1 border border-slate-200 text-slate-500 font-semibold py-3 rounded-xl text-sm hover:bg-slate-50 transition-colors">
-                  Cancel
-                </button>
-                {noteText.trim() !== (noteModal.text ?? "") && (
-                  <button
-                    onClick={saveNote}
-                    className="flex-[2] bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
-                  >
-                    {noteText.trim() ? "Save note" : "Delete note"}
-                  </button>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
