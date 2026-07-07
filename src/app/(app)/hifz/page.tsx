@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BookMarked, ChevronLeft, ChevronRight, ChevronDown, Check, CheckCircle2,
@@ -202,35 +202,21 @@ export default function HifzPage() {
   const [calYear, setCalYear] = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
   const [calSelected, setCalSelected] = useState<string>(todayStr);
-  const [noteText, setNoteText] = useState("");
-  const noteRef = useRef<HTMLTextAreaElement>(null);
+  const [noteDirty, setNoteDirty] = useState(false);
+  const noteEditorRef = useRef<HTMLDivElement>(null);
 
-  function insertFormat(before: string, after: string) {
-    const el = noteRef.current;
-    if (!el) return;
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    const selected = noteText.slice(start, end);
-    const newText = noteText.slice(0, start) + before + selected + after + noteText.slice(end);
-    setNoteText(newText);
-    setTimeout(() => { el.focus(); el.setSelectionRange(start + before.length, end + before.length); }, 0);
-  }
-
-  function insertBullet() {
-    const el = noteRef.current;
-    if (!el) return;
-    const start = el.selectionStart;
-    const lineStart = noteText.lastIndexOf("\n", start - 1) + 1;
-    const linePrefix = noteText.slice(lineStart, lineStart + 2);
-    if (linePrefix === "• ") {
-      const newText = noteText.slice(0, lineStart) + noteText.slice(lineStart + 2);
-      setNoteText(newText);
-      setTimeout(() => { el.focus(); el.setSelectionRange(Math.max(lineStart, start - 2), Math.max(lineStart, start - 2)); }, 0);
-    } else {
-      const newText = noteText.slice(0, lineStart) + "• " + noteText.slice(lineStart);
-      setNoteText(newText);
-      setTimeout(() => { el.focus(); el.setSelectionRange(start + 2, start + 2); }, 0);
+  // Sync editor content whenever the selected date changes
+  useEffect(() => {
+    if (noteEditorRef.current) {
+      noteEditorRef.current.innerHTML = notes[calSelected] ?? "";
+      setNoteDirty(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calSelected]);
+
+  function applyCmd(cmd: string) {
+    noteEditorRef.current?.focus();
+    document.execCommand(cmd, false, undefined);
   }
 
   // Plan edit
@@ -318,10 +304,13 @@ export default function HifzPage() {
 
   async function saveNote() {
     if (!user?.uid || !calSelected) return;
+    const html = noteEditorRef.current?.innerHTML ?? "";
+    const isEmpty = !html || html === "<br>" || html.replace(/<[^>]+>/g, "").trim() === "";
     const updated = { ...notes };
-    if (noteText.trim()) updated[calSelected] = noteText.trim();
+    if (!isEmpty) updated[calSelected] = html;
     else delete updated[calSelected];
     await updateDoc(doc(db, "users", user.uid), { "hifzPlan.notes": updated });
+    setNoteDirty(false);
   }
 
   async function savePlan() {
@@ -849,7 +838,7 @@ export default function HifzPage() {
                       <div className="flex items-center gap-1 mb-1.5 px-1">
                         <button
                           type="button"
-                          onClick={() => insertFormat("**", "**")}
+                          onMouseDown={e => { e.preventDefault(); applyCmd("bold"); }}
                           title="Bold"
                           className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                         >
@@ -857,7 +846,7 @@ export default function HifzPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => insertFormat("_", "_")}
+                          onMouseDown={e => { e.preventDefault(); applyCmd("italic"); }}
                           title="Italic"
                           className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                         >
@@ -865,25 +854,27 @@ export default function HifzPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={insertBullet}
-                          title="Bullet"
+                          onMouseDown={e => { e.preventDefault(); applyCmd("insertUnorderedList"); }}
+                          title="Bullet list"
                           className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                         >
                           <List size={13} />
                         </button>
                       </div>
-                      <textarea
-                        ref={noteRef}
-                        value={noteText}
-                        onChange={e => setNoteText(e.target.value)}
-                        placeholder="What you memorised, how it went…"
-                        rows={5}
-                        className="w-full rounded-xl px-3 py-2.5 text-sm text-slate-700 border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none font-mono"
+                      {/* contenteditable — supports real bold/italic/lists, auto-bullet on Enter */}
+                      <div
+                        ref={noteEditorRef}
+                        contentEditable
+                        suppressContentEditableWarning
+                        onInput={() => setNoteDirty(true)}
+                        data-placeholder="What you memorised, how it went…"
+                        className="note-editor w-full rounded-xl px-3 py-2.5 text-sm text-slate-700 border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-h-[120px]"
+                        style={{ lineHeight: "1.6" }}
                       />
-                      {noteText.trim() !== (notes[calSelected] ?? "") && (
+                      {noteDirty && (
                         <button onClick={saveNote}
                           className="w-full mt-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 rounded-xl text-xs transition-colors">
-                          {noteText.trim() ? "Save note" : "Delete note"}
+                          Save note
                         </button>
                       )}
                     </div>
@@ -947,7 +938,7 @@ export default function HifzPage() {
                       return (
                         <button
                           key={ds}
-                          onClick={() => { setCalSelected(ds); setNoteText(notes[ds] ?? ""); }}
+                          onClick={() => setCalSelected(ds)}
                           className={`relative h-12 rounded-xl flex flex-col items-center justify-center text-sm font-semibold transition-all hover:scale-105 ${
                             isSelected
                               ? done ? "ring-2 ring-offset-1 ring-blue-500 bg-blue-600 text-white"
@@ -972,6 +963,37 @@ export default function HifzPage() {
                       );
                     })}
                   </div>
+
+                  {/* Monthly stats — fills empty space below calendar grid */}
+                  {(() => {
+                    let done = 0, missed = 0, total = 0;
+                    calDays.forEach(cell => {
+                      if (!cell.ds) return;
+                      const dow = (new Date(cell.ds).getDay() + 6) % 7;
+                      const isScheduled = hifzPlan.days ? hifzPlan.days.includes(dow) : true;
+                      if (!isScheduled) return;
+                      total++;
+                      if (log[cell.ds]) done++;
+                      else if (cell.ds < todayStr) missed++;
+                    });
+                    const rate = total > 0 ? Math.round((done / Math.max(done + missed, 1)) * 100) : 0;
+                    return (
+                      <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <p className="text-xl font-bold text-blue-600">{done}</p>
+                          <p className="text-[10px] text-slate-400 font-medium">Done</p>
+                        </div>
+                        <div>
+                          <p className="text-xl font-bold text-red-400">{missed}</p>
+                          <p className="text-[10px] text-slate-400 font-medium">Missed</p>
+                        </div>
+                        <div>
+                          <p className="text-xl font-bold text-emerald-500">{rate}%</p>
+                          <p className="text-[10px] text-slate-400 font-medium">Rate</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
               </div>
@@ -989,11 +1011,11 @@ export default function HifzPage() {
                       .map(([date, text]) => (
                         <button
                           key={date}
-                          onClick={() => { setCalSelected(date); setNoteText(text); }}
+                          onClick={() => setCalSelected(date)}
                           className={`text-left rounded-xl px-3 py-2.5 transition-colors ${calSelected === date ? "bg-blue-50 border border-blue-100" : "hover:bg-slate-50 border border-slate-100"}`}
                         >
                           <p className="text-[10px] text-slate-400 mb-0.5">{date}</p>
-                          <p className="text-xs text-slate-600 line-clamp-2">{text.replace(/\*\*(.*?)\*\*/g, "$1").replace(/_(.*?)_/g, "$1").replace(/^• /gm, "· ")}</p>
+                          <p className="text-xs text-slate-600 line-clamp-2">{text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()}</p>
                         </button>
                       ))}
                   </div>
