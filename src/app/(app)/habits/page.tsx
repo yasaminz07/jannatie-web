@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Flame, CheckSquare, X, BookOpen, Hand, Sun, Heart, Moon,
   BookMarked, GraduationCap, Building2, ArrowLeft, ChevronRight,
-  Bell, Check,
+  Bell, Check, ExternalLink,
 } from "lucide-react";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -387,6 +388,13 @@ export default function HabitsPage() {
                 Scheduled: {hifzPlan.days.map((d) => DAY_LABELS[d]).join(", ")}
               </p>
             )}
+
+            <Link
+              href="/hifz"
+              className="mt-4 flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl border border-slate-200 text-xs text-slate-500 font-semibold hover:border-blue-400 hover:text-blue-600 transition-colors"
+            >
+              <ExternalLink size={12} /> View full Hifz Tracker
+            </Link>
           </motion.div>
         )}
 

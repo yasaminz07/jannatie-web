@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard, CheckSquare, BookOpen, MessageCircle,
   MoreHorizontal, Trophy, Calendar, TrendingUp, Building2,
-  Home, Settings, LogOut, X, UserPlus, Search, UserCheck, Users,
+  Home, Settings, LogOut, X, UserPlus, Search, UserCheck, Users, BookMarked,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -26,6 +26,7 @@ const coreTabs = [
 ];
 
 const moreItems = [
+  { label: "Hifz Tracker", href: "/hifz", icon: BookMarked },
   { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
   { label: "Calendar", href: "/calendar", icon: Calendar },
   { label: "Progress", href: "/progress", icon: TrendingUp },

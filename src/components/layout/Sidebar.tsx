@@ -7,7 +7,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   LayoutDashboard, CheckSquare, BookOpen, MessageCircle,
   Calendar, TrendingUp, Settings, Building2, LogOut, Trophy,
-  UserPlus, Search, UserCheck, X, Home, Users,
+  UserPlus, Search, UserCheck, X, Home, Users, BookMarked,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from "framer-motion";
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Habits", href: "/habits", icon: CheckSquare },
+  { label: "Hifz Tracker", href: "/hifz", icon: BookMarked },
   { label: "Learn", href: "/learn", icon: BookOpen },
   { label: "AI Buddy", href: "/ai", icon: MessageCircle },
   { label: "Calendar", href: "/calendar", icon: Calendar },
