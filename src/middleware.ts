@@ -11,7 +11,7 @@ export function middleware(request: NextRequest) {
     "img-src 'self' data: blob: https://*.googleusercontent.com https://firebasestorage.googleapis.com",
     "connect-src 'self' https://*.googleapis.com https://*.firebase.com https://*.firebaseio.com wss://*.firebaseio.com https://api.resend.com https://api.aladhan.com https://nominatim.openstreetmap.org https://overpass-api.de https://js.stripe.com",
     "font-src 'self'",
-    "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com",
+    "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://checkout.stripe.com https://js.stripe.com",
     "object-src 'none'",
     "base-uri 'self'",
   ].join("; ");

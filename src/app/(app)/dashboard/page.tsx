@@ -24,29 +24,29 @@ interface HifzPlan {
 }
 
 const HADITHS = [
-  { text: "The best of you are those who learn the Quran and teach it.", source: "Sahih al-Bukhari 5027" },
-  { text: "Actions are judged by intentions, and every person will get what they intended.", source: "Sahih al-Bukhari 1" },
-  { text: "None of you truly believes until he loves for his brother what he loves for himself.", source: "Sahih al-Bukhari 13" },
-  { text: "The strong person is not the one who can wrestle someone else down. The strong person is the one who can control himself when he is angry.", source: "Sahih al-Bukhari 6114" },
-  { text: "Whoever believes in Allah and the Last Day should speak good or keep silent.", source: "Sahih al-Bukhari 6018" },
-  { text: "Make things easy and do not make them difficult, cheer people up and do not drive them away.", source: "Sahih al-Bukhari 69" },
-  { text: "The world is a prison for the believer and a paradise for the disbeliever.", source: "Sahih Muslim 2956" },
-  { text: "Remove harm from the road. That is charity.", source: "Sahih Muslim 1009" },
-  { text: "Smiling in the face of your brother is charity.", source: "Jami at-Tirmidhi 1956" },
-  { text: "Seek knowledge from the cradle to the grave.", source: "Ibn Abd al-Barr, Jami Bayan al-Ilm" },
-  { text: "He who does not thank people, does not thank Allah.", source: "Sunan Abu Dawud 4811" },
-  { text: "Speak the truth even if it is bitter.", source: "Ibn Hibban 5763" },
-  { text: "Whoever is not merciful to others will not be treated mercifully.", source: "Sahih al-Bukhari 6013" },
-  { text: "The best among you is the one who has the best manners and character.", source: "Sahih al-Bukhari 3559" },
-  { text: "Do not waste water even if you are at a flowing river.", source: "Sunan Ibn Majah 425" },
-  { text: "Allah does not look at your appearance or your wealth, but He looks at your heart and your deeds.", source: "Sahih Muslim 2564" },
-  { text: "Verily, with hardship comes ease.", source: "Quran 94:5 — also Jami at-Tirmidhi 2346" },
-  { text: "Feed the hungry, visit the sick, and free the captive.", source: "Sahih al-Bukhari 5373" },
-  { text: "The most beloved of deeds to Allah are those done consistently, even if they are small.", source: "Sahih al-Bukhari 6464" },
-  { text: "Every act of kindness is charity.", source: "Sahih al-Bukhari 6021" },
+  { arabic: "خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ", text: "The best of you are those who learn the Quran and teach it.", source: "Sahih al-Bukhari 5027" },
+  { arabic: "إِنَّمَا الْأَعْمَالُ بِالنِّيَّاتِ", text: "Actions are judged by intentions, and every person will get what they intended.", source: "Sahih al-Bukhari 1" },
+  { arabic: "لَا يُؤْمِنُ أَحَدُكُمْ حَتَّى يُحِبَّ لِأَخِيهِ مَا يُحِبُّ لِنَفْسِهِ", text: "None of you truly believes until he loves for his brother what he loves for himself.", source: "Sahih al-Bukhari 13" },
+  { arabic: "لَيْسَ الشَّدِيدُ بِالصُّرَعَةِ، إِنَّمَا الشَّدِيدُ الَّذِي يَمْلِكُ نَفْسَهُ عِنْدَ الْغَضَبِ", text: "The strong person is not the one who wrestles others down. The strong person is the one who controls himself when angry.", source: "Sahih al-Bukhari 6114" },
+  { arabic: "مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الْآخِرِ فَلْيَقُلْ خَيْرًا أَوْ لِيَصْمُتْ", text: "Whoever believes in Allah and the Last Day should speak good or keep silent.", source: "Sahih al-Bukhari 6018" },
+  { arabic: "يَسِّرُوا وَلَا تُعَسِّرُوا، وَبَشِّرُوا وَلَا تُنَفِّرُوا", text: "Make things easy and do not make them difficult; cheer people up and do not drive them away.", source: "Sahih al-Bukhari 69" },
+  { arabic: "الدُّنْيَا سِجْنُ الْمُؤْمِنِ وَجَنَّةُ الْكَافِرِ", text: "The world is a prison for the believer and a paradise for the disbeliever.", source: "Sahih Muslim 2956" },
+  { arabic: "إِمَاطَةُ الْأَذَى عَنِ الطَّرِيقِ صَدَقَةٌ", text: "Remove harm from the road. That is charity.", source: "Sahih Muslim 1009" },
+  { arabic: "تَبَسُّمُكَ فِي وَجْهِ أَخِيكَ لَكَ صَدَقَةٌ", text: "Smiling in the face of your brother is charity.", source: "Jami at-Tirmidhi 1956" },
+  { arabic: "اطْلُبُوا الْعِلْمَ مِنَ الْمَهْدِ إِلَى اللَّحْدِ", text: "Seek knowledge from the cradle to the grave.", source: "Ibn Abd al-Barr, Jami Bayan al-Ilm" },
+  { arabic: "لَا يَشْكُرُ اللَّهَ مَنْ لَا يَشْكُرُ النَّاسَ", text: "He who does not thank people does not thank Allah.", source: "Sunan Abu Dawud 4811" },
+  { arabic: "قُلِ الْحَقَّ وَلَوْ كَانَ مُرًّا", text: "Speak the truth even if it is bitter.", source: "Ibn Hibban 5763" },
+  { arabic: "لَا يَرْحَمُ اللَّهُ مَنْ لَا يَرْحَمُ النَّاسَ", text: "Whoever is not merciful to others will not be treated mercifully.", source: "Sahih al-Bukhari 6013" },
+  { arabic: "خَيْرُكُمْ أَحْسَنُكُمْ خُلُقًا", text: "The best among you is the one who has the best manners and character.", source: "Sahih al-Bukhari 3559" },
+  { arabic: "لَا تُسْرِفْ وَلَوْ كُنْتَ عَلَى نَهَرٍ جَارٍ", text: "Do not waste water even if you are at a flowing river.", source: "Sunan Ibn Majah 425" },
+  { arabic: "إِنَّ اللَّهَ لَا يَنْظُرُ إِلَى صُوَرِكُمْ وَأَمْوَالِكُمْ، وَلَكِنْ يَنْظُرُ إِلَى قُلُوبِكُمْ وَأَعْمَالِكُمْ", text: "Allah does not look at your appearance or wealth, but He looks at your hearts and deeds.", source: "Sahih Muslim 2564" },
+  { arabic: "إِنَّ مَعَ الْعُسْرِ يُسْرًا", text: "Verily, with hardship comes ease.", source: "Quran 94:6" },
+  { arabic: "أَطْعِمُوا الْجَائِعَ، وَعُودُوا الْمَرِيضَ، وَفُكُّوا الْعَانِيَ", text: "Feed the hungry, visit the sick, and free the captive.", source: "Sahih al-Bukhari 5373" },
+  { arabic: "أَحَبُّ الْأَعْمَالِ إِلَى اللَّهِ أَدْوَمُهَا وَإِنْ قَلَّ", text: "The most beloved of deeds to Allah are those done consistently, even if they are small.", source: "Sahih al-Bukhari 6464" },
+  { arabic: "كُلُّ مَعْرُوفٍ صَدَقَةٌ", text: "Every act of kindness is charity.", source: "Sahih al-Bukhari 6021" },
 ];
 
-function getDailyHadith(uid: string): { text: string; source: string } {
+function getDailyHadith(uid: string): { arabic: string; text: string; source: string } {
   const date = new Date().toISOString().slice(0, 10);
   let hash = 0;
   const seed = uid + date;
@@ -630,7 +630,10 @@ export default function DashboardPage() {
                   return (
                     <div className="bg-blue-50 rounded-xl px-4 py-4 text-center mb-4 border border-blue-100">
                       <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-2">Hadith of the Day</p>
-                      <p className="text-xs text-slate-600 leading-relaxed mb-2">
+                      <p className="text-sm text-slate-700 leading-relaxed mb-2 font-medium" dir="rtl" style={{ fontFamily: "serif" }}>
+                        {hadith.arabic}
+                      </p>
+                      <p className="text-xs text-slate-500 leading-relaxed mb-2">
                         &ldquo;{hadith.text}&rdquo;
                       </p>
                       <p className="text-[10px] text-slate-400">{hadith.source}</p>

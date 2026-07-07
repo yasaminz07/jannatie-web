@@ -89,9 +89,11 @@ export default function EventCard({
   // Determine if we should show verified badge
   // In owner mode: use the passed isPremiumCommunity prop
   // In public mode: use the stored communityIsPremium field on the event
+  // In public mode: prefer the live communityPlan from the fetched profile (passed as isPremiumCommunity),
+  // falling back to the snapshot stamped on the event at creation time.
   const showVerifiedBadge = mode === "owner"
     ? (isPremiumCommunity ?? false)
-    : (event.communityIsPremium ?? false);
+    : (isPremiumCommunity ?? event.communityIsPremium ?? false);
 
   // Whether to show RSVP features
   const showRsvpButton = mode === "public" && isUpcoming;

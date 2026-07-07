@@ -62,3 +62,18 @@ export async function updateUserDoc(userId: string, fields: Record<string, Field
 
   if (!res.ok) throw new Error(`Firestore update failed: ${await res.text()}`);
 }
+
+export async function getUserDoc(userId: string): Promise<Record<string, unknown>> {
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
+  if (!projectId) throw new Error("Missing NEXT_PUBLIC_FIREBASE_PROJECT_ID");
+  const accessToken = await getFirestoreAccessToken();
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${userId}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!res.ok) throw new Error(`Firestore get failed: ${await res.text()}`);
+  const doc = await res.json() as { fields?: Record<string, { stringValue?: string }> };
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(doc.fields ?? {})) {
+    out[k] = v.stringValue ?? null;
+  }
+  return out;
+}

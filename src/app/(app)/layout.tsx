@@ -16,6 +16,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.push("/login");
       return;
     }
+    if (!loading && user?.email === "jannatieteam+admin@gmail.com") {
+      router.push("/admin");
+      return;
+    }
     if (!loading && profile?.accountType === "community") {
       router.push("/community-hub");
     }
@@ -33,7 +37,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user || profile?.accountType === "community") return null;
+  if (!user || profile?.accountType === "community" || user?.email === "jannatieteam+admin@gmail.com") return null;
 
   return (
     <div className="min-h-screen">

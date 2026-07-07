@@ -217,6 +217,59 @@ const UPGRADE_PLANS = [
   },
 ];
 
+function CancelPremiumButton({ uid }: { uid: string }) {
+  const [loading, setLoading] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+
+  async function handleCancel() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/stripe/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      toast.success("Subscription will cancel at the end of your billing period.");
+      setConfirm(false);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Could not cancel subscription. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!confirm) {
+    return (
+      <button
+        onClick={() => setConfirm(true)}
+        className="text-xs text-rose-500 hover:text-rose-600 font-semibold transition-colors"
+      >
+        Cancel subscription
+      </button>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-slate-500">Are you sure?</span>
+      <button
+        onClick={handleCancel}
+        disabled={loading}
+        className="text-xs text-rose-600 font-semibold hover:text-rose-700 transition-colors disabled:opacity-60"
+      >
+        {loading ? "Cancelling…" : "Yes, cancel"}
+      </button>
+      <button
+        onClick={() => setConfirm(false)}
+        className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+      >
+        Keep it
+      </button>
+    </div>
+  );
+}
+
 function UpgradeModal({ onClose }: { onClose: () => void }) {
   const [annual, setAnnual] = useState(false);
   return (
@@ -1144,6 +1197,9 @@ export default function SettingsPage() {
               >
                 <Crown size={13} /> Upgrade
               </button>
+            )}
+            {profile?.plan && profile.plan !== "free" && (
+              <CancelPremiumButton uid={user?.uid ?? ""} />
             )}
           </div>
         </div>

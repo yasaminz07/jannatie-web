@@ -16,8 +16,71 @@ import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Camera, ChevronRight, Eye, EyeOff, Check, X, Shield,
-  LifeBuoy, Trash2, AlertTriangle, Store,
+  LifeBuoy, Trash2, AlertTriangle, Store, CreditCard, Crown,
 } from "lucide-react";
+
+function CommunityCancelSection({ uid }: { uid: string }) {
+  const [loading, setLoading] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+
+  async function handleCancel() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/stripe/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      toast.success("Your Community Premium subscription will cancel at the end of your billing period.");
+      setConfirm(false);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Could not cancel. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <CreditCard size={17} className="text-blue-600" />
+        <h2 className="font-semibold text-slate-800">Subscription</h2>
+      </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
+            Community Premium <Crown size={13} className="text-amber-500" />
+          </p>
+          <p className="text-xs text-slate-400 mt-0.5">Verified badge, unlimited events and analytics</p>
+        </div>
+        {!confirm ? (
+          <button
+            onClick={() => setConfirm(true)}
+            className="text-xs text-rose-500 hover:text-rose-600 font-semibold transition-colors"
+          >
+            Cancel subscription
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">Are you sure?</span>
+            <button
+              onClick={handleCancel}
+              disabled={loading}
+              className="text-xs text-rose-600 font-semibold hover:text-rose-700 transition-colors disabled:opacity-60"
+            >
+              {loading ? "Cancelling…" : "Yes, cancel"}
+            </button>
+            <button onClick={() => setConfirm(false)} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+              Keep it
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const inputCls =
   "w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white";
@@ -596,6 +659,11 @@ export default function CommunitySettingsPage() {
           </a>
         </div>
       </div>
+
+      {/* Subscription */}
+      {(profile?.communityPlan === "premium" || profile?.plan === "premium") && (
+        <CommunityCancelSection uid={user?.uid ?? ""} />
+      )}
 
       {/* Danger zone */}
       <div className="bg-white rounded-2xl border border-red-200 p-6">

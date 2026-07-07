@@ -132,7 +132,8 @@ export default function CommunityFeedPage() {
           communityCategory: data.communityCategory,
           city: data.city,
           bio: data.bio,
-          communityPlan: data.communityPlan,
+          // fall back to plan field for accounts manually set in Firebase Console
+          communityPlan: data.communityPlan ?? (data.plan === "premium" ? "premium" : undefined),
         } as CommunityProfile;
       });
       // Sort premium (featured) communities first
@@ -166,6 +167,11 @@ export default function CommunityFeedPage() {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [cityDropdownOpen]);
+
+  const premiumCommunityUids = useMemo(
+    () => new Set(communities.filter(c => c.communityPlan === "premium").map(c => c.uid)),
+    [communities]
+  );
 
   const followingUids = useMemo(() => profile?.following ?? [], [profile?.following]);
   const followingCommunityUids = useMemo(() => {
@@ -373,7 +379,7 @@ export default function CommunityFeedPage() {
                   <div className="space-y-4">
                     {followingUpcoming.map((e, i) => (
                       <motion.div key={e.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i * 0.04, 0.3) }}>
-                        <EventCard event={e} mode="public" />
+                        <EventCard event={e} mode="public" isPremiumCommunity={premiumCommunityUids.has(e.communityUid)} />
                       </motion.div>
                     ))}
                   </div>
@@ -385,7 +391,7 @@ export default function CommunityFeedPage() {
                   <div className="space-y-4 opacity-75">
                     {followingPast.map((e, i) => (
                       <motion.div key={e.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i * 0.04, 0.3) }}>
-                        <EventCard event={e} mode="public" />
+                        <EventCard event={e} mode="public" isPremiumCommunity={premiumCommunityUids.has(e.communityUid)} />
                       </motion.div>
                     ))}
                   </div>
@@ -450,7 +456,7 @@ export default function CommunityFeedPage() {
                   <div className="space-y-4">
                     {upcoming.map((e, i) => (
                       <motion.div key={e.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i * 0.04, 0.3) }}>
-                        <EventCard event={e} mode="public" />
+                        <EventCard event={e} mode="public" isPremiumCommunity={premiumCommunityUids.has(e.communityUid)} />
                       </motion.div>
                     ))}
                   </div>
@@ -462,7 +468,7 @@ export default function CommunityFeedPage() {
                   <div className="space-y-4 opacity-75">
                     {past.map((e, i) => (
                       <motion.div key={e.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i * 0.04, 0.3) }}>
-                        <EventCard event={e} mode="public" />
+                        <EventCard event={e} mode="public" isPremiumCommunity={premiumCommunityUids.has(e.communityUid)} />
                       </motion.div>
                     ))}
                   </div>
