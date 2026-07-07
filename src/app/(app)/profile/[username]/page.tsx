@@ -238,7 +238,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
         phone: d.phone as string | undefined,
         accountType: d.accountType,
         communityCategory: d.communityCategory,
-        communityPlan: d.communityPlan,
+        communityPlan: d.communityPlan ?? (d.plan === "premium" ? "premium" : undefined),
         bio: d.bio,
         website: d.website,
         city: d.city,
