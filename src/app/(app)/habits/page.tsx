@@ -786,12 +786,54 @@ export default function HabitsPage() {
                       <p className="text-xs text-slate-400 mb-3">
                         We will notify you at this time on your chosen days if you have not yet memorised.
                       </p>
-                      <input
-                        type="time"
-                        value={notifTime}
-                        onChange={(e) => setNotifTime(e.target.value)}
-                        className="w-full rounded-xl px-4 py-3 text-sm text-slate-800 border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                      />
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={(() => { const h = parseInt(notifTime.split(":")[0]); return String(h % 12 || 12); })()}
+                          onChange={e => {
+                            const [, m] = notifTime.split(":");
+                            const h24old = parseInt(notifTime.split(":")[0]);
+                            const ispm = h24old >= 12;
+                            let h = parseInt(e.target.value) % 12;
+                            if (ispm) h += 12;
+                            setNotifTime(`${String(h).padStart(2,"0")}:${m}`);
+                          }}
+                          className="flex-1 rounded-xl px-3 py-3 text-sm font-semibold text-slate-800 border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 appearance-none text-center cursor-pointer"
+                        >
+                          {Array.from({length: 12}, (_,i) => i+1).map(h => (
+                            <option key={h} value={h}>{String(h).padStart(2,"0")}</option>
+                          ))}
+                        </select>
+                        <span className="text-slate-400 font-bold text-lg">:</span>
+                        <select
+                          value={notifTime.split(":")[1]}
+                          onChange={e => setNotifTime(`${notifTime.split(":")[0]}:${e.target.value}`)}
+                          className="flex-1 rounded-xl px-3 py-3 text-sm font-semibold text-slate-800 border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 appearance-none text-center cursor-pointer"
+                        >
+                          {Array.from({length: 60}, (_,i) => String(i).padStart(2,"0")).map(m => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
+                        {(() => {
+                          const h24 = parseInt(notifTime.split(":")[0]);
+                          const ispm = h24 >= 12;
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const [hStr, mStr] = notifTime.split(":");
+                                let h = parseInt(hStr);
+                                h = ispm ? h - 12 : h + 12;
+                                if (h < 0) h += 24;
+                                if (h >= 24) h -= 24;
+                                setNotifTime(`${String(h).padStart(2,"0")}:${mStr}`);
+                              }}
+                              className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 transition-colors flex-shrink-0 min-w-[52px]"
+                            >
+                              {ispm ? "PM" : "AM"}
+                            </button>
+                          );
+                        })()}
+                      </div>
                       {notifTime && (
                         <p className="text-xs text-slate-400 mt-1.5">
                           You will be reminded at {formatTime(notifTime)}.

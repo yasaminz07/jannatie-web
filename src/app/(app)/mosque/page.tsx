@@ -59,8 +59,35 @@ const glassCard = {
 const PRAYERS = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"] as const;
 type PrayerName = (typeof PRAYERS)[number];
 
-// Method 3 (MWL) is a reliable default for UK/global
-const DEFAULT_METHOD = 3;
+const DEFAULT_METHOD = 3; // Muslim World League — fallback
+
+// Map ISO country code → aladhan.com method number
+const METHOD_BY_COUNTRY: Record<string, number> = {
+  // UK & Ireland → Moonsighting Committee Worldwide (most UK mosques)
+  GB: 15, IE: 15,
+  // North America → ISNA
+  US: 2, CA: 2,
+  // Saudi Arabia → Umm Al-Qura
+  SA: 4, YE: 4,
+  // Gulf
+  AE: 16, QA: 10, KW: 9, BH: 9, OM: 4,
+  // Egypt & East Africa
+  EG: 5, SD: 5,
+  // Maghreb + MWL-aligned
+  MA: 3, DZ: 3, TN: 3, LY: 3, MR: 3,
+  // South Asia → University of Islamic Sciences, Karachi
+  PK: 1, IN: 1, BD: 1, AF: 1, LK: 1,
+  // Southeast Asia → MUIS/JAKIM
+  MY: 11, SG: 11, BN: 11, ID: 20,
+  // Turkey
+  TR: 13,
+  // France
+  FR: 12,
+  // Russia & Central Asia
+  RU: 14, KZ: 14, UZ: 14,
+  // Iran
+  IR: 7,
+};
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
@@ -148,18 +175,19 @@ out center 100;
     .slice(0, 60);
 }
 
-async function fetchTimingsForCoords(lat: number, lon: number): Promise<PrayerTimings | null> {
+async function fetchTimingsForCoords(lat: number, lon: number, method: number = DEFAULT_METHOD): Promise<PrayerTimings | null> {
   const today = new Date();
   const d = today.getDate();
   const mo = today.getMonth() + 1;
   const y = today.getFullYear();
   const res = await fetch(
-    `https://api.aladhan.com/v1/timings/${d}-${mo}-${y}?latitude=${lat}&longitude=${lon}&method=${DEFAULT_METHOD}`
+    `https://api.aladhan.com/v1/timings/${d}-${mo}-${y}?latitude=${lat}&longitude=${lon}&method=${method}`
   );
   const json = await res.json();
   if (json.code === 200) return json.data.timings as PrayerTimings;
   return null;
 }
+
 
 export default function MosquePage() {
   const { profile, user } = useAuth();
@@ -191,15 +219,37 @@ export default function MosquePage() {
   const [loadingNews, setLoadingNews] = useState(true);
   const [showPastNews, setShowPastNews] = useState(false);
 
-  async function loadPrayerTimes(lat: number, lon: number, mosque?: SavedMosque | null) {
+  async function loadPrayerTimes(userLat: number, userLon: number, mosque?: SavedMosque | null) {
     setLoading(true);
     setError(null);
     try {
-      const target = mosque ?? null;
-      const [timingsResult, geoRes] = await Promise.all([
-        fetchTimingsForCoords(target ? target.lat : lat, target ? target.lon : lon),
-        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`),
+      const targetLat = mosque ? mosque.lat : userLat;
+      const targetLon = mosque ? mosque.lon : userLon;
+
+      // Step 1: Geocode target (for method detection) + user location (for city display) in parallel
+      const [targetGeoRes, userGeoRes] = await Promise.all([
+        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${targetLat}&lon=${targetLon}&format=json&zoom=3`),
+        mosque
+          ? fetch(`https://nominatim.openstreetmap.org/reverse?lat=${userLat}&lon=${userLon}&format=json&zoom=10`)
+          : Promise.resolve(null as unknown as Response),
       ]);
+
+      const targetGeo = await targetGeoRes.json();
+      const cc = (targetGeo.address?.country_code as string | undefined)?.toUpperCase() ?? null;
+      const method = cc ? (METHOD_BY_COUNTRY[cc] ?? DEFAULT_METHOD) : DEFAULT_METHOD;
+
+      // City name: from user location when mosque is selected, otherwise from target (same as user)
+      const cityGeo = mosque ? await userGeoRes.json() : targetGeo;
+      const cityName =
+        (cityGeo.address?.city as string | undefined) ??
+        (cityGeo.address?.town as string | undefined) ??
+        (cityGeo.address?.county as string | undefined) ??
+        null;
+      const countryCode = (cityGeo.address?.country_code as string | undefined)?.toUpperCase() ?? null;
+      setCity(cityName && countryCode ? `${cityName}, ${countryCode}` : cityName);
+
+      // Step 2: Fetch timings using the correct regional method
+      const timingsResult = await fetchTimingsForCoords(targetLat, targetLon, method);
       if (timingsResult) {
         setTimings(timingsResult);
         const today = new Date();
@@ -207,14 +257,6 @@ export default function MosquePage() {
       } else {
         setError("Could not load prayer times. Please try again.");
       }
-      const geo = await geoRes.json();
-      const cityName =
-        (geo.address?.city as string | undefined) ??
-        (geo.address?.town as string | undefined) ??
-        (geo.address?.county as string | undefined) ??
-        null;
-      const countryCode = (geo.address?.country_code as string | undefined)?.toUpperCase() ?? null;
-      setCity(cityName && countryCode ? `${cityName}, ${countryCode}` : cityName);
     } catch {
       setError("Could not load prayer times. Please check your connection.");
     } finally {

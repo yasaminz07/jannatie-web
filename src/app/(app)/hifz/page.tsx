@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BookMarked, ChevronLeft, ChevronRight, Check, CheckCircle2,
-  Circle, Clock, CalendarDays, List, Settings2, X, Bell,
-  Pencil, StickyNote, Search, Filter, RotateCcw,
+  Clock, Settings2, X, Bell,
+  Pencil, StickyNote, Search,
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
@@ -208,10 +208,22 @@ export default function HifzPage() {
   const [editDays, setEditDays] = useState<number[]>(hifzPlan?.days ?? [0,1,2,3,4,5,6]);
   const [editTime, setEditTime] = useState(hifzPlan?.time ?? "07:30");
 
-  // Derived
-  const surahStatus: SurahStatusMap = (hifzPlan?.surahStatus ?? {}) as SurahStatusMap;
-  const notes: Record<string, string> = (hifzPlan?.notes ?? {}) as Record<string, string>;
-  const log: Record<string, boolean> = hifzPlan?.log ?? {};
+  // Derived — memoised so downstream useMemos get stable references
+  const surahStatus = useMemo<SurahStatusMap>(
+    () => (hifzPlan?.surahStatus ?? {}) as SurahStatusMap,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(hifzPlan?.surahStatus)]
+  );
+  const notes = useMemo<Record<string, string>>(
+    () => (hifzPlan?.notes ?? {}) as Record<string, string>,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(hifzPlan?.notes)]
+  );
+  const log = useMemo<Record<string, boolean>>(
+    () => hifzPlan?.log ?? {},
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(hifzPlan?.log)]
+  );
 
   const memorisedCount = useMemo(
     () => SURAHS.filter(s => surahStatus[String(s.n)] === "memorised").length,
@@ -253,24 +265,6 @@ export default function HifzPage() {
     });
     setSaving(false);
   }
-
-  const cycleSurahStatus = useCallback(async (num: number) => {
-    if (!user?.uid) return;
-    const key = String(num);
-    const current = surahStatus[key];
-    let next: SurahStatus | null;
-    if (!current) next = "in-progress";
-    else if (current === "in-progress") next = "memorised";
-    else next = null;
-
-    const updated: Record<string, SurahStatus> = next === null
-      ? Object.fromEntries(Object.entries(surahStatus).filter(([k]) => k !== key))
-      : { ...surahStatus, [key]: next };
-
-    await updateDoc(doc(db, "users", user.uid), {
-      "hifzPlan.surahStatus": updated,
-    });
-  }, [user?.uid, surahStatus]);
 
   async function saveNote() {
     if (!user?.uid || !noteModal) return;
@@ -453,21 +447,23 @@ export default function HifzPage() {
 
                   {/* Stats */}
                   <div className="flex-1 grid grid-cols-2 gap-3">
-                    <div className="rounded-xl p-3" style={{ background: "rgba(219,234,254,0.5)", border: "1px solid rgba(147,197,253,0.4)" }}>
-                      <p className="text-xl font-bold text-blue-700">{memorisedCount}</p>
-                      <p className="text-[11px] text-blue-600 font-medium">Memorised</p>
-                      <p className="text-[10px] text-blue-400">{114 - memorisedCount} remaining</p>
+                    <div className="rounded-xl p-3" style={{ background: "rgba(248,250,252,0.8)", border: "1px solid rgba(226,232,240,0.8)" }}>
+                      <p className="text-xl font-bold text-slate-800">{memorisedCount}</p>
+                      <p className="text-[11px] text-slate-500 font-medium">Memorised</p>
+                      <p className="text-[10px] text-slate-400">{114 - memorisedCount} left</p>
                     </div>
-                    <div className="rounded-xl p-3" style={{ background: "rgba(254,243,199,0.5)", border: "1px solid rgba(252,211,77,0.4)" }}>
-                      <p className="text-xl font-bold text-amber-700">{inProgressCount}</p>
-                      <p className="text-[11px] text-amber-600 font-medium">In Progress</p>
-                      <p className="text-[10px] text-amber-400">surahs</p>
+                    <div className="rounded-xl p-3" style={{ background: "rgba(248,250,252,0.8)", border: "1px solid rgba(226,232,240,0.8)" }}>
+                      <p className="text-xl font-bold text-slate-800">{inProgressCount}</p>
+                      <p className="text-[11px] text-slate-500 font-medium">In Progress</p>
+                      <p className="text-[10px] text-slate-400">surahs</p>
                     </div>
-                    <div className="rounded-xl p-3 col-span-2" style={{ background: "rgba(240,253,244,0.5)", border: "1px solid rgba(134,239,172,0.4)" }}>
-                      <p className="text-sm font-bold text-emerald-700">{memorisedVerses.toLocaleString()} / {TOTAL_VERSES.toLocaleString()} verses</p>
-                      <p className="text-[11px] text-emerald-600 font-medium mt-0.5">Total verses memorised</p>
-                      <div className="h-1.5 bg-emerald-100 rounded-full mt-2 overflow-hidden">
-                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(memorisedVerses / TOTAL_VERSES) * 100}%`, transition: "width 0.6s ease" }} />
+                    <div className="rounded-xl p-3 col-span-2" style={{ background: "rgba(248,250,252,0.8)", border: "1px solid rgba(226,232,240,0.8)" }}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-[11px] text-slate-500 font-medium">Verses memorised</p>
+                        <p className="text-[11px] text-slate-500 font-semibold">{memorisedVerses.toLocaleString()} / {TOTAL_VERSES.toLocaleString()}</p>
+                      </div>
+                      <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(memorisedVerses / TOTAL_VERSES) * 100}%`, transition: "width 0.6s ease" }} />
                       </div>
                     </div>
                   </div>
@@ -592,13 +588,7 @@ export default function HifzPage() {
                       key={s.n}
                       layout
                       className="rounded-xl px-4 py-3 flex items-center gap-3 transition-all"
-                      style={
-                        status === "memorised"
-                          ? { background: "rgba(219,234,254,0.60)", border: "1px solid rgba(147,197,253,0.50)" }
-                          : status === "in-progress"
-                          ? { background: "rgba(254,243,199,0.60)", border: "1px solid rgba(252,211,77,0.45)" }
-                          : glassCard
-                      }
+                      style={glassCard}
                     >
                       {/* Number badge */}
                       <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${
@@ -612,42 +602,58 @@ export default function HifzPage() {
                       {/* Names */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className={`text-sm font-semibold ${status === "memorised" ? "text-blue-800" : status === "in-progress" ? "text-amber-800" : "text-slate-800"}`}>
-                            {s.en}
-                          </span>
+                          <span className="text-sm font-semibold text-slate-800">{s.en}</span>
                           <span className="text-slate-400 text-sm font-medium" dir="rtl">{s.ar}</span>
                         </div>
-                        <p className={`text-[11px] ${status === "memorised" ? "text-blue-500" : status === "in-progress" ? "text-amber-500" : "text-slate-400"}`}>
-                          {s.v} verses · {s.meaning}
-                        </p>
+                        <p className="text-[11px] text-slate-400">{s.v} verses · {s.meaning}</p>
                       </div>
 
-                      {/* Status toggle */}
-                      <button
-                        onClick={() => cycleSurahStatus(s.n)}
-                        className={`flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-all flex-shrink-0 ${
-                          status === "memorised"
-                            ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-700"
-                            : status === "in-progress"
-                            ? "bg-amber-400 border-amber-400 text-white hover:bg-amber-500"
-                            : "border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600"
-                        }`}
-                      >
-                        {status === "memorised"
-                          ? <><CheckCircle2 size={11} /> Memorised</>
-                          : status === "in-progress"
-                          ? <><Clock size={11} /> In Progress</>
-                          : <><Circle size={11} /> Not started</>
-                        }
-                      </button>
+                      {/* Two direct status buttons */}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <button
+                          onClick={() => {
+                            const key = String(s.n);
+                            const next = status === "in-progress" ? null : "in-progress";
+                            const updated: Record<string, SurahStatus> = next === null
+                              ? Object.fromEntries(Object.entries(surahStatus).filter(([k]) => k !== key))
+                              : { ...surahStatus, [key]: next };
+                            if (user?.uid) updateDoc(doc(db, "users", user.uid), { "hifzPlan.surahStatus": updated });
+                          }}
+                          title="In Progress"
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all ${
+                            status === "in-progress"
+                              ? "bg-amber-400 border-amber-400 text-white"
+                              : "border-slate-200 text-slate-300 hover:border-amber-300 hover:text-amber-400"
+                          }`}
+                        >
+                          <Clock size={13} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            const key = String(s.n);
+                            const next = status === "memorised" ? null : "memorised";
+                            const updated: Record<string, SurahStatus> = next === null
+                              ? Object.fromEntries(Object.entries(surahStatus).filter(([k]) => k !== key))
+                              : { ...surahStatus, [key]: next };
+                            if (user?.uid) updateDoc(doc(db, "users", user.uid), { "hifzPlan.surahStatus": updated });
+                          }}
+                          title="Memorised"
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all ${
+                            status === "memorised"
+                              ? "bg-blue-600 border-blue-600 text-white"
+                              : "border-slate-200 text-slate-300 hover:border-blue-300 hover:text-blue-500"
+                          }`}
+                        >
+                          <Check size={13} />
+                        </button>
+                      </div>
                     </motion.div>
                   );
                 })}
               </div>
 
-              {/* Tap hint */}
               <p className="text-center text-[11px] text-slate-400 mt-4">
-                Tap the status button to cycle: Not started → In Progress → Memorised → Not started
+                <Clock size={10} className="inline mr-1" />= In Progress &nbsp;·&nbsp; <Check size={10} className="inline mr-1" />= Memorised &nbsp;·&nbsp; Tap again to remove
               </p>
             </motion.div>
           )}
@@ -890,16 +896,64 @@ export default function HifzPage() {
                     })}
                   </div>
 
-                  {/* Reminder time */}
+                  {/* Reminder time — custom picker */}
                   <p className="text-xs font-semibold text-slate-600 mb-2 mt-4">
                     <Bell size={11} className="inline mr-1 text-blue-600" />Reminder time
                   </p>
-                  <input
-                    type="time"
-                    value={editTime}
-                    onChange={e => setEditTime(e.target.value)}
-                    className="w-full rounded-xl px-4 py-3 text-sm text-slate-800 border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 mb-5"
-                  />
+                  <div className="flex items-center gap-2 mb-5">
+                    {/* Hour */}
+                    <select
+                      value={(() => { const h = parseInt(editTime.split(":")[0]); return String(h % 12 || 12); })()}
+                      onChange={e => {
+                        const [, m] = editTime.split(":");
+                        const h24old = parseInt(editTime.split(":")[0]);
+                        const ispm = h24old >= 12;
+                        let h = parseInt(e.target.value) % 12;
+                        if (ispm) h += 12;
+                        setEditTime(`${String(h).padStart(2,"0")}:${m}`);
+                      }}
+                      className="flex-1 rounded-xl px-3 py-3 text-sm font-semibold text-slate-800 border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 appearance-none text-center cursor-pointer"
+                    >
+                      {Array.from({length: 12}, (_,i) => i+1).map(h => (
+                        <option key={h} value={h}>{String(h).padStart(2,"0")}</option>
+                      ))}
+                    </select>
+                    <span className="text-slate-400 font-bold text-lg">:</span>
+                    {/* Minute */}
+                    <select
+                      value={editTime.split(":")[1]}
+                      onChange={e => {
+                        const h = editTime.split(":")[0];
+                        setEditTime(`${h}:${e.target.value}`);
+                      }}
+                      className="flex-1 rounded-xl px-3 py-3 text-sm font-semibold text-slate-800 border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 appearance-none text-center cursor-pointer"
+                    >
+                      {Array.from({length: 60}, (_,i) => String(i).padStart(2,"0")).map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                    {/* AM / PM toggle */}
+                    {(() => {
+                      const h24 = parseInt(editTime.split(":")[0]);
+                      const ispm = h24 >= 12;
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const [hStr, mStr] = editTime.split(":");
+                            let h = parseInt(hStr);
+                            h = ispm ? h - 12 : h + 12;
+                            if (h < 0) h += 24;
+                            if (h >= 24) h -= 24;
+                            setEditTime(`${String(h).padStart(2,"0")}:${mStr}`);
+                          }}
+                          className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 transition-colors flex-shrink-0 min-w-[52px]"
+                        >
+                          {ispm ? "PM" : "AM"}
+                        </button>
+                      );
+                    })()}
+                  </div>
 
                   <div className="flex gap-3">
                     <button onClick={() => setEditingPlan(false)} className="flex-1 border border-slate-200 text-slate-500 font-semibold py-3 rounded-xl text-sm hover:bg-slate-50 transition-colors">
