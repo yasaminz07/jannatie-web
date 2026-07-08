@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Clock, ChevronUp, ChevronDown } from "lucide-react";
 
 interface TimePickerPopupProps {
@@ -11,6 +12,11 @@ const MINUTE_STEPS = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
 export default function TimePickerPopup({ value, onChange }: TimePickerPopupProps) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const [hStr, mStr] = (value || "07:00").split(":");
   const h24 = parseInt(hStr) || 0;
@@ -20,25 +26,42 @@ export default function TimePickerPopup({ value, onChange }: TimePickerPopupProp
   const minIdx = MINUTE_STEPS.indexOf(
     MINUTE_STEPS.reduce((p, c) => (Math.abs(c - rawMin) < Math.abs(p - rawMin) ? c : p), MINUTE_STEPS[0])
   );
+  const displayH = String(h12).padStart(2, "0");
+  const displayM = String(MINUTE_STEPS[minIdx]).padStart(2, "0");
 
-  function setHour(newH12: number) {
-    let h = ((newH12 - 1 + 12) % 12) + 1;
-    const h24new = ispm ? (h % 12) + 12 : h % 12;
+  function openPicker() {
+    if (triggerRef.current) {
+      const r = triggerRef.current.getBoundingClientRect();
+      // Position below trigger; clamp to stay in viewport
+      const popupW = 304;
+      let left = r.left;
+      if (left + popupW > window.innerWidth - 12) left = window.innerWidth - popupW - 12;
+      setPos({ top: r.bottom + 8, left, width: r.width });
+    }
+    setOpen(true);
+  }
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      const popup = document.getElementById("tp-popup");
+      if (popup?.contains(e.target as Node) || triggerRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  function stepHour(dir: 1 | -1) {
+    const newH12 = ((h12 - 1 + dir + 12) % 12) + 1;
+    const h24new = ispm ? (newH12 % 12) + 12 : newH12 % 12;
     onChange(`${String(h24new).padStart(2, "0")}:${mStr}`);
   }
 
   function setMinuteIdx(idx: number) {
-    const newIdx = ((idx % MINUTE_STEPS.length) + MINUTE_STEPS.length) % MINUTE_STEPS.length;
-    onChange(`${hStr}:${String(MINUTE_STEPS[newIdx]).padStart(2, "0")}`);
-  }
-
-  function stepHour(dir: 1 | -1) {
-    const newH12 = ((h12 - 1 + dir + 12) % 12) + 1;
-    setHour(newH12);
-  }
-
-  function stepMinute(dir: 1 | -1) {
-    setMinuteIdx(minIdx + dir);
+    const i = ((idx % MINUTE_STEPS.length) + MINUTE_STEPS.length) % MINUTE_STEPS.length;
+    onChange(`${hStr}:${String(MINUTE_STEPS[i]).padStart(2, "0")}`);
   }
 
   function pickAmPm(pm: boolean) {
@@ -49,15 +72,168 @@ export default function TimePickerPopup({ value, onChange }: TimePickerPopupProp
     onChange(`${String(h).padStart(2, "0")}:${mStr}`);
   }
 
-  const displayH = String(h12).padStart(2, "0");
-  const displayM = String(MINUTE_STEPS[minIdx]).padStart(2, "0");
+  const popup = pos && (
+    <div
+      id="tp-popup"
+      style={{
+        position: "fixed",
+        top: pos.top,
+        left: pos.left,
+        width: 304,
+        zIndex: 99999,
+        animation: "tp-enter 0.15s ease-out both",
+      }}
+    >
+      {/* Glass card */}
+      <div
+        style={{
+          background: "rgba(255,255,255,0.97)",
+          border: "1px solid rgba(226,232,240,0.9)",
+          borderRadius: 20,
+          boxShadow: "0 8px 40px rgba(15,23,42,0.16), 0 2px 8px rgba(15,23,42,0.08)",
+          overflow: "hidden",
+        }}
+      >
+        {/* Header */}
+        <div className="px-5 pt-4 pb-3 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Clock size={14} className="text-blue-500" />
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Set time</p>
+          </div>
+          <div
+            className="px-3 py-1 rounded-full text-sm font-bold tabular-nums"
+            style={{ background: "rgba(37,99,235,0.08)", color: "#2563eb" }}
+          >
+            {displayH}:{displayM} {ispm ? "PM" : "AM"}
+          </div>
+        </div>
+
+        {/* Drums */}
+        <div className="px-5 py-4">
+          <div className="flex items-center justify-center gap-3">
+
+            {/* Hour drum */}
+            <div className="flex flex-col items-center gap-1.5">
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Hour</p>
+              <button
+                type="button"
+                onClick={() => stepHour(1)}
+                className="w-12 h-7 flex items-center justify-center rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-300 hover:text-blue-400 transition-all active:scale-95"
+              >
+                <ChevronUp size={16} />
+              </button>
+              <div
+                className="w-14 h-14 flex items-center justify-center rounded-2xl text-3xl font-bold tabular-nums text-white shadow-md"
+                style={{ background: "linear-gradient(135deg,#3b82f6,#2563eb)" }}
+              >
+                {displayH}
+              </div>
+              <button
+                type="button"
+                onClick={() => stepHour(-1)}
+                className="w-12 h-7 flex items-center justify-center rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-300 hover:text-blue-400 transition-all active:scale-95"
+              >
+                <ChevronDown size={16} />
+              </button>
+            </div>
+
+            <span className="text-3xl font-bold text-slate-200 pb-0.5 select-none">:</span>
+
+            {/* Minute drum */}
+            <div className="flex flex-col items-center gap-1.5">
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Min</p>
+              <button
+                type="button"
+                onClick={() => setMinuteIdx(minIdx + 1)}
+                className="w-12 h-7 flex items-center justify-center rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-300 hover:text-blue-400 transition-all active:scale-95"
+              >
+                <ChevronUp size={16} />
+              </button>
+              <div
+                className="w-14 h-14 flex items-center justify-center rounded-2xl text-3xl font-bold tabular-nums text-white shadow-md"
+                style={{ background: "linear-gradient(135deg,#3b82f6,#2563eb)" }}
+              >
+                {displayM}
+              </div>
+              <button
+                type="button"
+                onClick={() => setMinuteIdx(minIdx - 1)}
+                className="w-12 h-7 flex items-center justify-center rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-300 hover:text-blue-400 transition-all active:scale-95"
+              >
+                <ChevronDown size={16} />
+              </button>
+            </div>
+
+            {/* AM / PM */}
+            <div className="flex flex-col gap-2 ml-1">
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center">Period</p>
+              <button
+                type="button"
+                onClick={() => pickAmPm(false)}
+                className={`w-14 h-[42px] rounded-xl text-sm font-bold transition-all active:scale-95 ${
+                  !ispm
+                    ? "text-white shadow-sm"
+                    : "bg-slate-50 text-slate-400 hover:bg-slate-100"
+                }`}
+                style={!ispm ? { background: "linear-gradient(135deg,#3b82f6,#2563eb)" } : {}}
+              >AM</button>
+              <button
+                type="button"
+                onClick={() => pickAmPm(true)}
+                className={`w-14 h-[42px] rounded-xl text-sm font-bold transition-all active:scale-95 ${
+                  ispm
+                    ? "text-white shadow-sm"
+                    : "bg-slate-50 text-slate-400 hover:bg-slate-100"
+                }`}
+                style={ispm ? { background: "linear-gradient(135deg,#3b82f6,#2563eb)" } : {}}
+              >PM</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick minutes */}
+        <div className="px-5 pb-4 border-t border-slate-50 pt-3">
+          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Quick select</p>
+          <div className="grid grid-cols-6 gap-1">
+            {MINUTE_STEPS.map((m, idx) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMinuteIdx(idx)}
+                className={`py-1.5 rounded-lg text-[11px] font-bold transition-all active:scale-95 ${
+                  idx === minIdx
+                    ? "text-white shadow-sm"
+                    : "bg-slate-50 text-slate-500 hover:bg-blue-50 hover:text-blue-600"
+                }`}
+                style={idx === minIdx ? { background: "linear-gradient(135deg,#3b82f6,#2563eb)" } : {}}
+              >
+                :{String(m).padStart(2, "0")}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Done */}
+        <div className="px-5 pb-5">
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="w-full py-3 rounded-2xl text-white text-sm font-bold transition-all hover:opacity-90 active:scale-[0.98] shadow-md"
+            style={{ background: "linear-gradient(135deg,#3b82f6,#2563eb)", boxShadow: "0 4px 16px rgba(37,99,235,0.3)" }}
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="w-full">
-      {/* Trigger */}
+    <>
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setOpen(v => !v)}
+        onClick={() => open ? setOpen(false) : openPicker()}
         className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border bg-white text-left transition-all ${
           open ? "border-blue-400 ring-2 ring-blue-50" : "border-slate-200 hover:border-blue-200"
         }`}
@@ -70,109 +246,7 @@ export default function TimePickerPopup({ value, onChange }: TimePickerPopupProp
         <span className="text-[11px] text-slate-300 font-medium">{open ? "close" : "tap to edit"}</span>
       </button>
 
-      {/* Inline panel — no fixed positioning, works inside any modal */}
-      {open && (
-        <div className="mt-2 rounded-2xl border border-slate-100 bg-white shadow-lg shadow-slate-100/80 p-4">
-
-          {/* Drum-roll style selectors */}
-          <div className="flex items-center justify-center gap-2 mb-4">
-
-            {/* Hour drum */}
-            <div className="flex flex-col items-center gap-1">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Hour</p>
-              <button
-                type="button"
-                onClick={() => stepHour(1)}
-                className="w-14 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-500 transition-colors"
-              >
-                <ChevronUp size={18} />
-              </button>
-              <div className="w-14 h-12 flex items-center justify-center rounded-xl bg-blue-600 text-white text-2xl font-bold tabular-nums shadow-sm shadow-blue-200">
-                {displayH}
-              </div>
-              <button
-                type="button"
-                onClick={() => stepHour(-1)}
-                className="w-14 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-500 transition-colors"
-              >
-                <ChevronDown size={18} />
-              </button>
-            </div>
-
-            <span className="text-2xl font-bold text-slate-300 pb-1">:</span>
-
-            {/* Minute drum */}
-            <div className="flex flex-col items-center gap-1">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Min</p>
-              <button
-                type="button"
-                onClick={() => stepMinute(1)}
-                className="w-14 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-500 transition-colors"
-              >
-                <ChevronUp size={18} />
-              </button>
-              <div className="w-14 h-12 flex items-center justify-center rounded-xl bg-blue-600 text-white text-2xl font-bold tabular-nums shadow-sm shadow-blue-200">
-                {displayM}
-              </div>
-              <button
-                type="button"
-                onClick={() => stepMinute(-1)}
-                className="w-14 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-500 transition-colors"
-              >
-                <ChevronDown size={18} />
-              </button>
-            </div>
-
-            {/* AM / PM */}
-            <div className="flex flex-col items-center gap-1 ml-2">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Period</p>
-              <button
-                type="button"
-                onClick={() => pickAmPm(false)}
-                className={`w-14 h-10 rounded-xl text-sm font-bold transition-all ${
-                  !ispm ? "bg-blue-600 text-white shadow-sm shadow-blue-200" : "bg-slate-50 text-slate-500 hover:bg-slate-100"
-                }`}
-              >AM</button>
-              <button
-                type="button"
-                onClick={() => pickAmPm(true)}
-                className={`w-14 h-10 rounded-xl text-sm font-bold transition-all ${
-                  ispm ? "bg-blue-600 text-white shadow-sm shadow-blue-200" : "bg-slate-50 text-slate-500 hover:bg-slate-100"
-                }`}
-              >PM</button>
-            </div>
-          </div>
-
-          {/* Quick minute grid */}
-          <div className="border-t border-slate-100 pt-3">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Quick minutes</p>
-            <div className="grid grid-cols-6 gap-1">
-              {MINUTE_STEPS.map((m, idx) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => { setMinuteIdx(idx); }}
-                  className={`py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    idx === minIdx
-                      ? "bg-blue-600 text-white shadow-sm"
-                      : "bg-slate-50 text-slate-500 hover:bg-blue-50 hover:text-blue-600"
-                  }`}
-                >
-                  :{String(m).padStart(2, "0")}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="w-full mt-3 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-500 transition-colors"
-          >
-            Done
-          </button>
-        </div>
-      )}
-    </div>
+      {mounted && open && createPortal(popup, document.body)}
+    </>
   );
 }

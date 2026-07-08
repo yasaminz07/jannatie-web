@@ -164,6 +164,12 @@
   animation: pulseDot 1.4s ease-in-out infinite;
 }
 
+/* Time picker popup entrance */
+@keyframes tp-enter {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)     scale(1);    }
+}
+
 /* Note editor (contenteditable) */
 .note-editor:empty::before {
   content: attr(data-placeholder);
