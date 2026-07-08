@@ -980,16 +980,16 @@ export default function HifzPage() {
                     return (
                       <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center">
                         <div>
-                          <p className="text-xl font-bold text-blue-600">{done}</p>
-                          <p className="text-[10px] text-slate-400 font-medium">Done</p>
+                          <p className="text-xl font-bold text-slate-900">{done}</p>
+                          <p className="text-[10px] text-blue-400 font-semibold uppercase tracking-wide">Done</p>
                         </div>
                         <div>
-                          <p className="text-xl font-bold text-red-400">{missed}</p>
-                          <p className="text-[10px] text-slate-400 font-medium">Missed</p>
+                          <p className="text-xl font-bold text-slate-900">{missed}</p>
+                          <p className="text-[10px] text-red-400 font-semibold uppercase tracking-wide">Missed</p>
                         </div>
                         <div>
-                          <p className="text-xl font-bold text-emerald-500">{rate}%</p>
-                          <p className="text-[10px] text-slate-400 font-medium">Rate</p>
+                          <p className="text-xl font-bold text-slate-900">{rate}%</p>
+                          <p className="text-[10px] text-emerald-500 font-semibold uppercase tracking-wide">Rate</p>
                         </div>
                       </div>
                     );
@@ -1014,8 +1014,11 @@ export default function HifzPage() {
                           onClick={() => setCalSelected(date)}
                           className={`text-left rounded-xl px-3 py-2.5 transition-colors ${calSelected === date ? "bg-blue-50 border border-blue-100" : "hover:bg-slate-50 border border-slate-100"}`}
                         >
-                          <p className="text-[10px] text-slate-400 mb-0.5">{date}</p>
-                          <p className="text-xs text-slate-600 line-clamp-2">{text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()}</p>
+                          <p className="text-[10px] text-slate-400 mb-1">{date}</p>
+                          <div
+                            className="text-xs text-slate-600 note-preview line-clamp-3"
+                            dangerouslySetInnerHTML={{ __html: text }}
+                          />
                         </button>
                       ))}
                   </div>

@@ -162,8 +162,10 @@ export default function HabitsPage() {
 
   const hifzSubtitle = (() => {
     if (!hifzPlan) return "";
-    if (hifzPlan.amount && hifzPlan.unit) return `${hifzPlan.amount} ${hifzPlan.unit}/day`;
-    return HIFZ_PRESETS.find(p => p.id === hifzPlan.preset)?.subtitle ?? "";
+    const preset = HIFZ_PRESETS.find(p => p.id === hifzPlan.preset);
+    if (preset && preset.id !== "custom") return preset.subtitle;
+    if (hifzPlan.amount && hifzPlan.unit) return `${hifzPlan.amount} ${hifzPlan.unit}/session`;
+    return "";
   })();
 
   const doneCount = habits.filter((h) => isDone(h.name)).length;
@@ -205,6 +207,14 @@ export default function HabitsPage() {
     }
     await updateDoc(doc(db, "users", user.uid), updates);
     awardXP(user.uid, 15);
+  }
+
+  async function toggleHifzDay(ds: string) {
+    if (!user?.uid) return;
+    const currentlyDone = !!(hifzPlan?.log?.[ds]);
+    await updateDoc(doc(db, "users", user.uid), {
+      [`hifzPlan.log.${ds}`]: !currentlyDone,
+    });
   }
 
   async function saveFinal() {
@@ -334,7 +344,9 @@ export default function HabitsPage() {
               <div>
                 <p className="text-sm font-semibold text-slate-800">
                   {isTodayHifzScheduled
-                    ? `${hifzPlan.amount} ${hifzPlan.unit} to memorise today`
+                    ? hifzPlan.amount && hifzPlan.unit
+                      ? `${hifzPlan.amount} ${hifzPlan.unit} to memorise today`
+                      : `${hifzSubtitle} today`
                     : "Rest day — no memorisation scheduled"}
                 </p>
                 {isDoneHifzToday && (
@@ -359,7 +371,7 @@ export default function HabitsPage() {
               )}
             </div>
 
-            {/* Weekly grid */}
+            {/* Weekly grid — past/today cells are clickable to mark done or undo */}
             <div className="grid grid-cols-7 gap-1.5">
               {DAY_LABELS.map((label, i) => {
                 const date = getThisWeekDate(i);
@@ -368,38 +380,47 @@ export default function HabitsPage() {
                 const isToday = i === todayDayIndex;
                 const scheduled = hifzPlan.days ? hifzPlan.days.includes(i) : true;
                 const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+                const canToggle = scheduled && (isPast || isToday);
 
                 return (
                   <div key={label} className="flex flex-col items-center gap-1">
                     <span className={`text-[9px] font-semibold ${isToday ? "text-blue-600" : "text-slate-400"}`}>
                       {label}
                     </span>
-                    <div
+                    <button
+                      type="button"
+                      onClick={() => canToggle ? toggleHifzDay(ds) : undefined}
+                      title={canToggle ? (done ? "Mark as missed" : "Mark as done") : undefined}
                       className={`w-full aspect-square rounded-lg flex items-center justify-center transition-all ${
+                        canToggle ? "cursor-pointer hover:scale-105 active:scale-95" : "cursor-default"
+                      } ${
                         done
                           ? "bg-blue-600 border border-blue-500"
                           : isToday && scheduled
                           ? "bg-white border-2 border-blue-400"
                           : scheduled && isPast
-                          ? "bg-slate-100 border border-slate-200"
+                          ? "bg-red-50 border border-red-200"
                           : scheduled
                           ? "bg-white/60 border border-slate-100"
                           : "bg-slate-50 border border-slate-100"
                       }`}
                     >
                       {done && <Check size={11} className="text-white" />}
+                      {!done && scheduled && isPast && (
+                        <div className="w-1 h-1 rounded-full bg-red-300" />
+                      )}
                       {isToday && !done && scheduled && (
                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                       )}
-                    </div>
+                    </button>
                   </div>
                 );
               })}
             </div>
-
+            {/* Missed day hint */}
             {hifzPlan.days && (
-              <p className="text-[10px] text-slate-400 mt-3 text-center">
-                Scheduled: {hifzPlan.days.map((d) => DAY_LABELS[d]).join(", ")}
+              <p className="text-[10px] text-slate-400 mt-2 text-center">
+                Tap a day to mark it done or undo · <span className="text-blue-500 font-medium">Blue = done</span> · <span className="text-red-400 font-medium">Red = missed</span>
               </p>
             )}
 

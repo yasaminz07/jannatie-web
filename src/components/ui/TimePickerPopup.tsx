@@ -14,7 +14,7 @@ export default function TimePickerPopup({ value, onChange }: TimePickerPopupProp
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number; above: boolean } | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -32,11 +32,15 @@ export default function TimePickerPopup({ value, onChange }: TimePickerPopupProp
   function openPicker() {
     if (triggerRef.current) {
       const r = triggerRef.current.getBoundingClientRect();
-      // Position below trigger; clamp to stay in viewport
       const popupW = 304;
+      const popupH = 420; // approximate popup height
       let left = r.left;
       if (left + popupW > window.innerWidth - 12) left = window.innerWidth - popupW - 12;
-      setPos({ top: r.bottom + 8, left, width: r.width });
+      // Flip above the trigger if not enough space below
+      const spaceBelow = window.innerHeight - r.bottom;
+      const above = spaceBelow < popupH + 16 && r.top > popupH + 16;
+      const top = above ? r.top - popupH - 8 : r.bottom + 8;
+      setPos({ top, left, width: r.width, above });
     }
     setOpen(true);
   }
@@ -81,7 +85,7 @@ export default function TimePickerPopup({ value, onChange }: TimePickerPopupProp
         left: pos.left,
         width: 304,
         zIndex: 99999,
-        animation: "tp-enter 0.15s ease-out both",
+        animation: pos.above ? "tp-enter-up 0.15s ease-out both" : "tp-enter 0.15s ease-out both",
       }}
     >
       {/* Glass card */}
