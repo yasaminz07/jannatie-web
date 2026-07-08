@@ -981,15 +981,15 @@ export default function HifzPage() {
                       <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center">
                         <div>
                           <p className="text-xl font-bold text-slate-900">{done}</p>
-                          <p className="text-[10px] text-blue-400 font-semibold uppercase tracking-wide">Done</p>
+                          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">Done</p>
                         </div>
                         <div>
                           <p className="text-xl font-bold text-slate-900">{missed}</p>
-                          <p className="text-[10px] text-red-400 font-semibold uppercase tracking-wide">Missed</p>
+                          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">Missed</p>
                         </div>
                         <div>
                           <p className="text-xl font-bold text-slate-900">{rate}%</p>
-                          <p className="text-[10px] text-emerald-500 font-semibold uppercase tracking-wide">Rate</p>
+                          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">Rate</p>
                         </div>
                       </div>
                     );
