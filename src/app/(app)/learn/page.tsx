@@ -1579,74 +1579,135 @@ function RecapView({
   const questions = getQuestionsForLesson(topicId, lessonIndex);
   const next = findNextLesson(topicId, lessonIndex);
   const isPerfect = wrongAnswers.length === 0;
-  // Premium users must achieve full marks before proceeding to next lesson
+  const correctCount = questions.length - wrongAnswers.length;
+  const scorePct = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 100;
+  // Premium (non-practice) users must score 100% to unlock the next lesson
   const canProceedToNext = !isPremium || isPractice || isPerfect;
+
+  // Determine icon + title based on result
+  let headingText: string;
+  let starColour: string;
+  if (isPractice) {
+    headingText = "Practice Complete!";
+    starColour = "text-emerald-400 fill-emerald-400";
+  } else if (isPremium && isPerfect) {
+    headingText = "Perfect Score! 🎉";
+    starColour = "text-amber-400 fill-amber-400";
+  } else if (isPremium && !isPerfect) {
+    headingText = "Almost There!";
+    starColour = "text-slate-300 fill-slate-300";
+  } else {
+    headingText = "Lesson Complete!";
+    starColour = "text-amber-400 fill-amber-400";
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-5 py-10">
-      <div className="max-w-sm w-full text-center">
+      <div className="w-full max-w-sm">
+
+        {/* ── Icon ── */}
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.1, type: "spring", stiffness: 220 }}
+          className="text-center mb-2"
         >
-          <Star size={60} className={`mx-auto mb-5 ${isPractice ? "text-emerald-400 fill-emerald-400" : isPerfect ? "text-amber-400 fill-amber-400" : "text-blue-400 fill-blue-400"}`} />
+          <Star size={56} className={`mx-auto mb-4 ${starColour}`} />
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-        >
-          <h2 className="text-2xl font-bold text-slate-900 mb-1">
-            {isPractice ? "Practice Complete!" : isPerfect ? "Perfect Score! 🎉" : "Lesson Complete!"}
-          </h2>
-          <p className="text-slate-400 text-sm mb-6">
-            Masha&apos;Allah — {lesson?.title}
-          </p>
+        <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
 
-          <div className="flex gap-3 justify-center mb-6">
-            <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl" style={glassCard}>
-              <Zap size={15} className="text-blue-500" />
-              <span className="font-bold text-slate-800 text-sm">+{xpEarned} XP</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl" style={glassCard}>
-              {isPractice ? (
-                <span className="text-sm font-semibold text-emerald-600">+1 ❤️ earned</span>
-              ) : (
-                Array.from({ length: HEARTS_MAX }).map((_, i) => (
-                  <Heart
-                    key={i}
-                    size={13}
-                    className={i < heartsLeft ? "text-red-400 fill-red-400" : "text-slate-200 fill-slate-200"}
-                  />
-                ))
-              )}
-            </div>
+          {/* ── Heading ── */}
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-slate-900 mb-1">{headingText}</h2>
+            <p className="text-slate-400 text-sm">Masha&apos;Allah — {lesson?.title}</p>
           </div>
 
-          {/* Premium: wrong answer review */}
-          {isPremium && !isPractice && wrongAnswers.length > 0 && (
-            <div className="rounded-2xl p-5 mb-5 text-left" style={{ background: "rgba(254,226,226,0.50)", border: "1px solid rgba(252,165,165,0.55)" }}>
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-bold text-red-500 uppercase tracking-widest">
-                  Review — {wrongAnswers.length} incorrect
-                </p>
-                <span className="text-[10px] font-bold text-red-400 bg-red-100 px-2 py-0.5 rounded-full">
-                  {questions.length - wrongAnswers.length}/{questions.length} correct
+          {/* ── Stats row ── */}
+          <div className="flex gap-3 justify-center mb-6">
+            {/* XP */}
+            <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl" style={glassCard}>
+              <Zap size={15} className="text-blue-500" />
+              <span className="font-bold text-slate-800 text-sm">
+                {(!isPremium || isPractice || isPerfect) ? `+${xpEarned} XP` : "0 XP"}
+              </span>
+            </div>
+
+            {/* Premium non-practice: show score percentage */}
+            {isPremium && !isPractice ? (
+              <div
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl"
+                style={
+                  isPerfect
+                    ? { background: "rgba(209,250,229,0.70)", border: "1px solid rgba(110,231,183,0.55)" }
+                    : { background: "rgba(254,226,226,0.65)", border: "1px solid rgba(252,165,165,0.50)" }
+                }
+              >
+                {isPerfect
+                  ? <Check size={14} className="text-emerald-500" />
+                  : <X size={14} className="text-red-400" />
+                }
+                <span className={`font-bold text-sm ${isPerfect ? "text-emerald-700" : "text-red-600"}`}>
+                  {correctCount}/{questions.length} correct
+                </span>
+                <span className={`text-xs font-semibold ${isPerfect ? "text-emerald-500" : "text-red-400"}`}>
+                  ({scorePct}%)
                 </span>
               </div>
-              <div className="space-y-4">
+            ) : (
+              /* Non-premium: show hearts */
+              <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl" style={glassCard}>
+                {isPractice ? (
+                  <span className="text-sm font-semibold text-emerald-600">+1 ❤️ earned</span>
+                ) : (
+                  Array.from({ length: HEARTS_MAX }).map((_, i) => (
+                    <Heart
+                      key={i}
+                      size={13}
+                      className={i < heartsLeft ? "text-red-400 fill-red-400" : "text-slate-200 fill-slate-200"}
+                    />
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ── Premium: wrong answer review ── */}
+          {isPremium && !isPractice && wrongAnswers.length > 0 && (
+            <div className="rounded-2xl mb-5 overflow-hidden" style={{ border: "1px solid rgba(252,165,165,0.55)" }}>
+              {/* Section header */}
+              <div className="px-5 py-3 flex items-center justify-between" style={{ background: "rgba(254,226,226,0.65)" }}>
+                <div className="flex items-center gap-2">
+                  <X size={14} className="text-red-500" />
+                  <p className="text-xs font-bold text-red-600 uppercase tracking-widest">
+                    {wrongAnswers.length} incorrect {wrongAnswers.length === 1 ? "answer" : "answers"}
+                  </p>
+                </div>
+                <span className="text-xs font-bold text-red-400 bg-white/70 px-2.5 py-0.5 rounded-full">
+                  {correctCount}/{questions.length}
+                </span>
+              </div>
+
+              {/* Wrong answers list */}
+              <div className="divide-y divide-red-100 bg-white/60">
                 {wrongAnswers.map((wa, i) => (
-                  <div key={i} className="text-sm">
-                    <p className="font-semibold text-slate-700 mb-1 leading-snug">{wa.question}</p>
-                    <div className="flex items-start gap-1.5 mb-0.5">
-                      <X size={12} className="text-red-400 flex-shrink-0 mt-0.5" />
-                      <span className="text-red-600 text-xs leading-snug">Your answer: {wa.yourAnswer}</span>
-                    </div>
-                    <div className="flex items-start gap-1.5">
-                      <Check size={12} className="text-emerald-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-emerald-700 text-xs leading-snug">Correct: {wa.correctAnswer}</span>
+                  <div key={i} className="px-5 py-4">
+                    <p className="text-sm font-semibold text-slate-800 mb-2.5 leading-snug">{wa.question}</p>
+                    <div className="space-y-1.5">
+                      <div className="flex items-start gap-2 rounded-lg px-3 py-2" style={{ background: "rgba(254,226,226,0.55)", border: "1px solid rgba(252,165,165,0.40)" }}>
+                        <X size={12} className="text-red-400 flex-shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-bold text-red-400 uppercase tracking-wide mb-0.5">Your answer</p>
+                          <p className="text-xs text-red-700 leading-snug">{wa.yourAnswer}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2 rounded-lg px-3 py-2" style={{ background: "rgba(209,250,229,0.55)", border: "1px solid rgba(110,231,183,0.40)" }}>
+                        <Check size={12} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-wide mb-0.5">Correct answer</p>
+                          <p className="text-xs text-emerald-700 leading-snug">{wa.correctAnswer}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1654,29 +1715,33 @@ function RecapView({
             </div>
           )}
 
-          {/* Premium: full marks required notice */}
+          {/* ── Premium: full marks required notice ── */}
           {isPremium && !isPractice && !isPerfect && (
-            <div className="rounded-2xl p-4 mb-5 text-center" style={{ background: "rgba(239,246,255,0.80)", border: "1px solid rgba(147,197,253,0.60)" }}>
-              <Crown size={14} className="text-amber-400 mx-auto mb-1.5" />
-              <p className="text-xs font-bold text-blue-700 mb-0.5">Premium — Full marks required</p>
-              <p className="text-xs text-slate-500 leading-snug">Study the material and retake this lesson to get 100% before moving on.</p>
+            <div className="rounded-2xl p-4 mb-5" style={{ background: "rgba(239,246,255,0.90)", border: "1px solid rgba(147,197,253,0.60)" }}>
+              <div className="flex items-start gap-3">
+                <Crown size={15} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-bold text-blue-700 mb-0.5">Premium — 100% required to advance</p>
+                  <p className="text-xs text-slate-500 leading-snug">
+                    Study the material above, then retake this lesson to get full marks before moving on.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Premium: perfect score badge */}
+          {/* ── Premium: perfect score banner ── */}
           {isPremium && !isPractice && isPerfect && (
-            <div className="rounded-2xl p-4 mb-5 text-center" style={{ background: "rgba(209,250,229,0.60)", border: "1px solid rgba(110,231,183,0.55)" }}>
-              <Crown size={14} className="text-amber-400 mx-auto mb-1.5" />
-              <p className="text-xs font-bold text-emerald-700">Perfect score — you may proceed!</p>
+            <div className="rounded-2xl p-4 mb-5 text-center" style={{ background: "rgba(209,250,229,0.65)", border: "1px solid rgba(110,231,183,0.55)" }}>
+              <Crown size={15} className="text-amber-400 mx-auto mb-1" />
+              <p className="text-xs font-bold text-emerald-700">Perfect score — lesson unlocked, you may proceed!</p>
             </div>
           )}
 
-          {/* Key takeaways — show when premium has wrongs (replacing next lesson btn) */}
+          {/* ── Key takeaways (non-premium or perfect premium) ── */}
           {(!isPremium || isPractice || isPerfect) && (
             <div className="rounded-2xl p-5 mb-6 text-left" style={glassCard}>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
-                Key takeaways
-              </p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Key takeaways</p>
               <div className="space-y-3">
                 {questions.slice(0, 3).map((q, i) => (
                   <div key={i} className="flex items-start gap-2.5">
@@ -1688,22 +1753,17 @@ function RecapView({
             </div>
           )}
 
+          {/* ── Action buttons ── */}
           <div className="space-y-2.5">
             {!isPractice && next && canProceedToNext && (
               <button
-                onClick={() =>
-                  setView({
-                    kind: "lesson-intro",
-                    topicId: next.topicId,
-                    lessonIndex: next.lessonIndex,
-                  })
-                }
+                onClick={() => setView({ kind: "lesson-intro", topicId: next.topicId, lessonIndex: next.lessonIndex })}
                 className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-sm transition-colors"
               >
                 Next lesson →
               </button>
             )}
-            {!isPractice && next && !canProceedToNext && (
+            {!isPractice && !canProceedToNext && (
               <button
                 onClick={() => setView({ kind: "lesson-intro", topicId, lessonIndex })}
                 className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-sm transition-colors"
@@ -1714,7 +1774,7 @@ function RecapView({
             <button
               onClick={() => setView({ kind: "home" })}
               className={`w-full py-3.5 font-bold rounded-2xl text-sm transition-colors border ${
-                (!isPractice && next)
+                (!isPractice && (next || !canProceedToNext))
                   ? "border-slate-200 text-slate-600 hover:bg-slate-50"
                   : "bg-blue-600 hover:bg-blue-500 text-white border-transparent"
               }`}
@@ -2271,7 +2331,12 @@ export default function LearnPage() {
           isPremium={isPremium}
           onClose={() => setView({ kind: "home" })}
           onComplete={(xpEarned, heartsLeft, wrongAnswers) => {
-            handleLessonComplete(view.topicId, xpEarned, heartsLeft, view.isPractice ?? false);
+            const isPracticeMode = view.isPractice ?? false;
+            const isPerfect = wrongAnswers.length === 0;
+            // Premium non-practice users: only save progress when they score 100%
+            if (!isPremium || isPracticeMode || isPerfect) {
+              handleLessonComplete(view.topicId, xpEarned, heartsLeft, isPracticeMode);
+            }
             setView({
               kind: "recap",
               topicId: view.topicId,
