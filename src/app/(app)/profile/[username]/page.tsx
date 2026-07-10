@@ -91,7 +91,7 @@ function FollowButton({ isFollowing, loading, onToggle }: { isFollowing: boolean
       disabled={loading}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className={`rounded-2xl px-6 py-2.5 text-sm font-semibold border-2 transition-all duration-200 flex items-center gap-2 ${
+      className={`rounded-2xl px-4 py-2 text-sm font-semibold border-2 transition-all duration-200 flex items-center gap-2 ${
         isFollowing
           ? hovered ? "bg-red-50 border-red-400 text-red-500" : "border-slate-200 text-slate-700"
           : "bg-blue-600 border-blue-600 text-white hover:bg-blue-700"
@@ -556,7 +556,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-4 gap-3 mt-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
             {[
               { label: "XP", value: profileData.xp, icon: <Zap size={13} className="text-blue-400" /> },
               { label: "Level", value: profileData.level, icon: <Star size={13} className="text-amber-400" /> },
@@ -574,19 +574,19 @@ export default function ProfilePage({ params }: { params: { username: string } }
 
         {/* Tabs */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}>
-          <div className="inline-flex rounded-2xl p-1 gap-1 mb-4" style={glass}>
+          <div className="flex w-full rounded-2xl p-1 gap-1 mb-4" style={glass}>
             {!isOwnProfile && (
               <button onClick={() => setTab("progress")}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === "progress" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+                className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all text-center ${tab === "progress" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
                 Today
               </button>
             )}
             <button onClick={() => setTab("followers")}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === "followers" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+              className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all text-center truncate ${tab === "followers" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
               Followers <span className="opacity-70">{profileData.followerUids.length}</span>
             </button>
             <button onClick={() => setTab("following")}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === "following" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+              className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all text-center truncate ${tab === "following" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
               Following <span className="opacity-70">{profileData.following.length}</span>
             </button>
           </div>

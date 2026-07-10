@@ -261,7 +261,7 @@ function FriendsProgress({ following, senderPhone, senderName }: { following: st
     <div className="flex flex-col items-center py-8 gap-3 text-center">
       <Users size={28} className="text-slate-300" />
       <p className="text-sm text-slate-400">You haven&apos;t added any friends yet.</p>
-      <p className="text-xs text-slate-400">Search for friends in the sidebar to see their progress here.</p>
+      <p className="text-xs text-slate-400">Search for friends using the Find Friends button to see their progress here.</p>
     </div>
   );
 
@@ -454,27 +454,27 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.06 }}
-          className="grid grid-cols-3 gap-3 mb-6"
+          className="grid grid-cols-3 gap-2 sm:gap-3 mb-6"
         >
-          <div className="rounded-2xl px-4 py-4 flex items-center gap-3" style={glassCard}>
-            <Flame size={20} className="text-amber-400 flex-shrink-0" />
-            <div>
-              <p className="text-xl font-bold text-slate-900 leading-none">{streak}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">day streak</p>
+          <div className="rounded-2xl px-3 py-3 sm:px-4 sm:py-4 flex items-center gap-2 sm:gap-3 min-w-0" style={glassCard}>
+            <Flame size={18} className="text-amber-400 flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="text-lg sm:text-xl font-bold text-slate-900 leading-none truncate">{streak}</p>
+              <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 truncate">day streak</p>
             </div>
           </div>
 
-          <div className="rounded-2xl px-4 py-4 flex items-center gap-3" style={glassCard}>
-            <Zap size={20} className="text-blue-500 flex-shrink-0" />
-            <div>
-              <p className="text-xl font-bold text-slate-900 leading-none">{xp}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">total XP</p>
+          <div className="rounded-2xl px-3 py-3 sm:px-4 sm:py-4 flex items-center gap-2 sm:gap-3 min-w-0" style={glassCard}>
+            <Zap size={18} className="text-blue-500 flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="text-lg sm:text-xl font-bold text-slate-900 leading-none truncate">{xp}</p>
+              <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 truncate">total XP</p>
             </div>
           </div>
 
-          <div className="rounded-2xl px-4 py-4" style={glassCard}>
-            <p className="text-sm font-bold text-slate-800 leading-tight">{levelName}</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Level {level}</p>
+          <div className="rounded-2xl px-3 py-3 sm:px-4 sm:py-4 min-w-0" style={glassCard}>
+            <p className="text-xs sm:text-sm font-bold text-slate-800 leading-tight truncate">{levelName}</p>
+            <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5">Level {level}</p>
             <div className="mt-2.5 h-1 bg-slate-200 rounded-full overflow-hidden">
               <div className="h-full bg-blue-500 rounded-full transition-all duration-700" style={{ width: `${xpProgress}%` }} />
             </div>
@@ -728,7 +728,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-800">Follow friends to see their progress</p>
-                <p className="text-xs text-slate-400 mt-0.5">Search for friends in the sidebar and follow them.</p>
+                <p className="text-xs text-slate-400 mt-0.5">Use the Find Friends button to search and follow friends.</p>
               </div>
             </div>
           </motion.div>

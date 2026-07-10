@@ -100,7 +100,7 @@ export default function AIPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-72px)] md:h-screen w-full">
+    <div className="flex flex-col h-[calc(100dvh-72px)] md:h-screen w-full">
       {/* Header */}
       <div className="px-5 py-4 flex-shrink-0" style={headerStyle}>
         <div className="flex items-center gap-3">

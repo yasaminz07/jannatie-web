@@ -231,13 +231,14 @@ export default function BottomNav() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 380, damping: 34 }}
-              className="md:hidden fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl pb-safe"
+              className="md:hidden fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl"
               style={{
                 background: "rgba(255,255,255,0.96)",
                 backdropFilter: "blur(32px)",
                 WebkitBackdropFilter: "blur(32px)",
                 border: "1px solid rgba(255,255,255,0.95)",
                 boxShadow: "0 -8px 40px rgba(15,23,42,0.12)",
+                paddingBottom: "env(safe-area-inset-bottom, 0px)",
               }}
             >
               {/* Handle */}
@@ -316,6 +317,7 @@ export default function BottomNav() {
           WebkitBackdropFilter: "blur(20px)",
           borderTop: "1px solid rgba(255,255,255,0.90)",
           boxShadow: "0 -4px 24px rgba(15,23,42,0.06)",
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
         }}
       >
         <div className="flex items-center justify-around px-1 py-2">

@@ -162,7 +162,7 @@ function FindFriends() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.93, y: -8 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[61] w-[340px] rounded-3xl overflow-hidden"
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[61] w-[min(340px,calc(100vw-32px))] rounded-3xl overflow-hidden"
               style={{
                 background: "rgba(255,255,255,0.98)",
                 border: "1px solid rgba(226,232,240,0.80)",

@@ -737,9 +737,9 @@ export default function SettingsPage() {
               {initials}
             </div>
           )}
-          <div>
-            <p className="font-semibold text-slate-900 text-lg leading-tight">{profile?.displayName ?? "Your name"}</p>
-            {profile?.username && <p className="text-sm text-slate-400 mt-0.5">@{profile.username}</p>}
+          <div className="min-w-0">
+            <p className="font-semibold text-slate-900 text-lg leading-tight truncate">{profile?.displayName ?? "Your name"}</p>
+            {profile?.username && <p className="text-sm text-slate-400 mt-0.5 truncate">@{profile.username}</p>}
           </div>
         </div>
 
@@ -1161,9 +1161,9 @@ export default function SettingsPage() {
               { label: "Daily habit reminders", desc: "Morning reminder to log your habits", value: habitReminders, onChange: setHabitReminders },
               { label: "Email updates", desc: "Islamic tips and app news", value: emailNotifs, onChange: setEmailNotifs },
             ].map(({ label, desc, value, onChange }) => (
-              <div key={label} className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">{label}</p>
+              <div key={label} className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-700 truncate">{label}</p>
                   <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
                 </div>
                 <Toggle value={value} onChange={onChange} />
@@ -1479,7 +1479,7 @@ export default function SettingsPage() {
             style={{
               position: "fixed",
               top: pickerRect.top,
-              left: pickerRect.left,
+              left: Math.min(pickerRect.left, (typeof window !== "undefined" ? window.innerWidth : 375) - 238),
               width: 230,
               maxHeight: 280,
               overflowY: "auto",

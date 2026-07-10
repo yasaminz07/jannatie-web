@@ -662,9 +662,9 @@ export default function HifzPage() {
 
                         {/* Names */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-slate-800">{s.en}</span>
-                            <span className="text-slate-400 text-sm font-medium" dir="rtl">{s.ar}</span>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-sm font-semibold text-slate-800 truncate">{s.en}</span>
+                            <span className="text-slate-400 text-sm font-medium flex-shrink-0" dir="rtl">{s.ar}</span>
                           </div>
                           <p className="text-[11px] text-slate-400">{s.v} verses · {s.meaning}</p>
                         </div>

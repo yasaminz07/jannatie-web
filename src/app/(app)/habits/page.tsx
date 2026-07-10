@@ -827,7 +827,7 @@ export default function HabitsPage() {
                           style={{ background: "rgba(248,250,252,0.80)", border: "1px solid rgba(226,232,240,0.80)" }}
                         >
                           <p className="text-xs font-semibold text-slate-600 mb-3">Set your custom target</p>
-                          <div className="flex gap-3">
+                          <div className="flex flex-wrap gap-3">
                             <input
                               type="number"
                               placeholder="Amount"
@@ -838,7 +838,7 @@ export default function HabitsPage() {
                             <select
                               value={customUnit}
                               onChange={(e) => setCustomUnit(e.target.value as "ayat" | "pages")}
-                              className="rounded-xl px-3 py-2.5 text-sm text-slate-700 border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                              className="flex-1 min-w-[120px] rounded-xl px-3 py-2.5 text-sm text-slate-700 border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                             >
                               <option value="ayat">Ayat per session</option>
                               <option value="pages">Pages per session</option>
