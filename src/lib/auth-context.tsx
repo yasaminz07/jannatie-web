@@ -63,14 +63,19 @@ interface UserProfile {
   following?: string[];
   followers?: string[];
   // Community accounts
-  accountType?: "user" | "community"; // undefined = normal user
+  accountType?: "user" | "community" | "child"; // undefined = normal user
   communityCategory?: "business" | "influencer" | "coffee_shop" | "organization" | "other";
   bio?: string;
   website?: string;
   city?: string;
-  verificationInfo?: string; // applicant-submitted proof (social link, registration info, etc.)
-  applicationStatus?: "pending" | "approved" | "rejected"; // community accounts only
-  communityPlan?: string; // "premium" when set by admin in Firebase Console
+  verificationInfo?: string;
+  applicationStatus?: "pending" | "approved" | "rejected";
+  communityPlan?: string;
+  // Child accounts
+  childDateOfBirth?: string;        // "YYYY-MM-DD"
+  parentEmail?: string;             // parent contact email
+  parentDashboardPassword?: string; // SHA-256 hash of parental PIN
+  pendingFriends?: string[];        // UIDs awaiting parental approval (age < 13)
 }
 
 interface AuthContextValue {
@@ -89,6 +94,15 @@ interface AuthContextValue {
     website: string;
     verificationInfo: string;
     photoURL: string | null;
+  }) => Promise<void>;
+  signUpChild: (params: {
+    email: string;
+    password: string;
+    name: string;
+    username: string;
+    childDateOfBirth: string;
+    parentEmail: string;
+    parentDashboardPassword: string;
   }) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   logOut: () => Promise<void>;
@@ -200,6 +214,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  async function signUpChild(params: {
+    email: string;
+    password: string;
+    name: string;
+    username: string;
+    childDateOfBirth: string;
+    parentEmail: string;
+    parentDashboardPassword: string;
+  }) {
+    const taken = await getDocs(query(collection(db, "users"), where("username", "==", params.username.toLowerCase())));
+    if (!taken.empty) throw new Error("That username is already taken. Please choose a different one.");
+
+    const hashBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(params.parentDashboardPassword));
+    const hash = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
+
+    const { user: newUser } = await createUserWithEmailAndPassword(auth, params.email, params.password);
+    await updateProfile(newUser, { displayName: params.name });
+    await setDoc(doc(db, "users", newUser.uid), {
+      uid: newUser.uid,
+      email: newUser.email,
+      displayName: params.name,
+      username: params.username.toLowerCase(),
+      photoURL: null,
+      plan: "free",
+      xp: 0,
+      level: 1,
+      streak: 0,
+      following: [],
+      followers: [],
+      pendingFriends: [],
+      joinedAt: serverTimestamp(),
+      accountType: "child",
+      childDateOfBirth: params.childDateOfBirth,
+      parentEmail: params.parentEmail,
+      parentDashboardPassword: hash,
+    });
+  }
+
   async function signInWithGoogle() {
     const { user: googleUser } = await signInWithPopup(auth, googleProvider);
     const ref = doc(db, "users", googleUser.uid);
@@ -227,7 +279,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signUpCommunity, signInWithGoogle, logOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signUpCommunity, signUpChild, signInWithGoogle, logOut }}>
       {children}
     </AuthContext.Provider>
   );
@@ -237,4 +289,19 @@ export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
+}
+
+export function getChildAge(dateOfBirth: string): number {
+  const dob = new Date(dateOfBirth + "T00:00:00");
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+  return age;
+}
+
+export async function verifyParentPassword(stored: string, entered: string): Promise<boolean> {
+  const hashBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(entered));
+  const hash = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
+  return hash === stored;
 }

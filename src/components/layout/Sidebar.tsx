@@ -7,10 +7,10 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   LayoutDashboard, CheckSquare, BookOpen, MessageCircle,
   Calendar, TrendingUp, Settings, Building2, LogOut, Trophy,
-  UserPlus, Search, UserCheck, X, Home, Users, BookMarked,
+  UserPlus, Search, UserCheck, X, Home, Users, BookMarked, ShieldCheck, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth, getChildAge } from "@/lib/auth-context";
 import { levelProgress } from "@/lib/xpAndStreak";
 import {
   collection, query, getDocs, doc, updateDoc,
@@ -20,7 +20,7 @@ import { db } from "@/lib/firebase";
 import NotificationBell from "./NotificationBell";
 import { motion, AnimatePresence } from "framer-motion";
 
-const navItems = [
+const navItemsNormal = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Habits", href: "/habits", icon: CheckSquare },
   { label: "Hifz Tracker", href: "/hifz", icon: BookMarked },
@@ -30,6 +30,16 @@ const navItems = [
   { label: "Progress", href: "/progress", icon: TrendingUp },
   { label: "Community", href: "/community", icon: Users },
   { label: "Mosque", href: "/mosque", icon: Building2 },
+  { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
+];
+
+const navItemsChild = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Habits", href: "/habits", icon: CheckSquare },
+  { label: "Journeys", href: "/learn", icon: BookOpen },
+  { label: "AI Buddy", href: "/ai", icon: MessageCircle },
+  { label: "Calendar", href: "/calendar", icon: Calendar },
+  { label: "Progress", href: "/progress", icon: TrendingUp },
   { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
 ];
 
@@ -60,11 +70,16 @@ function UserAvatar({ name, photoURL, size = 32 }: { name: string; photoURL?: st
 
 function FindFriends() {
   const { user, profile } = useAuth();
+  const isChild = profile?.accountType === "child";
+  const childAge = isChild && profile?.childDateOfBirth ? getChildAge(profile.childDateOfBirth) : null;
+  const isChildUnder13 = isChild && childAge !== null && childAge < 13;
+
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
+  const [pendingMap, setPendingMap] = useState<Record<string, boolean>>({});
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -73,11 +88,13 @@ function FindFriends() {
   }, [open]);
 
   useEffect(() => {
-    if (!profile?.following) return;
-    const map: Record<string, boolean> = {};
-    profile.following.forEach(uid => { map[uid] = true; });
-    setFollowingMap(map);
-  }, [profile?.following]);
+    const fm: Record<string, boolean> = {};
+    (profile?.following ?? []).forEach(uid => { fm[uid] = true; });
+    setFollowingMap(fm);
+    const pm: Record<string, boolean> = {};
+    (profile?.pendingFriends ?? []).forEach(uid => { pm[uid] = true; });
+    setPendingMap(pm);
+  }, [profile?.following, profile?.pendingFriends]);
 
   const runSearch = useCallback(async (term: string) => {
     const t = term.toLowerCase().trim();
@@ -104,11 +121,19 @@ function FindFriends() {
   async function toggleFollow(target: SearchResult) {
     if (!user) return;
     const isFollowing = !!followingMap[target.uid];
-    setFollowingMap(prev => ({ ...prev, [target.uid]: !isFollowing }));
-    // Only write to own document to avoid Firestore security rule errors
+    const isPending = !!pendingMap[target.uid];
+
     if (isFollowing) {
+      setFollowingMap(prev => ({ ...prev, [target.uid]: false }));
       await updateDoc(doc(db, "users", user.uid), { following: arrayRemove(target.uid) });
+    } else if (isPending) {
+      setPendingMap(prev => ({ ...prev, [target.uid]: false }));
+      await updateDoc(doc(db, "users", user.uid), { pendingFriends: arrayRemove(target.uid) });
+    } else if (isChildUnder13) {
+      setPendingMap(prev => ({ ...prev, [target.uid]: true }));
+      await updateDoc(doc(db, "users", user.uid), { pendingFriends: arrayUnion(target.uid) });
     } else {
+      setFollowingMap(prev => ({ ...prev, [target.uid]: true }));
       await updateDoc(doc(db, "users", user.uid), { following: arrayUnion(target.uid) });
     }
   }
@@ -120,7 +145,7 @@ function FindFriends() {
         className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all border text-slate-500 hover:text-slate-900 hover:bg-slate-900/5 border-transparent"
       >
         <UserPlus size={15} />
-        Add Friends
+        {isChildUnder13 ? "Add Friends (Parent Approval)" : "Add Friends"}
       </button>
 
       <AnimatePresence>
@@ -195,11 +220,15 @@ function FindFriends() {
                         "flex-shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all border",
                         followingMap[r.uid]
                           ? "bg-white border-slate-200 text-slate-600 hover:border-red-300 hover:text-red-400"
+                          : pendingMap[r.uid]
+                          ? "bg-amber-50 border-amber-200 text-amber-700"
                           : "bg-blue-600 border-blue-600 text-white hover:bg-blue-700"
                       )}>
                       {followingMap[r.uid]
                         ? <span className="flex items-center gap-1"><UserCheck size={12} /> Following</span>
-                        : "+ Follow"
+                        : pendingMap[r.uid]
+                        ? <span className="flex items-center gap-1"><Clock size={12} /> Pending</span>
+                        : isChildUnder13 ? "+ Add (needs approval)" : "+ Follow"
                       }
                     </button>
                   </div>
@@ -221,6 +250,8 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { profile, logOut } = useAuth();
   const name = profile?.displayName ?? "User";
+  const isChild = profile?.accountType === "child";
+  const navItems = isChild ? navItemsChild : navItemsNormal;
 
   return (
     <aside
@@ -295,6 +326,18 @@ export default function Sidebar() {
 
         {/* Bottom links — inside the nav flex column, pinned to bottom */}
         <div className="border-t border-slate-200/60 pt-2 space-y-0.5">
+          {isChild && (
+            <Link href="/parental"
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all border",
+                pathname === "/parental"
+                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                  : "text-amber-600 hover:bg-amber-50/60 border-transparent"
+              )}>
+              <ShieldCheck size={15} />
+              Parental Dashboard
+            </Link>
+          )}
           <Link href="/"
             className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-900/5 transition-all border border-transparent">
             <Home size={15} />

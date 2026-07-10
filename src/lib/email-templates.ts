@@ -252,6 +252,48 @@ export function newsletterWelcomeEmailHtml(opts: { email: string; unsubscribeUrl
   return emailWrapper("Welcome to Jannatie", body, opts.unsubscribeUrl);
 }
 
+export function parentalResetEmailHtml(opts: {
+  greeting: string;
+  code: string;
+  childName: string;
+}): string {
+  const digits = opts.code.split("").join("&nbsp;&nbsp;");
+  const body = `
+    <p style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 10px;">${opts.greeting}</p>
+    <p style="font-size:15px;color:#475569;line-height:1.7;margin:0 0 28px;">
+      A request was made to reset the <strong style="color:#1e293b;">parental dashboard password</strong>
+      for <strong style="color:#1e293b;">${opts.childName}</strong>'s Jannatie account.
+      Enter the code below to proceed.
+    </p>
+
+    <!-- OTP block -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+      style="background-color:#fffbeb;border:1px solid #fde68a;border-radius:16px;margin:0 0 28px;">
+      <tr>
+        <td style="padding:36px 24px;text-align:center;">
+          <p style="font-size:11px;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:0.12em;margin:0 0 16px;">Reset Code</p>
+          <p style="font-size:46px;font-weight:800;color:#92400e;letter-spacing:0.25em;margin:0;line-height:1;">${digits}</p>
+          <p style="font-size:12px;color:#6b7280;margin:16px 0 0;">Expires in <strong>10 minutes</strong></p>
+        </td>
+      </tr>
+    </table>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+      style="background-color:#fff7ed;border:1px solid #fed7aa;border-radius:12px;margin:0 0 0;">
+      <tr>
+        <td style="padding:18px 22px;">
+          <p style="font-size:13px;color:#92400e;margin:0;line-height:1.7;">
+            <strong style="color:#78350f;">Didn't request this?</strong>
+            If you did not ask to reset this password, please contact us immediately at
+            <a href="mailto:${SUPPORT_EMAIL}" style="color:#b45309;font-weight:600;">${SUPPORT_EMAIL}</a>.
+          </p>
+        </td>
+      </tr>
+    </table>`;
+
+  return emailWrapper("Parental Password Reset", body);
+}
+
 export function passwordResetEmailHtml(opts: { greeting: string; resetUrl: string }): string {
   const body = `
     <p style="font-size:15px;font-weight:600;color:#1e293b;margin:0 0 10px;">${opts.greeting}</p>

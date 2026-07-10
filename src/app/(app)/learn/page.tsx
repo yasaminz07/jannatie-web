@@ -36,11 +36,16 @@ interface Unit {
   topics: Array<{ id: string; name: string; lessons: number }>;
   unlocked: boolean;
 }
+interface WrongAnswer {
+  question: string;
+  yourAnswer: string;
+  correctAnswer: string;
+}
 type LearnView =
   | { kind: "home" }
   | { kind: "lesson-intro"; topicId: string; lessonIndex: number; isPractice?: boolean }
   | { kind: "quiz"; topicId: string; lessonIndex: number; questions: Question[]; isPractice?: boolean }
-  | { kind: "recap"; topicId: string; lessonIndex: number; xpEarned: number; heartsLeft: number; isPractice?: boolean }
+  | { kind: "recap"; topicId: string; lessonIndex: number; xpEarned: number; heartsLeft: number; isPractice?: boolean; wrongAnswers?: WrongAnswer[] }
   | { kind: "exam"; unitId: number }
   | { kind: "exam-results"; unitId: number; score: number; total: number; xpEarned: number };
 
@@ -411,6 +416,7 @@ function HomeView({
   isPremium,
   streakFreezes,
   streakBrokenAt,
+  isChild = false,
   setView,
   onShowContent,
   onBuyFreeze,
@@ -427,12 +433,14 @@ function HomeView({
   isPremium: boolean;
   streakFreezes: number;
   streakBrokenAt?: string;
+  isChild?: boolean;
   setView: (v: LearnView) => void;
   onShowContent: (topicId: string, lessonIndex: number) => void;
   onBuyFreeze: () => void;
   onRepairStreak: () => void;
   onRefillHearts: () => void;
 }) {
+  const unitLabel = (s: string) => isChild ? s.replace(/Unit/g, "Journey") : s;
   const [expanded, setExpanded] = useState<Record<number, boolean>>({ 1: true, 2: false, 3: false, 4: false, 5: false });
   const toggle = (id: number) => setExpanded((p) => ({ ...p, [id]: !p[id] }));
   const [desktopActiveUnit, setDesktopActiveUnit] = useState(1);
@@ -631,7 +639,7 @@ function HomeView({
                     <div style={{ width: 0, height: 0, borderTop: "7px solid transparent", borderBottom: "7px solid transparent", borderRight: "8px solid white", filter: "drop-shadow(-1px 0 1px rgba(15,23,42,0.06))" }} />
                     {/* Card */}
                     <div className="bg-white rounded-2xl px-4 py-3 whitespace-nowrap" style={{ border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 8px 28px rgba(15,23,42,0.10), 0 2px 8px rgba(15,23,42,0.05)" }}>
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-blue-500 leading-none mb-1">{unit.label}</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-blue-500 leading-none mb-1">{unitLabel(unit.label)}</p>
                       <p className="text-[13px] font-bold text-slate-900 leading-tight">{unit.name}</p>
                       {!unit.unlocked && (
                         <p className="text-[9px] text-slate-400 mt-1.5 flex items-center gap-1">
@@ -659,7 +667,7 @@ function HomeView({
                 {/* Unit header */}
                 <div className="flex items-center justify-between mb-3 flex-shrink-0">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600 mb-0.5">{activeUnit.label}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600 mb-0.5">{unitLabel(activeUnit.label)}</p>
                     <h2 className="text-lg font-bold text-slate-900 leading-tight">{activeUnit.name}</h2>
                   </div>
                   <div className="flex items-center gap-3">
@@ -778,7 +786,7 @@ function HomeView({
                             <Award size={15} className="text-amber-500" />
                           </div>
                           <div>
-                            <p className="text-[7px] font-bold uppercase tracking-widest text-amber-500 mb-0.5">Unit Exam</p>
+                            <p className="text-[7px] font-bold uppercase tracking-widest text-amber-500 mb-0.5">{unitLabel("Unit Exam")}</p>
                             <p className="text-[9px] font-semibold text-amber-700 leading-tight">Take the challenge!</p>
                           </div>
                         </motion.button>
@@ -828,7 +836,7 @@ function HomeView({
                 <div className="flex items-center gap-3">
                   <div className="flex-1 min-w-0">
                     <p className={`text-[10px] font-bold uppercase tracking-widest ${unit.unlocked ? "text-white/65" : "text-slate-400"}`}>
-                      {unit.label}
+                      {unitLabel(unit.label)}
                     </p>
                     <h2 className={`text-sm font-bold leading-tight ${unit.unlocked ? "text-white" : "text-slate-400"}`}>
                       {unit.name}
@@ -1001,7 +1009,7 @@ function HomeView({
                                   <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center mb-1.5">
                                     <Award size={16} className="text-amber-500" />
                                   </div>
-                                  <p className="text-[7px] font-bold uppercase tracking-widest text-amber-500 mb-0.5">Unit Exam</p>
+                                  <p className="text-[7px] font-bold uppercase tracking-widest text-amber-500 mb-0.5">{unitLabel("Unit Exam")}</p>
                                   <p className="text-[9px] font-semibold text-center text-amber-700 leading-tight">Take the challenge!</p>
                                 </motion.button>
                               </>
@@ -1159,7 +1167,7 @@ function QuizView({
   isPractice?: boolean;
   isPremium?: boolean;
   onClose: () => void;
-  onComplete: (xpEarned: number, heartsLeft: number) => void;
+  onComplete: (xpEarned: number, heartsLeft: number, wrongAnswers: WrongAnswer[]) => void;
   onFailed: (heartsLeft: number) => void;
   onHeartsEmpty: (heartsLeft: number) => void;
 }) {
@@ -1189,6 +1197,19 @@ function QuizView({
   const [showPhonetics, setShowPhonetics] = useState(false);
   const [heartsEmpty, setHeartsEmpty] = useState(false);
   const [failedLesson, setFailedLesson] = useState(false);
+  const [wrongAnswers, setWrongAnswers] = useState<WrongAnswer[]>([]);
+  const [showExitWarning, setShowExitWarning] = useState(false);
+  const hasStarted = qIndex > 0 || selected !== null;
+
+  // Warn on browser navigation (back button, refresh, closing tab) while mid-lesson
+  useEffect(() => {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
 
   const lesson = TOPIC_LESSONS[topicId]?.[lessonIndex];
   const topicCfg = UNIT_CONFIG.flatMap((u) => u.topics).find((t) => t.id === topicId);
@@ -1276,14 +1297,17 @@ function QuizView({
       setXpEarned((x) => x + q.xp);
       setShowXpPop(true);
       setTimeout(() => setShowXpPop(false), 850);
-    } else if (!isPractice && !isPremium) {
-      const newHearts = Math.max(0, hearts - 1);
-      setHearts(newHearts);
-      if (newHearts === 0) setHeartsEmpty(true);
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
     } else {
-      // Practice or premium: no heart loss, just shake feedback
+      setWrongAnswers((prev) => [...prev, {
+        question: q.question,
+        yourAnswer: q.options[idx],
+        correctAnswer: q.options[q.correct],
+      }]);
+      if (!isPractice && !isPremium) {
+        const newHearts = Math.max(0, hearts - 1);
+        setHearts(newHearts);
+        if (newHearts === 0) setHeartsEmpty(true);
+      }
       setShake(true);
       setTimeout(() => setShake(false), 500);
     }
@@ -1297,7 +1321,7 @@ function QuizView({
     } else {
       const passed = isPractice || correctCount >= Math.ceil(shuffledQuestions.length * LESSON_PASS_THRESHOLD);
       if (passed) {
-        onComplete(xpEarned, hearts);
+        onComplete(xpEarned, hearts, wrongAnswers);
       } else {
         setFailedLesson(true);
       }
@@ -1308,10 +1332,46 @@ function QuizView({
 
   return (
     <div className="min-h-screen">
+      {/* Exit warning modal */}
+      {showExitWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-3xl w-full max-w-xs p-6 shadow-2xl text-center"
+          >
+            <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+              <X size={24} className="text-amber-500" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Leave lesson?</h3>
+            <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+              Any progress in this lesson will be lost, including any hearts you have used.
+            </p>
+            <div className="space-y-2.5">
+              <button
+                onClick={() => { setShowExitWarning(false); onClose(); }}
+                className="w-full py-3 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-bold text-sm transition-colors"
+              >
+                Yes, leave lesson
+              </button>
+              <button
+                onClick={() => setShowExitWarning(false)}
+                className="w-full py-3 rounded-2xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors"
+              >
+                Continue lesson
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       <div className="max-w-2xl mx-auto px-5 py-6">
         {/* Header */}
         <div className="flex items-center gap-4 mb-2">
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 transition-colors">
+          <button
+            onClick={() => hasStarted ? setShowExitWarning(true) : onClose()}
+            className="text-slate-400 hover:text-slate-700 transition-colors"
+          >
             <X size={20} />
           </button>
           <div className="flex-1">
@@ -1526,6 +1586,8 @@ function RecapView({
   xpEarned,
   heartsLeft,
   isPractice = false,
+  isPremium = false,
+  wrongAnswers = [],
   setView,
 }: {
   topicId: string;
@@ -1533,21 +1595,26 @@ function RecapView({
   xpEarned: number;
   heartsLeft: number;
   isPractice?: boolean;
+  isPremium?: boolean;
+  wrongAnswers?: WrongAnswer[];
   setView: (v: LearnView) => void;
 }) {
   const lesson = TOPIC_LESSONS[topicId]?.[lessonIndex];
   const questions = getQuestionsForLesson(topicId, lessonIndex);
   const next = findNextLesson(topicId, lessonIndex);
+  const isPerfect = wrongAnswers.length === 0;
+  // Premium users must achieve full marks before proceeding to next lesson
+  const canProceedToNext = !isPremium || isPractice || isPerfect;
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-5">
+    <div className="min-h-screen flex items-center justify-center px-5 py-10">
       <div className="max-w-sm w-full text-center">
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.1, type: "spring", stiffness: 220 }}
         >
-          <Star size={60} className={`mx-auto mb-5 ${isPractice ? "text-emerald-400 fill-emerald-400" : "text-amber-400 fill-amber-400"}`} />
+          <Star size={60} className={`mx-auto mb-5 ${isPractice ? "text-emerald-400 fill-emerald-400" : isPerfect ? "text-amber-400 fill-amber-400" : "text-blue-400 fill-blue-400"}`} />
         </motion.div>
 
         <motion.div
@@ -1556,13 +1623,13 @@ function RecapView({
           transition={{ delay: 0.25 }}
         >
           <h2 className="text-2xl font-bold text-slate-900 mb-1">
-            {isPractice ? "Practice Complete!" : "Lesson Complete!"}
+            {isPractice ? "Practice Complete!" : isPerfect ? "Perfect Score! 🎉" : "Lesson Complete!"}
           </h2>
           <p className="text-slate-400 text-sm mb-6">
             Masha&apos;Allah — {lesson?.title}
           </p>
 
-          <div className="flex gap-3 justify-center mb-7">
+          <div className="flex gap-3 justify-center mb-6">
             <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl" style={glassCard}>
               <Zap size={15} className="text-blue-500" />
               <span className="font-bold text-slate-800 text-sm">+{xpEarned} XP</span>
@@ -1582,23 +1649,71 @@ function RecapView({
             </div>
           </div>
 
-          {/* Key takeaways */}
-          <div className="rounded-2xl p-5 mb-6 text-left" style={glassCard}>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
-              Key takeaways
-            </p>
-            <div className="space-y-3">
-              {questions.slice(0, 3).map((q, i) => (
-                <div key={i} className="flex items-start gap-2.5">
-                  <Check size={14} className="text-emerald-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-slate-600 leading-snug">{q.options[q.correct]}</p>
-                </div>
-              ))}
+          {/* Premium: wrong answer review */}
+          {isPremium && !isPractice && wrongAnswers.length > 0 && (
+            <div className="rounded-2xl p-5 mb-5 text-left" style={{ background: "rgba(254,226,226,0.50)", border: "1px solid rgba(252,165,165,0.55)" }}>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-bold text-red-500 uppercase tracking-widest">
+                  Review — {wrongAnswers.length} incorrect
+                </p>
+                <span className="text-[10px] font-bold text-red-400 bg-red-100 px-2 py-0.5 rounded-full">
+                  {questions.length - wrongAnswers.length}/{questions.length} correct
+                </span>
+              </div>
+              <div className="space-y-4">
+                {wrongAnswers.map((wa, i) => (
+                  <div key={i} className="text-sm">
+                    <p className="font-semibold text-slate-700 mb-1 leading-snug">{wa.question}</p>
+                    <div className="flex items-start gap-1.5 mb-0.5">
+                      <X size={12} className="text-red-400 flex-shrink-0 mt-0.5" />
+                      <span className="text-red-600 text-xs leading-snug">Your answer: {wa.yourAnswer}</span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <Check size={12} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <span className="text-emerald-700 text-xs leading-snug">Correct: {wa.correctAnswer}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Premium: full marks required notice */}
+          {isPremium && !isPractice && !isPerfect && (
+            <div className="rounded-2xl p-4 mb-5 text-center" style={{ background: "rgba(239,246,255,0.80)", border: "1px solid rgba(147,197,253,0.60)" }}>
+              <Crown size={14} className="text-amber-400 mx-auto mb-1.5" />
+              <p className="text-xs font-bold text-blue-700 mb-0.5">Premium — Full marks required</p>
+              <p className="text-xs text-slate-500 leading-snug">Study the material and retake this lesson to get 100% before moving on.</p>
+            </div>
+          )}
+
+          {/* Premium: perfect score badge */}
+          {isPremium && !isPractice && isPerfect && (
+            <div className="rounded-2xl p-4 mb-5 text-center" style={{ background: "rgba(209,250,229,0.60)", border: "1px solid rgba(110,231,183,0.55)" }}>
+              <Crown size={14} className="text-amber-400 mx-auto mb-1.5" />
+              <p className="text-xs font-bold text-emerald-700">Perfect score — you may proceed!</p>
+            </div>
+          )}
+
+          {/* Key takeaways — show when premium has wrongs (replacing next lesson btn) */}
+          {(!isPremium || isPractice || isPerfect) && (
+            <div className="rounded-2xl p-5 mb-6 text-left" style={glassCard}>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
+                Key takeaways
+              </p>
+              <div className="space-y-3">
+                {questions.slice(0, 3).map((q, i) => (
+                  <div key={i} className="flex items-start gap-2.5">
+                    <Check size={14} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-slate-600 leading-snug">{q.options[q.correct]}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2.5">
-            {!isPractice && next && (
+            {!isPractice && next && canProceedToNext && (
               <button
                 onClick={() =>
                   setView({
@@ -1612,10 +1727,18 @@ function RecapView({
                 Next lesson →
               </button>
             )}
+            {!isPractice && next && !canProceedToNext && (
+              <button
+                onClick={() => setView({ kind: "lesson-intro", topicId, lessonIndex })}
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-sm transition-colors"
+              >
+                Retake lesson
+              </button>
+            )}
             <button
               onClick={() => setView({ kind: "home" })}
               className={`w-full py-3.5 font-bold rounded-2xl text-sm transition-colors border ${
-                !isPractice && next
+                (!isPractice && next)
                   ? "border-slate-200 text-slate-600 hover:bg-slate-50"
                   : "bg-blue-600 hover:bg-blue-500 text-white border-transparent"
               }`}
@@ -1859,12 +1982,14 @@ function ExamResultsView({
   score,
   total,
   xpEarned,
+  isChild = false,
   setView,
 }: {
   unitId: number;
   score: number;
   total: number;
   xpEarned: number;
+  isChild?: boolean;
   setView: (v: LearnView) => void;
 }) {
   const pct = Math.round((score / total) * 100);
@@ -1889,7 +2014,7 @@ function ExamResultsView({
           <h2 className="text-2xl font-bold text-slate-900 mb-1">
             {passed ? "Exam Passed! Masha'Allah!" : "Keep Studying!"}
           </h2>
-          <p className="text-slate-400 text-sm mb-6">{unitCfg.name} Unit Exam</p>
+          <p className="text-slate-400 text-sm mb-6">{unitCfg.name} {isChild ? "Journey Exam" : "Unit Exam"}</p>
 
           <div className="w-28 h-28 mx-auto mb-6 relative">
             <svg viewBox="0 0 100 100" className="w-full h-full" style={{ transform: "rotate(-90deg)" }}>
@@ -1934,6 +2059,7 @@ function ExamResultsView({
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function LearnPage() {
   const { profile, user } = useAuth();
+  const isChild = profile?.accountType === "child";
   const [view, setView] = useState<LearnView>({ kind: "home" });
   const [saving, setSaving] = useState(false);
   const [contentModal, setContentModal] = useState<{
@@ -2125,6 +2251,7 @@ export default function LearnPage() {
           gems={gems}
           hearts={currentHearts}
           heartsRechargeAt={heartsRechargeAt}
+          isChild={isChild}
           isPremium={isPremium}
           streakFreezes={streakFreezes}
           streakBrokenAt={streakBrokenAt}
@@ -2167,7 +2294,7 @@ export default function LearnPage() {
           isPractice={view.isPractice ?? false}
           isPremium={isPremium}
           onClose={() => setView({ kind: "home" })}
-          onComplete={(xpEarned, heartsLeft) => {
+          onComplete={(xpEarned, heartsLeft, wrongAnswers) => {
             handleLessonComplete(view.topicId, xpEarned, heartsLeft, view.isPractice ?? false);
             setView({
               kind: "recap",
@@ -2176,6 +2303,7 @@ export default function LearnPage() {
               xpEarned,
               heartsLeft,
               isPractice: view.isPractice,
+              wrongAnswers,
             });
           }}
           onFailed={(heartsLeft) => {
@@ -2201,6 +2329,8 @@ export default function LearnPage() {
           xpEarned={view.xpEarned}
           heartsLeft={view.heartsLeft}
           isPractice={view.isPractice ?? false}
+          isPremium={isPremium}
+          wrongAnswers={view.wrongAnswers}
           setView={setView}
         />
         {modal}
@@ -2238,6 +2368,7 @@ export default function LearnPage() {
           score={view.score}
           total={view.total}
           xpEarned={view.xpEarned}
+          isChild={isChild}
           setView={setView}
         />
         {modal}

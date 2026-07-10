@@ -234,6 +234,9 @@ export default function AuthFlow({
   >("idle");
   const usernameTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Age verification (normal signup)
+  const [age, setAge] = useState("");
+
   // Gender & phone (signup)
   const [gender, setGender] = useState<"" | "male" | "female">("");
   const [phoneCountry, setPhoneCountry] = useState("+44");
@@ -366,6 +369,14 @@ export default function AuthFlow({
     e.preventDefault();
     if (!fullName.trim()) {
       toast.error("Please enter your full name.");
+      return;
+    }
+    if (!age || isNaN(parseInt(age))) {
+      toast.error("Please enter your age.");
+      return;
+    }
+    if (parseInt(age) <= 16) {
+      toast.error("You must be over 16 to create a normal account. Please create a child account instead.");
       return;
     }
     if (!gender) {
@@ -656,6 +667,32 @@ export default function AuthFlow({
                         onChange={(e) => setFullName(e.target.value)}
                         required
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        Your age <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        className={inputCls}
+                        type="number"
+                        min="1"
+                        max="120"
+                        placeholder="e.g. 22"
+                        value={age}
+                        onChange={e => setAge(e.target.value)}
+                        required
+                      />
+                      {age && parseInt(age) <= 16 && (
+                        <div className="mt-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
+                          <p className="text-xs text-amber-700 font-medium">
+                            You must be over 16 for a normal account.{" "}
+                            <Link href="/signup-child" className="text-blue-600 font-bold hover:underline">
+                              Create a child account →
+                            </Link>
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     <div>

@@ -7,9 +7,10 @@ import {
   LayoutDashboard, CheckSquare, BookOpen, MessageCircle,
   MoreHorizontal, Trophy, Calendar, TrendingUp, Building2,
   Home, Settings, LogOut, X, UserPlus, Search, UserCheck, Users, BookMarked,
+  ShieldCheck, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth, getChildAge } from "@/lib/auth-context";
 import {
   collection, query, orderBy, limit, onSnapshot,
   getDocs, where, doc, updateDoc, arrayUnion, arrayRemove, startAt, endAt,
@@ -18,20 +19,35 @@ import { db } from "@/lib/firebase";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 
-const coreTabs = [
+const coreTabsNormal = [
   { label: "Home", href: "/dashboard", icon: LayoutDashboard },
   { label: "Habits", href: "/habits", icon: CheckSquare },
   { label: "Learn", href: "/learn", icon: BookOpen },
   { label: "AI", href: "/ai", icon: MessageCircle },
 ];
 
-const moreItems = [
+const coreTabsChild = [
+  { label: "Home", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Habits", href: "/habits", icon: CheckSquare },
+  { label: "Journeys", href: "/learn", icon: BookOpen },
+  { label: "AI", href: "/ai", icon: MessageCircle },
+];
+
+const moreItemsNormal = [
   { label: "Hifz Tracker", href: "/hifz", icon: BookMarked },
   { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
   { label: "Calendar", href: "/calendar", icon: Calendar },
   { label: "Progress", href: "/progress", icon: TrendingUp },
   { label: "Community", href: "/community", icon: Users },
   { label: "Mosque", href: "/mosque", icon: Building2 },
+];
+
+const moreItemsChild = [
+  { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
+  { label: "Calendar", href: "/calendar", icon: Calendar },
+  { label: "Progress", href: "/progress", icon: TrendingUp },
+  { label: "Mosque", href: "/mosque", icon: Building2 },
+  { label: "Parental", href: "/parental", icon: ShieldCheck },
 ];
 
 interface SearchResult {
@@ -56,17 +72,24 @@ function SmallAvatar({ name, photoURL }: { name: string; photoURL?: string | nul
 
 function AddFriendsSearch() {
   const { user, profile } = useAuth();
+  const isChild = profile?.accountType === "child";
+  const childAge = isChild && profile?.childDateOfBirth ? getChildAge(profile.childDateOfBirth) : null;
+  const isChildUnder13 = isChild && childAge !== null && childAge < 13;
+
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
+  const [pendingMap, setPendingMap] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    if (!profile?.following) return;
-    const map: Record<string, boolean> = {};
-    profile.following.forEach(uid => { map[uid] = true; });
-    setFollowingMap(map);
-  }, [profile?.following]);
+    const fm: Record<string, boolean> = {};
+    (profile?.following ?? []).forEach(uid => { fm[uid] = true; });
+    setFollowingMap(fm);
+    const pm: Record<string, boolean> = {};
+    (profile?.pendingFriends ?? []).forEach(uid => { pm[uid] = true; });
+    setPendingMap(pm);
+  }, [profile?.following, profile?.pendingFriends]);
 
   useEffect(() => {
     const t = setTimeout(async () => {
@@ -91,18 +114,28 @@ function AddFriendsSearch() {
   async function toggleFollow(target: SearchResult) {
     if (!user) return;
     const isFollowing = !!followingMap[target.uid];
-    setFollowingMap(prev => ({ ...prev, [target.uid]: !isFollowing }));
-    // Only write to own document to avoid Firestore security rule errors
+    const isPending = !!pendingMap[target.uid];
+
     if (isFollowing) {
+      setFollowingMap(prev => ({ ...prev, [target.uid]: false }));
       await updateDoc(doc(db, "users", user.uid), { following: arrayRemove(target.uid) });
+    } else if (isPending) {
+      setPendingMap(prev => ({ ...prev, [target.uid]: false }));
+      await updateDoc(doc(db, "users", user.uid), { pendingFriends: arrayRemove(target.uid) });
+    } else if (isChildUnder13) {
+      setPendingMap(prev => ({ ...prev, [target.uid]: true }));
+      await updateDoc(doc(db, "users", user.uid), { pendingFriends: arrayUnion(target.uid) });
     } else {
+      setFollowingMap(prev => ({ ...prev, [target.uid]: true }));
       await updateDoc(doc(db, "users", user.uid), { following: arrayUnion(target.uid) });
     }
   }
 
   return (
     <div>
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Add Friends</p>
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">
+        {isChildUnder13 ? "Add Friends (needs parent approval)" : "Add Friends"}
+      </p>
       <div className="flex items-center gap-2 rounded-xl px-3 py-2.5 mb-2" style={{ background: "rgba(248,250,252,0.90)", border: "1px solid rgba(226,232,240,0.60)" }}>
         <Search size={13} className="text-slate-400 flex-shrink-0" />
         <input
@@ -130,10 +163,17 @@ function AddFriendsSearch() {
               "flex-shrink-0 rounded-lg px-2 py-1 text-[10px] font-semibold border transition-all",
               followingMap[r.uid]
                 ? "bg-white border-slate-200 text-slate-500"
+                : pendingMap[r.uid]
+                ? "bg-amber-50 border-amber-200 text-amber-700"
                 : "bg-blue-600 border-blue-600 text-white"
             )}
           >
-            {followingMap[r.uid] ? <UserCheck size={11} /> : <><UserPlus size={11} className="inline mr-0.5" />Follow</>}
+            {followingMap[r.uid]
+              ? <UserCheck size={11} />
+              : pendingMap[r.uid]
+              ? <span className="flex items-center gap-0.5"><Clock size={10} /> Pending</span>
+              : <><UserPlus size={11} className="inline mr-0.5" />Follow</>
+            }
           </button>
         </div>
       ))}
@@ -143,8 +183,10 @@ function AddFriendsSearch() {
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const { profile, logOut } = useAuth();
-  const { user } = useAuth();
+  const { profile, logOut, user } = useAuth();
+  const isChild = profile?.accountType === "child";
+  const moreItems = isChild ? moreItemsChild : moreItemsNormal;
+  const coreTabs = isChild ? coreTabsChild : coreTabsNormal;
   const [moreOpen, setMoreOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const sheetRef = useRef<HTMLDivElement>(null);
