@@ -107,11 +107,11 @@ function OnboardingModal({ onClose }: { onClose: () => void }) {
   const isLast = step === ONBOARDING_STEPS.length - 1;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="rounded-3xl p-8 w-full max-w-sm shadow-2xl"
+        className="rounded-3xl p-8 w-full max-w-sm shadow-2xl max-h-[90vh] overflow-y-auto"
         style={{
           background: "rgba(255,255,255,0.93)",
           backdropFilter: "blur(32px)",

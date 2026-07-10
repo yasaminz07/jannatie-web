@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -16,8 +16,12 @@ import {
 } from "firebase/firestore";
 import toast from "react-hot-toast";
 
+// Inputs for unlocked (light) dashboard
 const inputCls =
-  "w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white";
+  "w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all bg-white";
+// Inputs for locked (dark glass) screen
+const darkInputCls =
+  "w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all";
 
 function getPwChecks(pw: string) {
   return {
@@ -248,28 +252,53 @@ export default function ParentalPage() {
 
   // ─── Password Entry Screen ───────────────────────────────────────────────
   if (!unlocked) {
+    const glassCard: CSSProperties = {
+      background: "rgba(255,255,255,0.06)",
+      border: "1px solid rgba(255,255,255,0.12)",
+      backdropFilter: "blur(24px)",
+      WebkitBackdropFilter: "blur(24px)",
+      boxShadow: "0 24px 64px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)",
+    };
+    const darkInput: CSSProperties = {
+      background: "rgba(255,255,255,0.07)",
+      border: "1px solid rgba(255,255,255,0.12)",
+    };
+    const amberGlow: CSSProperties = {
+      boxShadow: "0 0 0 12px rgba(251,191,36,0.10), 0 0 0 24px rgba(251,191,36,0.05)",
+    };
     return (
-      <div className="min-h-screen flex items-center justify-center px-5">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
+      <div
+        className="min-h-screen flex items-center justify-center px-4 py-8 relative overflow-hidden"
+        style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)" }}
+      >
+        {/* Decorative orbs */}
+        <div className="absolute top-[-10%] right-[-5%] w-72 h-72 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(251,191,36,0.12) 0%, transparent 70%)" }} />
+        <div className="absolute bottom-[-8%] left-[-5%] w-64 h-64 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(99,102,241,0.10) 0%, transparent 70%)" }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(251,191,36,0.04) 0%, transparent 65%)" }} />
+
+        <motion.div initial={{ opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.4, ease: "easeOut" }} className="w-full max-w-sm relative z-10">
 
           {/* ── Step: idle / normal unlock ── */}
           {fpStep === "idle" && (
             <>
-              <div className="text-center mb-7">
-                <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
-                  <ShieldCheck size={28} className="text-amber-600" />
+              <div className="text-center mb-8">
+                <div className="relative inline-flex mb-5">
+                  <div className="w-[72px] h-[72px] rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", ...amberGlow }}>
+                    <ShieldCheck size={32} className="text-white" />
+                  </div>
                 </div>
-                <h1 className="text-2xl font-bold text-slate-900 mb-1">Parental Dashboard</h1>
-                <p className="text-sm text-slate-400">Enter your parental password to continue</p>
+                <h1 className="text-2xl font-bold text-white mb-1.5">Parental Dashboard</h1>
+                <p className="text-sm text-white/45">Enter your parental password to continue</p>
               </div>
 
-              <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 ring-1 ring-slate-100 p-7">
+              <div className="rounded-3xl p-7" style={glassCard}>
                 <form onSubmit={handleUnlock} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Parental password</label>
+                    <label className="block text-xs font-semibold text-white/60 uppercase tracking-widest mb-2">Parental password</label>
                     <div className="relative">
                       <input
-                        className={inputCls + " pr-11"}
+                        className={darkInputCls + " pr-11"}
+                        style={darkInput}
                         type={showPw ? "text" : "password"}
                         placeholder="Enter parental password"
                         value={enteredPw}
@@ -277,12 +306,17 @@ export default function ParentalPage() {
                         required
                         autoFocus
                       />
-                      <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                      <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors">
                         {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
                   </div>
-                  <button type="submit" disabled={unlocking || !enteredPw} className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl transition-colors text-sm disabled:opacity-60 flex items-center justify-center gap-2">
+                  <button
+                    type="submit"
+                    disabled={unlocking || !enteredPw}
+                    className="w-full font-bold py-3.5 rounded-xl transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2 text-white"
+                    style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", boxShadow: enteredPw ? "0 8px 24px rgba(245,158,11,0.35)" : "none" }}
+                  >
                     <Unlock size={15} />
                     {unlocking ? "Verifying..." : "Unlock dashboard"}
                   </button>
@@ -290,13 +324,13 @@ export default function ParentalPage() {
 
                 <button
                   onClick={() => setFpStep("send")}
-                  className="w-full text-center text-sm text-slate-400 hover:text-amber-600 transition-colors mt-5"
+                  className="w-full text-center text-sm text-white/35 hover:text-amber-400 transition-colors mt-5"
                 >
                   Forgot parental password?
                 </button>
               </div>
 
-              <p className="text-center text-xs text-slate-400 mt-4">
+              <p className="text-center text-xs text-white/25 mt-5">
                 This dashboard is for parents and guardians only.
               </p>
             </>
@@ -305,20 +339,20 @@ export default function ParentalPage() {
           {/* ── Step: send code ── */}
           {fpStep === "send" && (
             <>
-              <div className="text-center mb-7">
-                <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
-                  <Mail size={28} className="text-amber-600" />
+              <div className="text-center mb-8">
+                <div className="relative inline-flex mb-5">
+                  <div className="w-[72px] h-[72px] rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", ...amberGlow }}>
+                    <Mail size={32} className="text-white" />
+                  </div>
                 </div>
-                <h1 className="text-2xl font-bold text-slate-900 mb-1">Reset parental password</h1>
-                <p className="text-sm text-slate-400">
-                  We&apos;ll send a 6-digit code to the parent email on this account.
-                </p>
+                <h1 className="text-2xl font-bold text-white mb-1.5">Reset parental password</h1>
+                <p className="text-sm text-white/45">We&apos;ll send a 6-digit code to the parent email on this account.</p>
               </div>
 
-              <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 ring-1 ring-slate-100 p-7 space-y-4">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Code will be sent to</p>
-                  <p className="text-sm font-semibold text-slate-800">
+              <div className="rounded-3xl p-7 space-y-4" style={glassCard}>
+                <div className="rounded-xl px-4 py-3" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-0.5">Code will be sent to</p>
+                  <p className="text-sm font-semibold text-white/85">
                     {profile.parentEmail
                       ? profile.parentEmail.replace(/(.{2}).+(@.+)/, "$1•••$2")
                       : "No parent email set"}
@@ -326,20 +360,21 @@ export default function ParentalPage() {
                 </div>
 
                 {!profile.parentEmail && (
-                  <p className="text-xs text-red-500">No parent email is linked to this account. Please contact support.</p>
+                  <p className="text-xs text-red-400">No parent email is linked to this account. Please contact support.</p>
                 )}
 
                 <button
                   onClick={sendResetCode}
                   disabled={fpLoading || !profile.parentEmail}
-                  className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl transition-colors text-sm disabled:opacity-60 flex items-center justify-center gap-2"
+                  className="w-full font-bold py-3.5 rounded-xl transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2 text-white"
+                  style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", boxShadow: "0 8px 24px rgba(245,158,11,0.30)" }}
                 >
                   {fpLoading ? "Sending..." : "Send reset code"}
                 </button>
 
                 <button
                   onClick={() => setFpStep("idle")}
-                  className="w-full text-center text-sm text-slate-400 hover:text-slate-700 transition-colors"
+                  className="w-full text-center text-sm text-white/35 hover:text-white/70 transition-colors"
                 >
                   ← Back to login
                 </button>
@@ -350,25 +385,28 @@ export default function ParentalPage() {
           {/* ── Step: verify code ── */}
           {fpStep === "verify" && (
             <>
-              <div className="text-center mb-7">
-                <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
-                  <KeyRound size={28} className="text-amber-600" />
+              <div className="text-center mb-8">
+                <div className="relative inline-flex mb-5">
+                  <div className="w-[72px] h-[72px] rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", ...amberGlow }}>
+                    <KeyRound size={32} className="text-white" />
+                  </div>
                 </div>
-                <h1 className="text-2xl font-bold text-slate-900 mb-1">Check your email</h1>
-                <p className="text-sm text-slate-400">
+                <h1 className="text-2xl font-bold text-white mb-1.5">Check your email</h1>
+                <p className="text-sm text-white/45">
                   Enter the 6-digit code sent to{" "}
-                  <span className="font-semibold text-slate-700">
+                  <span className="font-semibold text-amber-400">
                     {profile.parentEmail?.replace(/(.{2}).+(@.+)/, "$1•••$2")}
                   </span>
                 </p>
               </div>
 
-              <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 ring-1 ring-slate-100 p-7">
+              <div className="rounded-3xl p-7" style={glassCard}>
                 <form onSubmit={verifyResetCode} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">6-digit code</label>
+                    <label className="block text-xs font-semibold text-white/60 uppercase tracking-widest mb-2">6-digit code</label>
                     <input
-                      className={inputCls + " text-center text-2xl font-bold tracking-[0.3em]"}
+                      className={darkInputCls + " text-center text-2xl font-bold tracking-[0.35em]"}
+                      style={darkInput}
                       type="text"
                       inputMode="numeric"
                       maxLength={6}
@@ -379,13 +417,14 @@ export default function ParentalPage() {
                       required
                     />
                     {fpCodeError && (
-                      <p className="text-xs text-red-500 mt-1.5">{fpCodeError}</p>
+                      <p className="text-xs text-red-400 mt-1.5">{fpCodeError}</p>
                     )}
                   </div>
                   <button
                     type="submit"
                     disabled={fpCode.length !== 6}
-                    className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl transition-colors text-sm disabled:opacity-60"
+                    className="w-full font-bold py-3.5 rounded-xl transition-all text-sm disabled:opacity-50 text-white"
+                    style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", boxShadow: fpCode.length === 6 ? "0 8px 24px rgba(245,158,11,0.35)" : "none" }}
                   >
                     Verify code
                   </button>
@@ -394,14 +433,14 @@ export default function ParentalPage() {
                 <div className="flex items-center justify-between mt-5">
                   <button
                     onClick={() => setFpStep("send")}
-                    className="text-sm text-slate-400 hover:text-slate-700 transition-colors"
+                    className="text-sm text-white/35 hover:text-white/70 transition-colors"
                   >
                     ← Back
                   </button>
                   <button
                     onClick={sendResetCode}
                     disabled={fpLoading}
-                    className="text-sm text-amber-600 hover:text-amber-800 font-semibold transition-colors disabled:opacity-60"
+                    className="text-sm text-amber-400 hover:text-amber-300 font-semibold transition-colors disabled:opacity-50"
                   >
                     {fpLoading ? "Sending..." : "Resend code"}
                   </button>
@@ -413,19 +452,22 @@ export default function ParentalPage() {
           {/* ── Step: set new password ── */}
           {fpStep === "reset" && (
             <>
-              <div className="text-center mb-7">
-                <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-                  <Check size={28} className="text-emerald-600" />
+              <div className="text-center mb-8">
+                <div className="relative inline-flex mb-5">
+                  <div className="w-[72px] h-[72px] rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", boxShadow: "0 0 0 12px rgba(16,185,129,0.10), 0 0 0 24px rgba(16,185,129,0.05)" }}>
+                    <Check size={32} className="text-white" />
+                  </div>
                 </div>
-                <h1 className="text-2xl font-bold text-slate-900 mb-1">Set new password</h1>
-                <p className="text-sm text-slate-400">Choose a strong parental password</p>
+                <h1 className="text-2xl font-bold text-white mb-1.5">Set new password</h1>
+                <p className="text-sm text-white/45">Choose a strong parental password</p>
               </div>
 
-              <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 ring-1 ring-slate-100 p-7">
+              <div className="rounded-3xl p-7" style={glassCard}>
                 <form onSubmit={handleResetPassword} className="space-y-3">
                   <div className="relative">
                     <input
-                      className={inputCls + " pr-11"}
+                      className={darkInputCls + " pr-11"}
+                      style={darkInput}
                       type={fpShowPw ? "text" : "password"}
                       placeholder="New parental password"
                       value={fpNewPw}
@@ -433,7 +475,7 @@ export default function ParentalPage() {
                       autoFocus
                       required
                     />
-                    <button type="button" onClick={() => setFpShowPw(v => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <button type="button" onClick={() => setFpShowPw(v => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors">
                       {fpShowPw ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
@@ -446,14 +488,15 @@ export default function ParentalPage() {
                         { label: "One symbol", pass: getPwChecks(fpNewPw).symbol },
                       ].map(({ label, pass }) => (
                         <div key={label} className="flex items-center gap-1.5">
-                          {pass ? <Check size={10} className="text-emerald-500" /> : <X size={10} className="text-red-400" />}
-                          <span className={`text-xs ${pass ? "text-emerald-600" : "text-red-400"}`}>{label}</span>
+                          {pass ? <Check size={10} className="text-emerald-400" /> : <X size={10} className="text-red-400" />}
+                          <span className={`text-xs ${pass ? "text-emerald-400" : "text-red-400"}`}>{label}</span>
                         </div>
                       ))}
                     </div>
                   )}
                   <input
-                    className={inputCls}
+                    className={darkInputCls}
+                    style={darkInput}
                     type="password"
                     placeholder="Confirm new password"
                     value={fpConfirmPw}
@@ -462,16 +505,17 @@ export default function ParentalPage() {
                   />
                   {fpConfirmPw.length > 0 && (
                     <div className="flex items-center gap-1">
-                      {fpNewPw === fpConfirmPw ? <Check size={10} className="text-emerald-500" /> : <X size={10} className="text-red-400" />}
-                      <span className={`text-xs ${fpNewPw === fpConfirmPw ? "text-emerald-600" : "text-red-400"}`}>
-                        {fpNewPw === fpConfirmPw ? "Passwords match" : "Passwords don't match"}
+                      {fpNewPw === fpConfirmPw ? <Check size={10} className="text-emerald-400" /> : <X size={10} className="text-red-400" />}
+                      <span className={`text-xs ${fpNewPw === fpConfirmPw ? "text-emerald-400" : "text-red-400"}`}>
+                        {fpNewPw === fpConfirmPw ? "Passwords match" : "Passwords don&apos;t match"}
                       </span>
                     </div>
                   )}
                   <button
                     type="submit"
                     disabled={fpSavingPw}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition-colors text-sm disabled:opacity-60"
+                    className="w-full font-bold py-3.5 rounded-xl transition-all text-sm disabled:opacity-50 text-white"
+                    style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", boxShadow: "0 8px 24px rgba(16,185,129,0.30)" }}
                   >
                     {fpSavingPw ? "Saving..." : "Save new password"}
                   </button>

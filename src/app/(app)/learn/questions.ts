@@ -1634,14 +1634,24 @@ export const TOPIC_QUESTIONS: Record<string, Question[]> = {
   seerah: seerahQuestions,
   prophets: prophetsQuestions,
   history: historyQuestions,
-  fiqh: fiqhQuestions,
   arabic: arabicQuestions,
+  arabic2: arabicQuestions,
+  fiqh: fiqhQuestions,
+  fiqh2: fiqhQuestions,
   salah: salahQuestions,
+  dhikr_ramadan: dhikrQuestions,
+  aqeedah: aqeedahQuestions,
+  hadith: hadithSciQuestions,
+  character: characterQuestions,
+  tafseer: quranQuestions,
+  ethics: mannersQuestions,
+  spirituality: dhikrQuestions,
+  finance_hajj: fiqhQuestions,
+  review: quranQuestions,
+  // legacy keys kept for backwards-compat
   dhikr: dhikrQuestions,
   fasting: fastingQuestions,
-  aqeedah: aqeedahQuestions,
   hadith_sci: hadithSciQuestions,
-  character: characterQuestions,
 };
 
 // Return questions for the given topic and lesson index (cycles through the bank)
@@ -1653,35 +1663,39 @@ export function getQuestionsForLesson(topicId: string, lessonIndex: number, coun
   return [...bank.slice(start), ...bank.slice(0, end - bank.length)];
 }
 
-// Unit exam question sets — 10 mixed questions per unit
+function cycleSlice(bank: Question[], start: number, count: number): Question[] {
+  if (bank.length === 0) return [];
+  const result: Question[] = [];
+  for (let i = 0; i < count; i++) result.push(bank[(start + i) % bank.length]);
+  return result;
+}
+
+// Unit exam question sets — 10 questions per unit exam
 export const UNIT_EXAM_QUESTIONS: Record<number, Question[]> = {
-  1: [
-    // Unit 1: Daily Essentials (Quran, Duas, Manners)
-    ...quranQuestions.slice(0, 4),
-    ...duasQuestions.slice(0, 3),
-    ...mannersQuestions.slice(0, 3),
-  ],
-  2: [
-    // Unit 2: Islamic History (Seerah, Prophets, History)
-    ...seerahQuestions.slice(0, 4),
-    ...prophetsQuestions.slice(0, 3),
-    ...historyQuestions.slice(0, 3),
-  ],
-  3: [
-    // Unit 3: Knowledge and Law (Fiqh, Arabic)
-    ...fiqhQuestions.slice(0, 5),
-    ...arabicQuestions.slice(0, 5),
-  ],
-  4: [
-    // Unit 4: Salah & Dhikr (Salah, Dhikr, Fasting)
-    ...salahQuestions.slice(0, 4),
-    ...dhikrQuestions.slice(0, 3),
-    ...fastingQuestions.slice(0, 3),
-  ],
-  5: [
-    // Unit 5: Advanced Studies (Aqeedah, Hadith Sciences, Character)
-    ...aqeedahQuestions.slice(0, 4),
-    ...hadithSciQuestions.slice(0, 3),
-    ...characterQuestions.slice(0, 3),
+  1:  cycleSlice(quranQuestions,    0,  10),
+  2:  cycleSlice(duasQuestions,     0,  10),
+  3:  cycleSlice(mannersQuestions,  0,  10),
+  4:  cycleSlice(seerahQuestions,   0,  10),
+  5:  cycleSlice(prophetsQuestions, 0,  10),
+  6:  cycleSlice(historyQuestions,  0,  10),
+  7:  cycleSlice(arabicQuestions,   0,  10),
+  8:  cycleSlice(arabicQuestions,   10, 10),
+  9:  cycleSlice(fiqhQuestions,     0,  10),
+  10: cycleSlice(fiqhQuestions,     10, 10),
+  11: cycleSlice(salahQuestions,    0,  10),
+  12: cycleSlice(dhikrQuestions,    0,  10),
+  13: cycleSlice(aqeedahQuestions,  0,  10),
+  14: cycleSlice(hadithSciQuestions,0,  10),
+  15: cycleSlice(characterQuestions,0,  10),
+  16: cycleSlice(quranQuestions,    10, 10),
+  17: cycleSlice(mannersQuestions,  10, 10),
+  18: cycleSlice(dhikrQuestions,    2,  10),
+  19: cycleSlice(fiqhQuestions,     20, 10),
+  20: [
+    ...cycleSlice(quranQuestions,    0, 2),
+    ...cycleSlice(duasQuestions,     0, 2),
+    ...cycleSlice(seerahQuestions,   0, 2),
+    ...cycleSlice(fiqhQuestions,     0, 2),
+    ...cycleSlice(aqeedahQuestions,  0, 2),
   ],
 };

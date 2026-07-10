@@ -26,6 +26,7 @@ interface FlatLesson {
   topicName: string;
   lessonIndex: number;
   title: string;
+  globalLevel: number;
 }
 type LessonStatus = "done" | "available" | "locked";
 interface Unit {
@@ -53,65 +54,47 @@ type LearnView =
 const TOPIC_ICONS: Record<string, ElementType> = {
   quran: BookOpen,
   duas: Hand,
+  manners: Heart,
   seerah: Moon,
-  fiqh: Scale,
-  arabic: Languages,
   prophets: Building2,
   history: Scroll,
-  manners: Heart,
+  arabic: Languages,
+  arabic2: Languages,
+  fiqh: Scale,
+  fiqh2: Scale,
   salah: Sun,
-  dhikr: Sparkles,
-  fasting: Moon,
+  dhikr_ramadan: Sparkles,
   aqeedah: Shield,
-  hadith_sci: FileText,
+  hadith: FileText,
   character: Smile,
+  tafseer: BookMarked,
+  ethics: Award,
+  spirituality: Star,
+  finance_hajj: Crown,
+  review: RotateCcw,
 };
 
 const UNIT_CONFIG = [
-  {
-    id: 1, label: "Unit 1", name: "Daily Essentials",
-    description: "Master the foundations of daily Islamic practice",
-    topics: [
-      { id: "quran", name: "Quran", lessons: 12 },
-      { id: "duas", name: "Duas", lessons: 20 },
-      { id: "manners", name: "Manners", lessons: 8 },
-    ],
-  },
-  {
-    id: 2, label: "Unit 2", name: "Islamic History",
-    description: "Learn from the lives of the Prophets and Companions",
-    topics: [
-      { id: "seerah", name: "Seerah", lessons: 15 },
-      { id: "prophets", name: "Prophets", lessons: 10 },
-      { id: "history", name: "History", lessons: 14 },
-    ],
-  },
-  {
-    id: 3, label: "Unit 3", name: "Knowledge and Law",
-    description: "Dive into Fiqh and the Arabic language",
-    topics: [
-      { id: "fiqh", name: "Fiqh", lessons: 18 },
-      { id: "arabic", name: "Arabic", lessons: 24 },
-    ],
-  },
-  {
-    id: 4, label: "Unit 4", name: "Salah & Dhikr",
-    description: "Master the pillars of prayer and the remembrance of Allah",
-    topics: [
-      { id: "salah", name: "Salah", lessons: 8 },
-      { id: "dhikr", name: "Dhikr", lessons: 7 },
-      { id: "fasting", name: "Fasting", lessons: 5 },
-    ],
-  },
-  {
-    id: 5, label: "Unit 5", name: "Advanced Studies",
-    description: "Deepen your knowledge of Islamic creed, hadith sciences, and character",
-    topics: [
-      { id: "aqeedah", name: "Aqeedah", lessons: 8 },
-      { id: "hadith_sci", name: "Hadith", lessons: 6 },
-      { id: "character", name: "Character", lessons: 6 },
-    ],
-  },
+  { id: 1,  label: "Unit 1",  name: "The Noble Quran",           description: "Discover the book of Allah ﷻ — its structure, recitation, memorisation, and how to build a lifelong relationship with the Quran.",   topics: [{ id: "quran",        name: "Quran",           lessons: 20 }] },
+  { id: 2,  label: "Unit 2",  name: "Daily Duas & Adhkar",        description: "Master the essential supplications and remembrances the Prophet ﷺ taught for every moment of your day.",                                     topics: [{ id: "duas",         name: "Duas & Adhkar",   lessons: 20 }] },
+  { id: 3,  label: "Unit 3",  name: "Islamic Manners",            description: "Develop the beautiful character traits that the Prophet ﷺ embodied — honesty, generosity, patience, and respect.",                             topics: [{ id: "manners",      name: "Manners",         lessons: 20 }] },
+  { id: 4,  label: "Unit 4",  name: "The Prophet's Life ﷺ",      description: "Journey through the Seerah of Muhammad ﷺ — from birth to farewell sermon — and bring his example to life.",                                   topics: [{ id: "seerah",       name: "Seerah",          lessons: 20 }] },
+  { id: 5,  label: "Unit 5",  name: "Stories of the Prophets",   description: "Learn from Adam (AS) to Isa (AS) and beyond — the trials, the triumphs, and the timeless lessons of every prophet.",                           topics: [{ id: "prophets",     name: "Prophets",        lessons: 20 }] },
+  { id: 6,  label: "Unit 6",  name: "Islamic History",           description: "From the rightly-guided caliphs to the Golden Age to the modern Ummah — understand where we came from.",                                        topics: [{ id: "history",      name: "History",         lessons: 20 }] },
+  { id: 7,  label: "Unit 7",  name: "Arabic Language I",         description: "Begin your Arabic journey with the alphabet, short vowels, essential vocabulary, and the language of Salah.",                                    topics: [{ id: "arabic",       name: "Arabic I",        lessons: 20 }] },
+  { id: 8,  label: "Unit 8",  name: "Arabic Language II",        description: "Go deeper with Arabic verbs, plurals, Quranic vocabulary, and begin reading unvocalised text.",                                                  topics: [{ id: "arabic2",      name: "Arabic II",       lessons: 20 }] },
+  { id: 9,  label: "Unit 9",  name: "Islamic Law I",             description: "Master the foundational fiqh of the five pillars, halal and haram, purification, and family law.",                                              topics: [{ id: "fiqh",         name: "Fiqh I",          lessons: 20 }] },
+  { id: 10, label: "Unit 10", name: "Islamic Law II",            description: "Explore usul al-fiqh, the maqasid al-shariah, Islamic finance, inheritance, and contemporary fiqh issues.",                                      topics: [{ id: "fiqh2",        name: "Fiqh II",         lessons: 20 }] },
+  { id: 11, label: "Unit 11", name: "The Prayer (Salah)",        description: "From conditions and pillars to khushu' and Tahajjud — become completely grounded in the five daily prayers.",                                    topics: [{ id: "salah",        name: "Salah",           lessons: 20 }] },
+  { id: 12, label: "Unit 12", name: "Dhikr & Ramadan",          description: "Build a life of constant remembrance and master the rulings, spirit, and practices of fasting and Ramadan.",                                     topics: [{ id: "dhikr_ramadan",name: "Dhikr & Ramadan", lessons: 20 }] },
+  { id: 13, label: "Unit 13", name: "Islamic Creed",             description: "Ground yourself in the six pillars of iman, tawheed, shirk, the unseen world, and the Day of Judgement.",                                       topics: [{ id: "aqeedah",      name: "Aqeedah",         lessons: 20 }] },
+  { id: 14, label: "Unit 14", name: "Hadith Sciences",           description: "Learn to understand, cite, and apply authentic hadith — from the isnad system to the 40 Hadith of Imam al-Nawawi.",                             topics: [{ id: "hadith",       name: "Hadith",          lessons: 20 }] },
+  { id: 15, label: "Unit 15", name: "Islamic Character",         description: "Cultivate the inner virtues — sidq, sabr, shukr, tawakkul, ikhlas — that make you a true servant of Allah ﷻ.",                                 topics: [{ id: "character",    name: "Character",       lessons: 20 }] },
+  { id: 16, label: "Unit 16", name: "Quranic Tafseer",           description: "Explore the meaning of the Quran verse by verse — from Surah Al-Fatiha to Juz Amma — with classical scholarship.",                             topics: [{ id: "tafseer",      name: "Tafseer",         lessons: 20 }] },
+  { id: 17, label: "Unit 17", name: "Islamic Ethics & Society",  description: "Apply Islamic ethical principles to the family, community, environment, media, and your role as a citizen.",                                     topics: [{ id: "ethics",       name: "Ethics",          lessons: 20 }] },
+  { id: 18, label: "Unit 18", name: "Spiritual Development",     description: "Embark on the inner journey — tazkiyah al-nafs, muraqabah, the diseases of the heart, and the path to a sound heart.",                          topics: [{ id: "spirituality", name: "Spirituality",    lessons: 20 }] },
+  { id: 19, label: "Unit 19", name: "Zakat, Hajj & Finance",    description: "Master the worship of giving — zakat, sadaqah, halal finance — and the pillar of Hajj and Umrah.",                                              topics: [{ id: "finance_hajj", name: "Zakat & Hajj",    lessons: 20 }] },
+  { id: 20, label: "Unit 20", name: "Comprehensive Review",      description: "Bring all 19 journeys together with revision quizzes, comprehensive tests, and a final reflection on living Islam.",                             topics: [{ id: "review",       name: "Review",          lessons: 20 }] },
 ];
 
 const glassCard = {
@@ -150,24 +133,15 @@ function getNextHeartCountdown(storedHearts: number, rechargeAt?: string): strin
 // ─── Helper functions ─────────────────────────────────────────────────────────
 function flatLessonsForUnit(unitId: number): FlatLesson[] {
   const unit = UNIT_CONFIG.find((u) => u.id === unitId)!;
-  // Round-robin interleave topics so lessons mix instead of clustering by topic
-  const topicArrays = unit.topics.map((topic) => {
-    const tLessons = TOPIC_LESSONS[topic.id] ?? [];
-    return Array.from({ length: topic.lessons }, (_, i): FlatLesson => ({
-      topicId: topic.id,
-      topicName: topic.name,
-      lessonIndex: i,
-      title: tLessons[i]?.title ?? `Lesson ${i + 1}`,
-    }));
-  });
-  const result: FlatLesson[] = [];
-  const maxLen = Math.max(...topicArrays.map((a) => a.length), 0);
-  for (let i = 0; i < maxLen; i++) {
-    for (const arr of topicArrays) {
-      if (i < arr.length) result.push(arr[i]);
-    }
-  }
-  return result;
+  const topic = unit.topics[0];
+  const tLessons = TOPIC_LESSONS[topic.id] ?? [];
+  return Array.from({ length: topic.lessons }, (_, i): FlatLesson => ({
+    topicId: topic.id,
+    topicName: topic.name,
+    lessonIndex: i,
+    title: tLessons[i]?.title ?? `Lesson ${i + 1}`,
+    globalLevel: (unitId - 1) * 20 + i + 1,
+  }));
 }
 
 function getLessonStatus(
@@ -441,7 +415,9 @@ function HomeView({
   onRefillHearts: () => void;
 }) {
   const unitLabel = (s: string) => isChild ? s.replace(/Unit/g, "Journey") : s;
-  const [expanded, setExpanded] = useState<Record<number, boolean>>({ 1: true, 2: false, 3: false, 4: false, 5: false });
+  const [expanded, setExpanded] = useState<Record<number, boolean>>(
+    () => Object.fromEntries(UNIT_CONFIG.map((u, i) => [u.id, i === 0]))
+  );
   const toggle = (id: number) => setExpanded((p) => ({ ...p, [id]: !p[id] }));
   const [desktopActiveUnit, setDesktopActiveUnit] = useState(1);
   const lessonScrollRef = useRef<HTMLDivElement>(null);
@@ -752,7 +728,7 @@ function HomeView({
                             </div>
                             <div className="w-full">
                               <p className={`text-[8px] font-bold uppercase tracking-widest mb-0.5 truncate ${isDone ? "text-emerald-500" : isAvail ? "text-blue-500" : "text-slate-300"}`}>
-                                {lesson.topicName}
+                                Lvl {lesson.globalLevel}
                               </p>
                               <p className={`text-[11px] font-semibold leading-tight line-clamp-2 ${status === "locked" ? "text-slate-300" : "text-slate-700"}`}>
                                 {lesson.title}
@@ -963,7 +939,7 @@ function HomeView({
                                         )}
                                       </div>
                                       <p className={`text-[7px] font-bold uppercase tracking-widest mb-0.5 w-full text-center truncate ${isDone ? "text-emerald-500" : isAvail ? "text-blue-500" : "text-slate-300"}`}>
-                                        {lesson.topicName}
+                                        Lvl {lesson.globalLevel}
                                       </p>
                                       <p className={`text-[9px] font-semibold text-center leading-tight line-clamp-2 ${status === "locked" ? "text-slate-300" : "text-slate-600"}`}>
                                         {lesson.title}
@@ -1334,7 +1310,7 @@ function QuizView({
     <div className="min-h-screen">
       {/* Exit warning modal */}
       {showExitWarning && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}

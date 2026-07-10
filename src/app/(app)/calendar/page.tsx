@@ -661,14 +661,14 @@ export default function CalendarPage() {
       <AnimatePresence>
         {addEventOpen && (
           <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
             onClick={() => setAddEventOpen(false)}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="rounded-3xl p-6 max-w-sm w-full"
+              className="rounded-3xl p-6 max-w-sm w-full max-h-[90vh] overflow-y-auto"
               style={{
                 background: "rgba(255,255,255,0.97)",
                 backdropFilter: "blur(32px)",
@@ -746,14 +746,14 @@ export default function CalendarPage() {
       <AnimatePresence>
         {selectedEvent && (
           <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
             onClick={() => setSelectedEvent(null)}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="rounded-3xl p-6 max-w-sm w-full"
+              className="rounded-3xl p-6 max-w-sm w-full max-h-[90vh] overflow-y-auto"
               style={{
                 background: "rgba(255,255,255,0.97)",
                 backdropFilter: "blur(32px)",

@@ -274,7 +274,7 @@ function UpgradeModal({ onClose }: { onClose: () => void }) {
   const [annual, setAnnual] = useState(false);
   return (
     <div
-      className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
       onClick={onClose}
     >
       <motion.div
@@ -282,7 +282,7 @@ function UpgradeModal({ onClose }: { onClose: () => void }) {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 8 }}
         transition={{ duration: 0.2 }}
-        className="w-full max-w-lg rounded-3xl overflow-hidden"
+        className="w-full max-w-lg rounded-3xl overflow-hidden max-h-[90vh] overflow-y-auto"
         style={{
           background: "rgba(255,255,255,0.97)",
           backdropFilter: "blur(32px)",
@@ -1396,7 +1396,7 @@ export default function SettingsPage() {
       <AnimatePresence>
         {showDeleteConfirm && (
           <div
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
             onClick={() => !deleting && setShowDeleteConfirm(false)}
           >
             <motion.div
@@ -1404,7 +1404,7 @@ export default function SettingsPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 8 }}
               transition={{ duration: 0.2 }}
-              className="w-full max-w-sm rounded-3xl p-6"
+              className="w-full max-w-sm rounded-3xl p-6 max-h-[90vh] overflow-y-auto"
               style={{
                 background: "rgba(255,255,255,0.98)",
                 backdropFilter: "blur(32px)",
