@@ -13,7 +13,8 @@ import { useAuth } from "@/lib/auth-context";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getQuestionsForLesson, UNIT_EXAM_QUESTIONS, type Question } from "./questions";
-import { TOPIC_LESSONS } from "./lessonContent";
+import { getChildQuestionsForLesson } from "./childQuestions";
+import { TOPIC_LESSONS, CHILD_TOPIC_LESSONS } from "./lessonContent";
 import {
   calcLevel, calcStreakUpdate, buyStreakFreeze, repairStreak,
   GEMS_PER_LESSON, GEMS_PER_EXAM, FREEZE_COST, REPAIR_COST, MAX_FREEZES, REPAIR_WINDOW_DAYS,
@@ -163,16 +164,44 @@ function getLessonStatus(
   return prevAllDone ? "available" : "locked";
 }
 
-function buildUnits(learnProgress: Record<string, number>): Unit[] {
+const CHILD_UNIT_OVERRIDES: Record<number, { name: string; description: string }> = {
+  1:  { name: "The Amazing Quran",          description: "Learn about Allah's wonderful book, the Quran! Discover how it came to us and why it is the most special book in the world." },
+  2:  { name: "Our Daily Duas",             description: "Learn special prayers that the Prophet ﷺ taught us! These duas help us start the day, eat our food, and ask Allah for anything." },
+  3:  { name: "Being a Good Muslim",        description: "Learn how to be kind, honest, and respectful — just like the Prophet ﷺ showed us! Good character is a gift you give to Allah." },
+  4:  { name: "The Prophet Muhammad ﷺ",    description: "Discover the amazing life of our beloved Prophet ﷺ — from his birth in Makkah to building a community of faith and kindness." },
+  5:  { name: "Stories of the Prophets",   description: "Explore exciting stories of prophets like Ibrahim, Musa, Isa, and others — and the important lessons we can learn from their lives!" },
+  6:  { name: "Islamic History",            description: "Travel back in time and learn about the early Muslims, how Islam spread, and the amazing events in Islamic history." },
+  7:  { name: "Learning Arabic",            description: "Start learning the Arabic alphabet and basic words! Arabic is the language of the Quran — learning it brings you closer to Allah's words." },
+  8:  { name: "More Arabic",               description: "Keep growing your Arabic skills with more words and phrases — getting closer to reading and understanding the Quran on your own!" },
+  9:  { name: "Islamic Rules (Fiqh)",       description: "Learn the rules Allah gave us for living — like how to make wudu, how to pray, and what is halal and haram." },
+  10: { name: "More Islamic Rules",         description: "Continue learning about fasting, Hajj, and taking care of your community — all part of living a beautiful Muslim life!" },
+  11: { name: "How to Pray (Salah)",        description: "Master the five daily prayers step by step — the positions, the words, and why Salah is one of the pillars of Islam." },
+  12: { name: "Dhikr & Ramadan",            description: "Learn the beautiful words of dhikr (remembering Allah) and everything about Ramadan — the month of fasting and extra worship!" },
+  13: { name: "What We Believe (Aqeedah)", description: "Learn the foundations of Islamic belief — who Allah is, the angels, the prophets, the books, and the Day of Judgement." },
+  14: { name: "The Prophet's Sayings",      description: "Discover the sayings and actions of the Prophet ﷺ (hadith) and how scholars collected them so we can follow them today." },
+  15: { name: "Good Character",             description: "Explore what it means to have great character — honest, grateful, patient, humble, and kind — and why Allah loves these qualities." },
+  16: { name: "Understanding the Quran",    description: "Dive deeper into Quranic verses and learn how to understand what Allah is teaching us — called Tafseer!" },
+  17: { name: "Islamic Values",             description: "Learn the most important values in Islam — like fairness, caring for others, and making the world a better place." },
+  18: { name: "Feeling Close to Allah",     description: "Learn how to feel close to Allah every day through prayer, gratitude, and building a heart full of love for Him and His Prophet ﷺ." },
+  19: { name: "Money, Hajj & Big Moments",  description: "Learn Islamic rules about spending money wisely, the steps of Hajj, and other important events in the life of a Muslim." },
+  20: { name: "Big Review!",               description: "Review everything you have learned on your Jannatie journey and make sure you know the key lessons from all the topics!" },
+};
+
+function buildUnits(learnProgress: Record<string, number>, isChild = false): Unit[] {
   const allDone = (id: number) =>
     UNIT_CONFIG.find((u) => u.id === id)!.topics.every(
       (t) => (learnProgress[t.id] ?? 0) >= t.lessons
     );
-  return UNIT_CONFIG.map((cfg, i) => ({
-    ...cfg,
-    topics: cfg.topics.map((t) => ({ ...t })),
-    unlocked: i === 0 || allDone(UNIT_CONFIG[i - 1].id),
-  }));
+  return UNIT_CONFIG.map((cfg, i) => {
+    const childOverride = isChild ? CHILD_UNIT_OVERRIDES[cfg.id] : undefined;
+    return {
+      ...cfg,
+      ...(childOverride ?? {}),
+      label: isChild ? cfg.label.replace("Unit", "Journey") : cfg.label,
+      topics: cfg.topics.map((t) => ({ ...t })),
+      unlocked: i === 0 || allDone(UNIT_CONFIG[i - 1].id),
+    };
+  });
 }
 
 function findNextLesson(topicId: string, lessonIndex: number) {
@@ -1014,6 +1043,7 @@ function LessonIntroView({
   isPractice = false,
   hearts,
   isPremium,
+  isChild = false,
   onShowContent,
   setView,
 }: {
@@ -1022,11 +1052,15 @@ function LessonIntroView({
   isPractice?: boolean;
   hearts: number;
   isPremium: boolean;
+  isChild?: boolean;
   onShowContent: (topicId: string, lessonIndex: number) => void;
   setView: (v: LearnView) => void;
 }) {
-  const lesson = TOPIC_LESSONS[topicId]?.[lessonIndex];
-  const questions = getQuestionsForLesson(topicId, lessonIndex);
+  const lesson = (isChild ? CHILD_TOPIC_LESSONS[topicId] : null)?.[lessonIndex]
+    ?? TOPIC_LESSONS[topicId]?.[lessonIndex];
+  const questions = isChild
+    ? getChildQuestionsForLesson(topicId, lessonIndex)
+    : getQuestionsForLesson(topicId, lessonIndex);
   const Icon = TOPIC_ICONS[topicId] ?? BookOpen;
   const topicCfg = UNIT_CONFIG.flatMap((u) => u.topics).find((t) => t.id === topicId);
 
@@ -2162,7 +2196,7 @@ export default function LearnPage() {
   const profileHearts: number = (profile as unknown as { hearts?: number })?.hearts ?? HEARTS_MAX;
   const heartsRechargeAt: string | undefined = (profile as unknown as { heartsRechargeAt?: string })?.heartsRechargeAt;
   const currentHearts = computeCurrentHearts(profileHearts, heartsRechargeAt);
-  const units = buildUnits(learnProgress);
+  const units = buildUnits(learnProgress, isChild);
 
   function openContent(topicId: string, lessonIndex: number) {
     setContentModal({ topicId, lessonIndex });
@@ -2359,6 +2393,7 @@ export default function LearnPage() {
           isPractice={view.isPractice ?? false}
           hearts={currentHearts}
           isPremium={isPremium}
+          isChild={isChild}
           onShowContent={openContent}
           setView={setView}
         />
