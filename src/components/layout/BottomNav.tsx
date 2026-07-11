@@ -7,7 +7,7 @@ import {
   LayoutDashboard, CheckSquare, BookOpen, MessageCircle,
   MoreHorizontal, Trophy, Calendar, TrendingUp, Building2,
   Home, Settings, LogOut, X, UserPlus, Search, UserCheck, Users, BookMarked,
-  ShieldCheck, Clock,
+  ShieldCheck, Clock, Swords,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, getChildAge } from "@/lib/auth-context";
@@ -35,6 +35,7 @@ const coreTabsChild = [
 
 const moreItemsNormal = [
   { label: "Hifz Tracker", href: "/hifz", icon: BookMarked },
+  { label: "Dual Quiz", href: "/pvp", icon: Swords },
   { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
   { label: "Calendar", href: "/calendar", icon: Calendar },
   { label: "Progress", href: "/progress", icon: TrendingUp },

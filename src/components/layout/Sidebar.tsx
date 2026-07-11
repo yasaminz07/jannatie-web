@@ -7,7 +7,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   LayoutDashboard, CheckSquare, BookOpen, MessageCircle,
   Calendar, TrendingUp, Settings, Building2, LogOut, Trophy,
-  UserPlus, Search, UserCheck, X, Home, Users, BookMarked, ShieldCheck, Clock,
+  UserPlus, Search, UserCheck, X, Home, Users, BookMarked, ShieldCheck, Clock, Swords,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, getChildAge } from "@/lib/auth-context";
@@ -25,6 +25,7 @@ const navItemsNormal = [
   { label: "Habits", href: "/habits", icon: CheckSquare },
   { label: "Hifz Tracker", href: "/hifz", icon: BookMarked },
   { label: "Learn", href: "/learn", icon: BookOpen },
+  { label: "Dual Quiz", href: "/pvp", icon: Swords },
   { label: "AI Buddy", href: "/ai", icon: MessageCircle },
   { label: "Calendar", href: "/calendar", icon: Calendar },
   { label: "Progress", href: "/progress", icon: TrendingUp },
