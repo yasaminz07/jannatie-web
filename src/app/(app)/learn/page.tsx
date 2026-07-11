@@ -109,7 +109,8 @@ const glassCard = {
 const HEARTS_MAX = 5;
 const HEARTS_RECHARGE_MS = 5 * 60 * 60 * 1000; // 1 heart per 5 hours
 const HEARTS_REFILL_COST = 50; // gems to fully refill hearts
-const LESSON_PASS_THRESHOLD = 0.6; // 60% correct required to pass
+const LESSON_PASS_THRESHOLD = 0.6;    // 60% correct required to pass (non-premium)
+const PREMIUM_PASS_THRESHOLD = 0.8;   // 80% correct required to pass (premium)
 
 function computeCurrentHearts(storedHearts: number, rechargeAt?: string): number {
   if (storedHearts >= HEARTS_MAX) return HEARTS_MAX;
@@ -1162,20 +1163,25 @@ function QuizView({
     })
   );
 
-  const [qIndex, setQIndex] = useState(0);
+  // Two-phase quiz: original questions, then one retry pass for any wrong answers
+  const [phase, setPhase] = useState<"original" | "retry">("original");
+  const [oIdx, setOIdx] = useState(0);
+  const [retryList, setRetryList] = useState<typeof shuffledQuestions>([]);
+  const [rIdx, setRIdx] = useState(0);
+
   const [selected, setSelected] = useState<number | null>(null);
   const [showExp, setShowExp] = useState(false);
   const [xpEarned, setXpEarned] = useState(0);
-  const [correctCount, setCorrectCount] = useState(0);
   const [hearts, setHearts] = useState(isPractice ? HEARTS_MAX : initialHearts);
   const [showXpPop, setShowXpPop] = useState(false);
   const [shake, setShake] = useState(false);
   const [showPhonetics, setShowPhonetics] = useState(false);
   const [heartsEmpty, setHeartsEmpty] = useState(false);
   const [failedLesson, setFailedLesson] = useState(false);
-  const [wrongAnswers, setWrongAnswers] = useState<WrongAnswer[]>([]);
+  // Map of question text → WrongAnswer; deleted when answered correctly (even on retry)
+  const [wrongAnswerMap, setWrongAnswerMap] = useState<Map<string, WrongAnswer>>(() => new Map());
   const [showExitWarning, setShowExitWarning] = useState(false);
-  const hasStarted = qIndex > 0 || selected !== null;
+  const hasStarted = oIdx > 0 || selected !== null;
 
   // Warn on browser navigation (back button, refresh, closing tab) while mid-lesson
   useEffect(() => {
@@ -1189,7 +1195,10 @@ function QuizView({
 
   const lesson = TOPIC_LESSONS[topicId]?.[lessonIndex];
   const topicCfg = UNIT_CONFIG.flatMap((u) => u.topics).find((t) => t.id === topicId);
-  const q = shuffledQuestions[qIndex];
+  const q = phase === "original" ? shuffledQuestions[oIdx] : retryList[rIdx];
+  const progressPct = phase === "original"
+    ? (oIdx / shuffledQuestions.length) * 100
+    : 100;
 
   // Hearts-empty screen — force quit mid-lesson
   if (heartsEmpty) {
@@ -1223,9 +1232,11 @@ function QuizView({
     );
   }
 
-  // Failed mastery screen — shown after all questions if score < 60%
+  // Failed mastery screen — shown after all questions (including retries) if score still below threshold
   if (failedLesson) {
-    const pct = Math.round((correctCount / shuffledQuestions.length) * 100);
+    const finalCorrect = shuffledQuestions.length - wrongAnswerMap.size;
+    const pct = Math.round((finalCorrect / shuffledQuestions.length) * 100);
+    const threshold = (isPremium && !isPractice) ? PREMIUM_PASS_THRESHOLD : LESSON_PASS_THRESHOLD;
     return (
       <div className="min-h-screen flex items-center justify-center px-5">
         <div className="max-w-sm w-full text-center">
@@ -1237,10 +1248,10 @@ function QuizView({
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
             <h2 className="text-2xl font-bold text-slate-900 mb-2">Keep Studying!</h2>
             <p className="text-slate-400 text-sm mb-3 leading-relaxed">
-              You need at least 60% correct to master this lesson. Study the material and try again.
+              You need at least {Math.round(threshold * 100)}% correct to complete this lesson. Study the material and try again.
             </p>
             <p className="text-lg font-bold text-slate-700 mb-8">
-              Your score: {correctCount}/{shuffledQuestions.length} ({pct}%)
+              Your score: {finalCorrect}/{shuffledQuestions.length} ({pct}%)
             </p>
             <div className="space-y-2.5">
               <button
@@ -1269,17 +1280,24 @@ function QuizView({
     setSelected(idx);
     setShowExp(true);
     if (idx === q.correct) {
-      setCorrectCount((c) => c + 1);
+      // Correct — remove from wrong map (covers retry redemptions too)
+      setWrongAnswerMap(prev => { const n = new Map(prev); n.delete(q.question); return n; });
       setXpEarned((x) => x + q.xp);
       setShowXpPop(true);
       setTimeout(() => setShowXpPop(false), 850);
     } else {
-      setWrongAnswers((prev) => [...prev, {
-        question: q.question,
-        yourAnswer: q.options[idx],
-        correctAnswer: q.options[q.correct],
-      }]);
-      if (!isPractice && !isPremium) {
+      // Wrong — record/update in map
+      setWrongAnswerMap(prev => {
+        const n = new Map(prev);
+        n.set(q.question, { question: q.question, yourAnswer: q.options[idx], correctAnswer: q.options[q.correct] });
+        return n;
+      });
+      // Queue for retry only from original phase (prevents infinite loops)
+      if (phase === "original") {
+        setRetryList(prev => [...prev, q]);
+      }
+      // Hearts deducted only in original phase, non-practice, non-premium
+      if (phase === "original" && !isPractice && !isPremium) {
         const newHearts = Math.max(0, hearts - 1);
         setHearts(newHearts);
         if (newHearts === 0) setHeartsEmpty(true);
@@ -1289,17 +1307,39 @@ function QuizView({
     }
   }
 
-  function next() {
-    if (qIndex + 1 < shuffledQuestions.length) {
-      setQIndex((i) => i + 1);
-      setSelected(null);
-      setShowExp(false);
+  function finishLesson() {
+    const finalWrongAnswers = Array.from(wrongAnswerMap.values());
+    const correctQs = shuffledQuestions.length - finalWrongAnswers.length;
+    const threshold = (isPremium && !isPractice) ? PREMIUM_PASS_THRESHOLD : LESSON_PASS_THRESHOLD;
+    const passed = isPractice || (correctQs / shuffledQuestions.length) >= threshold;
+    if (passed) {
+      onComplete(xpEarned, hearts, finalWrongAnswers);
     } else {
-      const passed = isPractice || correctCount >= Math.ceil(shuffledQuestions.length * LESSON_PASS_THRESHOLD);
-      if (passed) {
-        onComplete(xpEarned, hearts, wrongAnswers);
+      setFailedLesson(true);
+    }
+  }
+
+  function next() {
+    setSelected(null);
+    setShowExp(false);
+    if (phase === "original") {
+      if (oIdx + 1 < shuffledQuestions.length) {
+        setOIdx(i => i + 1);
       } else {
-        setFailedLesson(true);
+        // End of original questions — go to retry pass or finish
+        if (retryList.length > 0) {
+          setPhase("retry");
+          setRIdx(0);
+        } else {
+          finishLesson();
+        }
+      }
+    } else {
+      // Retry phase — one pass only, no re-queuing
+      if (rIdx + 1 < retryList.length) {
+        setRIdx(i => i + 1);
+      } else {
+        finishLesson();
       }
     }
   }
@@ -1353,8 +1393,8 @@ function QuizView({
           <div className="flex-1">
             <div className="h-2.5 rounded-full overflow-hidden bg-slate-200">
               <motion.div
-                className="h-full bg-blue-500 rounded-full"
-                animate={{ width: `${((qIndex + 1) / shuffledQuestions.length) * 100}%` }}
+                className={`h-full rounded-full ${phase === "retry" ? "bg-amber-400" : "bg-blue-500"}`}
+                animate={{ width: `${progressPct}%` }}
                 transition={{ duration: 0.4 }}
               />
             </div>
@@ -1393,12 +1433,25 @@ function QuizView({
           )}
         </div>
 
-        <p className="text-xs text-slate-400 mb-6 pl-8">
-          {topicCfg?.name} · {lesson?.title} · Q{qIndex + 1} of {shuffledQuestions.length}
-        </p>
+        {phase === "retry" ? (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-2 mb-4 pl-8"
+          >
+            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold px-3 py-1.5 rounded-full">
+              <RotateCcw size={10} />
+              Review {retryList.length - rIdx} missed answer{retryList.length - rIdx !== 1 ? "s" : ""}
+            </div>
+          </motion.div>
+        ) : (
+          <p className="text-xs text-slate-400 mb-4 pl-8">
+            {topicCfg?.name} · {lesson?.title} · Q{oIdx + 1} of {shuffledQuestions.length}
+          </p>
+        )}
 
         <motion.div
-          key={qIndex}
+          key={phase === "original" ? oIdx : 1000 + rIdx}
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.22 }}
@@ -1546,7 +1599,13 @@ function QuizView({
               onClick={next}
               className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-colors text-sm"
             >
-              {qIndex + 1 < shuffledQuestions.length ? "Next question →" : "See results →"}
+              {phase === "retry"
+                ? (rIdx + 1 < retryList.length ? "Next question →" : "See results →")
+                : (oIdx + 1 < shuffledQuestions.length
+                  ? "Next question →"
+                  : retryList.length > 0
+                  ? "Review missed answers →"
+                  : "See results →")}
             </motion.button>
           )}
         </motion.div>
@@ -1581,8 +1640,8 @@ function RecapView({
   const isPerfect = wrongAnswers.length === 0;
   const correctCount = questions.length - wrongAnswers.length;
   const scorePct = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 100;
-  // Premium (non-practice) users must score 100% to unlock the next lesson
-  const canProceedToNext = !isPremium || isPractice || isPerfect;
+  // RecapView is only reached when the user passed; always allow proceed
+  const canProceedToNext = true;
 
   // Determine icon + title based on result
   let headingText: string;
@@ -1593,9 +1652,6 @@ function RecapView({
   } else if (isPremium && isPerfect) {
     headingText = "Perfect Score! 🎉";
     starColour = "text-amber-400 fill-amber-400";
-  } else if (isPremium && !isPerfect) {
-    headingText = "Almost There!";
-    starColour = "text-slate-300 fill-slate-300";
   } else {
     headingText = "Lesson Complete!";
     starColour = "text-amber-400 fill-amber-400";
@@ -1628,9 +1684,7 @@ function RecapView({
             {/* XP */}
             <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl" style={glassCard}>
               <Zap size={15} className="text-blue-500" />
-              <span className="font-bold text-slate-800 text-sm">
-                {(!isPremium || isPractice || isPerfect) ? `+${xpEarned} XP` : "0 XP"}
-              </span>
+              <span className="font-bold text-slate-800 text-sm">+{xpEarned} XP</span>
             </div>
 
             {/* Premium non-practice: show score percentage */}
@@ -1638,19 +1692,19 @@ function RecapView({
               <div
                 className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl"
                 style={
-                  isPerfect
+                  scorePct >= 80
                     ? { background: "rgba(209,250,229,0.70)", border: "1px solid rgba(110,231,183,0.55)" }
                     : { background: "rgba(254,226,226,0.65)", border: "1px solid rgba(252,165,165,0.50)" }
                 }
               >
-                {isPerfect
+                {scorePct >= 80
                   ? <Check size={14} className="text-emerald-500" />
                   : <X size={14} className="text-red-400" />
                 }
-                <span className={`font-bold text-sm ${isPerfect ? "text-emerald-700" : "text-red-600"}`}>
+                <span className={`font-bold text-sm ${scorePct >= 80 ? "text-emerald-700" : "text-red-600"}`}>
                   {correctCount}/{questions.length} correct
                 </span>
-                <span className={`text-xs font-semibold ${isPerfect ? "text-emerald-500" : "text-red-400"}`}>
+                <span className={`text-xs font-semibold ${scorePct >= 80 ? "text-emerald-500" : "text-red-400"}`}>
                   ({scorePct}%)
                 </span>
               </div>
@@ -1715,43 +1769,37 @@ function RecapView({
             </div>
           )}
 
-          {/* ── Premium: full marks required notice ── */}
-          {isPremium && !isPractice && !isPerfect && (
-            <div className="rounded-2xl p-4 mb-5" style={{ background: "rgba(239,246,255,0.90)", border: "1px solid rgba(147,197,253,0.60)" }}>
-              <div className="flex items-start gap-3">
-                <Crown size={15} className="text-amber-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-bold text-blue-700 mb-0.5">Premium — 100% required to advance</p>
-                  <p className="text-xs text-slate-500 leading-snug">
-                    Study the material above, then retake this lesson to get full marks before moving on.
-                  </p>
+          {/* ── Premium: passed banner ── */}
+          {isPremium && !isPractice && (
+            <div
+              className="rounded-2xl p-4 mb-5 text-center"
+              style={
+                isPerfect
+                  ? { background: "rgba(209,250,229,0.65)", border: "1px solid rgba(110,231,183,0.55)" }
+                  : { background: "rgba(239,246,255,0.90)", border: "1px solid rgba(147,197,253,0.60)" }
+              }
+            >
+              <Crown size={15} className={`${isPerfect ? "text-amber-400" : "text-blue-400"} mx-auto mb-1`} />
+              <p className={`text-xs font-bold ${isPerfect ? "text-emerald-700" : "text-blue-700"}`}>
+                {isPerfect
+                  ? "Perfect score — lesson unlocked, you may proceed!"
+                  : `Passed with ${scorePct}% — lesson unlocked, you may proceed!`}
+              </p>
+            </div>
+          )}
+
+          {/* ── Key takeaways ── */}
+          <div className="rounded-2xl p-5 mb-6 text-left" style={glassCard}>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Key takeaways</p>
+            <div className="space-y-3">
+              {questions.slice(0, 3).map((q, i) => (
+                <div key={i} className="flex items-start gap-2.5">
+                  <Check size={14} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-slate-600 leading-snug">{q.options[q.correct]}</p>
                 </div>
-              </div>
+              ))}
             </div>
-          )}
-
-          {/* ── Premium: perfect score banner ── */}
-          {isPremium && !isPractice && isPerfect && (
-            <div className="rounded-2xl p-4 mb-5 text-center" style={{ background: "rgba(209,250,229,0.65)", border: "1px solid rgba(110,231,183,0.55)" }}>
-              <Crown size={15} className="text-amber-400 mx-auto mb-1" />
-              <p className="text-xs font-bold text-emerald-700">Perfect score — lesson unlocked, you may proceed!</p>
-            </div>
-          )}
-
-          {/* ── Key takeaways (non-premium or perfect premium) ── */}
-          {(!isPremium || isPractice || isPerfect) && (
-            <div className="rounded-2xl p-5 mb-6 text-left" style={glassCard}>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Key takeaways</p>
-              <div className="space-y-3">
-                {questions.slice(0, 3).map((q, i) => (
-                  <div key={i} className="flex items-start gap-2.5">
-                    <Check size={14} className="text-emerald-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-slate-600 leading-snug">{q.options[q.correct]}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          </div>
 
           {/* ── Action buttons ── */}
           <div className="space-y-2.5">
@@ -2332,11 +2380,8 @@ export default function LearnPage() {
           onClose={() => setView({ kind: "home" })}
           onComplete={(xpEarned, heartsLeft, wrongAnswers) => {
             const isPracticeMode = view.isPractice ?? false;
-            const isPerfect = wrongAnswers.length === 0;
-            // Premium non-practice users: only save progress when they score 100%
-            if (!isPremium || isPracticeMode || isPerfect) {
-              handleLessonComplete(view.topicId, xpEarned, heartsLeft, isPracticeMode);
-            }
+            // finishLesson() already gates at ≥80% — onComplete only fires on pass
+            handleLessonComplete(view.topicId, xpEarned, heartsLeft, isPracticeMode);
             setView({
               kind: "recap",
               topicId: view.topicId,
