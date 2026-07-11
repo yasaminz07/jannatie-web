@@ -110,6 +110,27 @@ service cloud.firestore {
         (request.auth.uid == resource.data.fromUid || request.auth.uid == resource.data.toUid);
     }
 
+    // PvP matches — live multiplayer quiz battles
+    match /pvpMatches/{matchId} {
+      // Any logged-in user can read a match they're part of (or searching for one)
+      allow read: if request.auth != null;
+
+      // Creator must set themselves as p1
+      allow create: if request.auth != null
+        && request.resource.data.p1.uid == request.auth.uid;
+
+      // Either player can update (submit answers, join as p2, mark complete)
+      allow update: if request.auth != null && (
+        resource.data.p1.uid == request.auth.uid ||
+        resource.data.get('p2', {}).get('uid', null) == request.auth.uid
+      );
+
+      // Only P1 can delete (cancel a waiting match before anyone joins)
+      allow delete: if request.auth != null
+        && resource.data.p1.uid == request.auth.uid
+        && resource.data.status == "waiting";
+    }
+
     // Reports — normal users or community accounts reporting a comment on a
     // community event post. Only the reporter can create; only the admin can
     // read/moderate.
