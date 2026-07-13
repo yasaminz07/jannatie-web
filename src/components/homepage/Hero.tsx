@@ -21,140 +21,131 @@ export default function Hero() {
         }}
       />
 
-      {/* Centered copy */}
-      <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-16 text-center">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 lg:pt-36 pb-16 grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-12 items-center">
 
-        {/* Decorative floating frost orbs behind the headline */}
-        <div className="absolute inset-0 pointer-events-none hidden md:block" aria-hidden="true">
+        {/* ── Left — copy ──────────────────────────────────────────────────── */}
+        <div className="text-center lg:text-left">
+
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.0, duration: 1 }}
-            className="animate-float absolute left-4 top-44 w-14 h-14 rounded-full"
-            style={{
-              background: "rgba(255,255,255,0.45)",
-              backdropFilter: "blur(10px)",
-              WebkitBackdropFilter: "blur(10px)",
-              border: "1px solid rgba(255,255,255,0.8)",
-              boxShadow: "0 8px 24px rgba(99,102,241,0.12), inset 0 1px 0 rgba(255,255,255,0.9)",
-            }}
-          />
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.2, duration: 1 }}
-            className="animate-float-delayed absolute right-10 top-32 w-9 h-9 rounded-full"
-            style={{
-              background: "rgba(219,234,254,0.55)",
-              backdropFilter: "blur(8px)",
-              WebkitBackdropFilter: "blur(8px)",
-              border: "1px solid rgba(255,255,255,0.8)",
-              boxShadow: "0 6px 18px rgba(59,130,246,0.14), inset 0 1px 0 rgba(255,255,255,0.9)",
-            }}
-          />
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.4, duration: 1 }}
-            className="animate-float absolute right-24 bottom-40 w-6 h-6 rounded-full"
-            style={{
-              animationDelay: "3s",
-              background: "rgba(224,231,255,0.6)",
-              border: "1px solid rgba(255,255,255,0.85)",
-              boxShadow: "0 4px 14px rgba(99,102,241,0.14)",
-            }}
-          />
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45 }}
-          className="glass-sm inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-10"
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-sm font-medium text-slate-600">Trusted by Muslims across the UK, UAE and Malaysia</span>
-        </motion.div>
-
-        <h1 className="text-6xl sm:text-7xl lg:text-[5.5rem] font-black text-slate-900 leading-[0.95] tracking-tight mb-8">
-          <AnimatedTitle />
-        </h1>
-
-        <motion.p
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.18 }}
-          className="text-slate-500 text-xl leading-relaxed max-w-xl mx-auto mb-10"
-        >
-          Build Islamic habits that last, deepen your knowledge of the deen and get answers grounded in authentic scholarship. Everything you need, beautifully designed.
-        </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.26 }}
-          className="flex flex-col sm:flex-row justify-center gap-3 mb-10"
-        >
-          <motion.div
-            animate={{ scale: [1, 1.025, 1] }}
-            transition={{ repeat: Infinity, duration: 3.2, ease: "easeInOut", repeatDelay: 1.2 }}
-            className="inline-flex"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45 }}
+            className="glass-sm inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-8"
           >
-            <Link
-              href="/signup"
-              className="group relative inline-flex items-center justify-center gap-2 text-white font-semibold px-8 py-4 rounded-2xl text-base transition-all duration-300 hover:-translate-y-0.5 overflow-hidden"
-              style={{
-                background: "linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%)",
-                boxShadow: "0 10px 30px rgba(59,130,246,0.35), inset 0 1px 0 rgba(255,255,255,0.35)",
-              }}
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-sm font-medium text-slate-600">Your deen, beautifully organised</span>
+          </motion.div>
+
+          <h1 className="text-5xl sm:text-6xl xl:text-7xl font-black text-slate-900 leading-[0.98] tracking-tight mb-7">
+            <AnimatedTitle />
+          </h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="text-slate-500 text-lg sm:text-xl leading-relaxed max-w-xl mx-auto lg:mx-0 mb-9"
+          >
+            Build Islamic habits that last, deepen your knowledge of the deen and get
+            answers grounded in authentic scholarship — all in one place.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.62 }}
+            className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-4 mb-9"
+          >
+            <motion.div
+              animate={{ scale: [1, 1.025, 1] }}
+              transition={{ repeat: Infinity, duration: 3.2, ease: "easeInOut", repeatDelay: 1.2 }}
+              className="inline-flex"
             >
-              {/* Shine sweep on hover */}
-              <span
-                className="absolute inset-y-0 -left-1/2 w-1/3 -skew-x-12 opacity-0 group-hover:opacity-100 group-hover:translate-x-[320%] transition-all duration-700 pointer-events-none"
-                style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)" }}
-              />
-              Start for free
-              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+              <Link
+                href="/signup"
+                className="group relative inline-flex items-center justify-center gap-2 text-white font-semibold px-8 py-4 rounded-2xl text-base transition-all duration-300 hover:-translate-y-0.5 overflow-hidden"
+                style={{
+                  background: "linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%)",
+                  boxShadow: "0 10px 30px rgba(59,130,246,0.35), inset 0 1px 0 rgba(255,255,255,0.35)",
+                }}
+              >
+                {/* Shine sweep on hover */}
+                <span
+                  className="absolute inset-y-0 -left-1/2 w-1/3 -skew-x-12 opacity-0 group-hover:opacity-100 group-hover:translate-x-[320%] transition-all duration-700 pointer-events-none"
+                  style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)" }}
+                />
+                Start for free
+                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </motion.div>
+
+            <Link
+              href="/features"
+              className="group inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 font-semibold px-4 py-4 text-base transition-colors"
+            >
+              See features
+              <ArrowRight size={15} className="text-blue-500 group-hover:translate-x-1 transition-transform" />
             </Link>
           </motion.div>
-          <Link
-            href="/features"
-            className="glass-card glass-card-hover inline-flex items-center justify-center text-slate-700 font-medium px-8 py-4 rounded-2xl text-base"
-          >
-            See features
-          </Link>
-        </motion.div>
 
+          {/* Checkmarks */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.75 }}
+            className="flex flex-col items-center lg:items-start gap-2 mb-8"
+          >
+            {[
+              "Free to start, no card needed",
+              "Every hadith is cited and verified",
+              "Authentic Sunni scholarship only",
+            ].map((t) => (
+              <span key={t} className="flex items-center gap-2 text-slate-400 text-sm">
+                <CheckCircle2 size={14} className="text-blue-500 flex-shrink-0" />
+                {t}
+              </span>
+            ))}
+          </motion.div>
+
+          {/* Trust strip */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.9 }}
+            className="flex items-center justify-center lg:justify-start gap-3"
+          >
+            <div className="flex -space-x-2.5">
+              {[
+                { i: "A", bg: "linear-gradient(135deg, #3b82f6, #2563eb)" },
+                { i: "F", bg: "linear-gradient(135deg, #8b5cf6, #6d28d9)" },
+                { i: "Y", bg: "linear-gradient(135deg, #10b981, #047857)" },
+                { i: "Z", bg: "linear-gradient(135deg, #f59e0b, #d97706)" },
+              ].map(({ i, bg }) => (
+                <div key={i}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold ring-2 ring-white"
+                  style={{ background: bg }}>
+                  {i}
+                </div>
+              ))}
+            </div>
+            <p className="text-sm text-slate-400">
+              Trusted by <span className="font-bold text-slate-600">10,000+</span> Muslims across the UK, UAE &amp; Malaysia
+            </p>
+          </motion.div>
+        </div>
+
+        {/* ── Right — dashboard preview ─────────────────────────────────────── */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.36 }}
-          className="flex flex-wrap justify-center gap-6"
+          initial={{ opacity: 0, y: 40, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.9, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
+          className="relative"
         >
-          {[
-            "Free to start, no card needed",
-            "Every hadith is cited and verified",
-            "Authentic Sunni scholarship only",
-          ].map((t) => (
-            <span key={t} className="flex items-center gap-1.5 text-slate-400 text-sm">
-              <CheckCircle2 size={14} className="text-blue-500 flex-shrink-0" />
-              {t}
-            </span>
-          ))}
+          <TiltPreview>
+            <DashboardPreview />
+          </TiltPreview>
         </motion.div>
       </div>
-
-      {/* Wide dashboard preview with 3D tilt */}
-      <motion.div
-        initial={{ opacity: 0, y: 56 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.9, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
-        className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-8"
-      >
-        <TiltPreview>
-          <DashboardPreview />
-        </TiltPreview>
-      </motion.div>
     </section>
   );
 }
@@ -219,7 +210,7 @@ function AnimatedTitle() {
 }
 
 /* Wraps children in a perspective container that tilts toward the cursor,
-   with floating glass chips orbiting the card */
+   with floating glass chips pinned to the card corners */
 function TiltPreview({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
@@ -246,42 +237,43 @@ function TiltPreview({ children }: { children: React.ReactNode }) {
   return (
     <div ref={ref} onMouseMove={onMove} onMouseLeave={onLeave} style={{ perspective: 1400 }} className="relative">
 
-      {/* Floating glass chips — desktop only */}
+      {/* Floating glass chips — pinned to the card corners, over chrome/padding
+          rather than content */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.2, duration: 0.6 }}
-        className="animate-float hidden xl:flex absolute -left-24 top-14 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-3"
+        transition={{ delay: 1.3, duration: 0.6 }}
+        className="animate-float hidden sm:flex absolute -top-5 -left-4 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-2.5"
       >
-        <Flame size={18} className="text-orange-500" />
+        <Flame size={17} className="text-orange-500" />
         <div>
           <p className="text-sm font-black text-slate-900 leading-none">22 days</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">current streak</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">current streak</p>
         </div>
       </motion.div>
 
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.4, duration: 0.6 }}
-        className="animate-float-delayed hidden xl:flex absolute -right-24 top-36 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-3"
+        transition={{ delay: 1.5, duration: 0.6 }}
+        className="animate-float-delayed hidden sm:flex absolute -bottom-5 -right-4 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-2.5"
       >
-        <BellRing size={18} className="text-blue-500" />
+        <BellRing size={17} className="text-blue-500" />
         <div>
           <p className="text-sm font-black text-slate-900 leading-none">Dhuhr · 42 min</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">next prayer</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">next prayer</p>
         </div>
       </motion.div>
 
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.6, duration: 0.6 }}
-        className="animate-float hidden xl:flex absolute -left-20 bottom-20 z-10 glass-card items-center gap-2 rounded-2xl px-4 py-2.5"
+        transition={{ delay: 1.7, duration: 0.6 }}
+        className="animate-float hidden xl:flex absolute top-1/2 -left-8 z-10 glass-card items-center gap-2 rounded-2xl px-3.5 py-2"
         style={{ animationDelay: "4s" }}
       >
-        <Sparkles size={15} className="text-indigo-500" />
-        <p className="text-sm font-bold text-indigo-600">+25 XP earned</p>
+        <Sparkles size={14} className="text-indigo-500" />
+        <p className="text-xs font-bold text-indigo-600">+25 XP earned</p>
       </motion.div>
 
       <motion.div style={{ rotateX: springX, rotateY: springY, transformStyle: "preserve-3d" }}>
@@ -323,16 +315,16 @@ function DashboardPreview() {
         </div>
 
         {/* Dashboard body */}
-        <div className="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div className="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
 
           {/* Main area */}
-          <div className="sm:col-span-2 space-y-5">
+          <div className="sm:col-span-2 space-y-4">
 
             {/* Greeting + level */}
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-slate-400 text-xs mb-0.5">Monday, 15 June 2026</p>
-                <p className="text-slate-900 font-bold text-xl">Good morning</p>
+                <p className="text-slate-900 font-bold text-lg">Good morning</p>
               </div>
               <div className="text-right">
                 <span className="inline-block text-blue-600 text-xs font-semibold px-3 py-1 rounded-full border border-blue-200/60"
@@ -341,7 +333,7 @@ function DashboardPreview() {
             </div>
 
             {/* XP bar */}
-            <div className="glass-sm rounded-2xl p-4">
+            <div className="glass-sm rounded-2xl p-3.5">
               <div className="flex justify-between text-xs mb-2">
                 <span className="text-slate-600 font-medium">2,450 XP</span>
                 <span className="text-slate-400">550 XP to Level 13</span>
@@ -358,7 +350,7 @@ function DashboardPreview() {
 
             {/* Habit list */}
             <div>
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-2.5">
                 <p className="text-slate-900 font-semibold text-sm">Today&apos;s habits</p>
                 <p className="text-blue-600 text-xs font-bold">3 / 4</p>
               </div>
@@ -369,7 +361,7 @@ function DashboardPreview() {
                     initial={{ opacity: 0, x: -12 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.7 + i * 0.1 }}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl border"
+                    className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border"
                     style={h.done
                       ? { background: "rgba(219,234,254,0.55)", borderColor: "rgba(191,219,254,0.6)" }
                       : { background: "rgba(255,255,255,0.40)", borderColor: "rgba(255,255,255,0.65)" }}
@@ -396,21 +388,21 @@ function DashboardPreview() {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-4">
+          <div className="space-y-3">
 
             {/* Prayer */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8 }}
-              className="rounded-2xl p-5 text-white"
+              className="rounded-2xl p-4 text-white"
               style={{
                 background: "linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%)",
                 boxShadow: "0 12px 32px rgba(59,130,246,0.35), inset 0 1px 0 rgba(255,255,255,0.30)",
               }}
             >
-              <p className="text-blue-100 text-xs font-medium mb-2">Next prayer</p>
-              <p className="font-black text-2xl mb-0.5">Dhuhr</p>
+              <p className="text-blue-100 text-xs font-medium mb-1.5">Next prayer</p>
+              <p className="font-black text-xl mb-0.5">Dhuhr</p>
               <p className="text-blue-100 text-sm">1:15 PM · in 42 min</p>
               <div className="mt-3 h-1 bg-white/25 rounded-full overflow-hidden">
                 <motion.div
@@ -427,12 +419,12 @@ function DashboardPreview() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.9 }}
-              className="glass-sm rounded-2xl p-5"
+              className="glass-sm rounded-2xl p-4"
             >
               <p className="text-orange-400 text-xs font-medium mb-1">Current streak</p>
               <div className="flex items-end gap-2">
-                <p className="font-black text-3xl text-slate-900">22</p>
-                <Flame size={22} className="text-orange-500 mb-0.5" />
+                <p className="font-black text-2xl text-slate-900">22</p>
+                <Flame size={20} className="text-orange-500 mb-0.5" />
               </div>
               <p className="text-slate-500 text-xs">days in a row</p>
             </motion.div>
@@ -442,9 +434,9 @@ function DashboardPreview() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.0 }}
-              className="glass-sm rounded-2xl p-4"
+              className="glass-sm rounded-2xl p-3.5"
             >
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-1.5">
                 <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
                   <span className="text-white text-[8px] font-bold">J</span>
                 </div>
