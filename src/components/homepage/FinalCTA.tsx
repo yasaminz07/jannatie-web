@@ -47,22 +47,34 @@ export default function FinalCTA() {
   return (
     <section className="relative mt-20">
 
-      {/* Organic curve out of the off-white page into the dark block —
-          the dark then runs seamlessly into the footer (same bg, no gap) */}
+      {/* Organic wiggly curve out of the off-white page into the dark block —
+          asymmetric and diagonal like Duolingo's, then the dark runs
+          seamlessly into the footer (same bg, no gap) */}
       <svg
-        viewBox="0 0 1440 120"
+        viewBox="0 0 1440 160"
         preserveAspectRatio="none"
-        className="block w-full h-[70px] sm:h-[110px]"
+        className="block w-full h-[90px] sm:h-[140px]"
         aria-hidden="true"
       >
-        <path d="M0,0 C480,110 960,110 1440,0 L1440,121 L0,121 Z" fill="#0f172a" />
+        <path
+          d="M0,70 C90,45 180,32 280,38 C420,47 520,130 700,132 C860,133 920,55 1040,45 C1130,38 1200,68 1290,55 C1350,46 1400,28 1440,22 L1440,161 L0,161 Z"
+          fill="#0f172a"
+        />
       </svg>
 
       <div
         ref={darkRef}
         onMouseMove={onMouseMove}
         className="relative overflow-hidden pt-16 pb-24 -mt-px"
-        style={{ background: "#0f172a" }}
+        style={{
+          // Huge soft radial washes baked into the base colour — no hard
+          // blur-circle edges, and the top edge stays exactly #0f172a so it
+          // meets the SVG curve without a seam
+          background: `
+            radial-gradient(80rem 36rem at 18% 34%, rgba(37, 64, 143, 0.32) 0%, transparent 58%),
+            radial-gradient(64rem 30rem at 84% 46%, rgba(72, 61, 165, 0.26) 0%, transparent 58%),
+            #0f172a`,
+        }}
       >
 
         {/* Decorative layer — fades out before the footer so no seam shows */}
@@ -73,9 +85,6 @@ export default function FinalCTA() {
             WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 72%, transparent 100%)",
           }}
         >
-          {/* Soft ambient glows */}
-          <div className="animate-aurora-a absolute -top-24 left-[10%] w-[26rem] h-[26rem] rounded-full bg-blue-500/15 blur-[90px]" />
-          <div className="animate-aurora-b absolute top-[30%] right-[8%] w-[24rem] h-[24rem] rounded-full bg-indigo-500/15 blur-[90px]" />
 
           {/* Dot grid */}
           <div
