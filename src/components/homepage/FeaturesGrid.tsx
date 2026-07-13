@@ -87,7 +87,7 @@ export default function FeaturesGrid() {
   const cardInView = useInView(cardRef, { amount: 0.4 });
 
   return (
-    <section className="py-28 bg-white">
+    <section className="relative py-28">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -112,7 +112,14 @@ export default function FeaturesGrid() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="lg:row-span-2 bg-slate-900 rounded-3xl p-8 flex flex-col"
+            className="lg:row-span-2 rounded-3xl p-8 flex flex-col"
+            style={{
+              background: "rgba(15,23,42,0.90)",
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)",
+              border: "1px solid rgba(255,255,255,0.10)",
+              boxShadow: "0 24px 60px rgba(15,23,42,0.28), inset 0 1px 0 rgba(255,255,255,0.10)",
+            }}
           >
             <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center mb-5 flex-shrink-0">
               <MessageCircle size={18} className="text-white" />
@@ -135,7 +142,7 @@ export default function FeaturesGrid() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.45, delay: i * 0.08 }}
-              className="bg-slate-50 hover:bg-white hover:shadow-md transition-all duration-300 rounded-3xl p-7 group"
+              className="glass-card glass-card-hover rounded-3xl p-7 group"
             >
               <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center mb-4`}>
                 <Icon size={18} className={iconColor} />

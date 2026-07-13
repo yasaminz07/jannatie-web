@@ -13,7 +13,7 @@ const points = [
 
 export default function CommunitySpotlight() {
   return (
-    <section className="py-28 bg-slate-50">
+    <section className="relative py-28">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
 
@@ -74,7 +74,7 @@ export default function CommunitySpotlight() {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.1 }}
           >
-            <div className="bg-white rounded-3xl overflow-hidden shadow-xl shadow-slate-200/80 ring-1 ring-slate-100 p-6">
+            <div className="glass-deep rounded-3xl overflow-hidden p-6">
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-11 h-11 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
                   CM
@@ -88,7 +88,7 @@ export default function CommunitySpotlight() {
                 </div>
               </div>
 
-              <div className="bg-slate-50 rounded-2xl p-5">
+              <div className="glass-sm rounded-2xl p-5">
                 <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-900 mb-1">
                   <CakeSlice size={14} className="text-blue-500" /> Charity Bake Sale
                 </p>

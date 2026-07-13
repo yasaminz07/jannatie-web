@@ -43,7 +43,7 @@ export default function PricingPreview() {
   const [annual, setAnnual] = useState(false);
 
   return (
-    <section className="py-28 bg-slate-50">
+    <section className="relative py-28">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -55,7 +55,7 @@ export default function PricingPreview() {
           <h2 className="text-4xl sm:text-5xl font-black text-slate-900 mb-4">Simple, honest pricing.</h2>
           <p className="text-slate-500 text-lg mb-8">Start free. Upgrade when you&apos;re ready.</p>
 
-          <div className="inline-flex items-center gap-1 bg-white rounded-full p-1 shadow-sm">
+          <div className="glass-card inline-flex items-center gap-1 rounded-full p-1">
             <button
               onClick={() => setAnnual(false)}
               className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${!annual ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-700"}`}
@@ -80,11 +80,12 @@ export default function PricingPreview() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
-              className={`relative rounded-2xl p-8 ${
-                highlight
-                  ? "bg-blue-600 shadow-lg shadow-blue-200"
-                  : "bg-white shadow-sm"
-              }`}
+              className={`relative rounded-3xl p-8 ${highlight ? "" : "glass-card glass-card-hover"}`}
+              style={highlight ? {
+                background: "linear-gradient(150deg, #3b82f6 0%, #4f46e5 100%)",
+                boxShadow: "0 24px 60px rgba(59,130,246,0.35), inset 0 1px 0 rgba(255,255,255,0.35)",
+                border: "1px solid rgba(255,255,255,0.25)",
+              } : undefined}
             >
               {popular && (
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-bold px-4 py-1.5 rounded-full">

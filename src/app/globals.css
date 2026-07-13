@@ -84,6 +84,48 @@
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
   }
+
+  /* iOS-style frosted card for the landing page — specular top edge + saturated blur */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    box-shadow:
+      0 4px 24px rgba(15, 23, 42, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.90);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+  }
+
+  .glass-card-hover:hover {
+    transform: translateY(-4px);
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow:
+      0 18px 44px rgba(15, 23, 42, 0.10),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  }
+
+  /* Heavy frost for hero-scale surfaces */
+  .glass-deep {
+    background: rgba(255, 255, 255, 0.60);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow:
+      0 24px 70px rgba(15, 23, 42, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  }
+
+  /* Dark frosted glass (final CTA panel) */
+  .glass-dark {
+    background: rgba(15, 23, 42, 0.72);
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow:
+      0 24px 70px rgba(15, 23, 42, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
 }
 
 @layer utilities {
@@ -152,6 +194,32 @@
 .animate-float-delayed {
   animation: float-delayed 10s ease-in-out infinite;
   animation-delay: 2s;
+}
+
+/* Aurora orbs — slow drifting colour blobs behind the landing page */
+@keyframes aurora-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(50px, -40px) scale(1.12); }
+  66%      { transform: translate(-35px, 25px) scale(0.94); }
+}
+@keyframes aurora-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40%      { transform: translate(-60px, 35px) scale(1.08); }
+  75%      { transform: translate(40px, -20px) scale(0.96); }
+}
+@keyframes aurora-c {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(30px, 45px) scale(1.15); }
+}
+.animate-aurora-a { animation: aurora-a 22s ease-in-out infinite; }
+.animate-aurora-b { animation: aurora-b 26s ease-in-out infinite; }
+.animate-aurora-c { animation: aurora-c 30s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-aurora-a, .animate-aurora-b, .animate-aurora-c,
+  .animate-float, .animate-float-delayed, .animate-ticker {
+    animation: none;
+  }
 }
 
 /* Pulse dot for AI typing indicator */

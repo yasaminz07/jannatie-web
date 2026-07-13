@@ -6,23 +6,25 @@ import { ArrowRight } from "lucide-react";
 
 export default function FinalCTA() {
   return (
-    <section className="py-32 bg-slate-900 relative overflow-hidden">
+    <section className="relative py-24 px-4 sm:px-6 lg:px-8">
+      <div className="glass-dark relative max-w-5xl mx-auto rounded-[2.5rem] overflow-hidden py-24 px-6">
 
-      {/* Subtle radial glow */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] rounded-full bg-blue-600/15 blur-[100px]" />
-      </div>
+        {/* Radial glows inside the panel */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="animate-aurora-a absolute -top-24 -left-16 w-[26rem] h-[26rem] rounded-full bg-blue-500/20 blur-[90px]" />
+          <div className="animate-aurora-b absolute -bottom-32 -right-10 w-[24rem] h-[24rem] rounded-full bg-indigo-500/20 blur-[90px]" />
+        </div>
 
-      {/* Dot grid */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)",
-          backgroundSize: "32px 32px",
-        }}
-      />
+        {/* Dot grid */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
+        />
 
-      <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <div className="relative max-w-3xl mx-auto text-center">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -60,8 +62,9 @@ export default function FinalCTA() {
             </Link>
           </div>
 
-          <p className="text-slate-600 text-sm">No credit card. Cancel anytime.</p>
+          <p className="text-slate-500 text-sm">No credit card. Cancel anytime.</p>
         </motion.div>
+        </div>
       </div>
     </section>
   );

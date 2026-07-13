@@ -1,12 +1,13 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useRef } from "react";
+import { motion, useMotionValue, useSpring, useReducedMotion } from "framer-motion";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Flame } from "lucide-react";
+import { ArrowRight, CheckCircle2, Flame, BellRing, Sparkles } from "lucide-react";
 
 export default function Hero() {
   return (
-    <section className="relative bg-white overflow-hidden">
+    <section className="relative overflow-hidden">
 
       {/* Subtle dot grid */}
       <div
@@ -14,12 +15,11 @@ export default function Hero() {
         style={{
           backgroundImage: "radial-gradient(circle, #cbd5e1 1px, transparent 1px)",
           backgroundSize: "32px 32px",
-          opacity: 0.35,
+          opacity: 0.25,
+          maskImage: "linear-gradient(to bottom, black 0%, transparent 70%)",
+          WebkitMaskImage: "linear-gradient(to bottom, black 0%, transparent 70%)",
         }}
       />
-
-      {/* Top gradient wash */}
-      <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-blue-50/60 to-transparent pointer-events-none" />
 
       {/* Centered copy */}
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-16 text-center">
@@ -28,9 +28,9 @@ export default function Hero() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
-          className="inline-flex items-center gap-2 bg-white border border-slate-200 shadow-sm rounded-full px-4 py-1.5 mb-10"
+          className="glass-sm inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-10"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           <span className="text-sm font-medium text-slate-600">Trusted by Muslims across the UK, UAE and Malaysia</span>
         </motion.div>
 
@@ -43,7 +43,7 @@ export default function Hero() {
           Grow closer
           <br />
           to{" "}
-          <span className="italic text-indigo-500">Allah</span>{" "}
+          <span className="italic text-gradient">Allah</span>{" "}
           <span className="arabic text-indigo-500 not-italic" style={{ fontSize: "68%" }}>ﷻ</span>
           <br />
           every day.
@@ -66,14 +66,18 @@ export default function Hero() {
         >
           <Link
             href="/signup"
-            className="group inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-4 rounded-xl text-base transition-all duration-200 shadow-lg shadow-blue-600/20"
+            className="group relative inline-flex items-center justify-center gap-2 text-white font-semibold px-8 py-4 rounded-2xl text-base transition-all duration-300 hover:-translate-y-0.5 overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%)",
+              boxShadow: "0 10px 30px rgba(59,130,246,0.35), inset 0 1px 0 rgba(255,255,255,0.35)",
+            }}
           >
             Start for free
             <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
           </Link>
           <Link
             href="/features"
-            className="inline-flex items-center justify-center bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-medium px-8 py-4 rounded-xl text-base transition-all duration-200"
+            className="glass-card glass-card-hover inline-flex items-center justify-center text-slate-700 font-medium px-8 py-4 rounded-2xl text-base"
           >
             See features
           </Link>
@@ -98,16 +102,91 @@ export default function Hero() {
         </motion.div>
       </div>
 
-      {/* Wide dashboard preview */}
+      {/* Wide dashboard preview with 3D tilt */}
       <motion.div
         initial={{ opacity: 0, y: 56 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.9, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
-        className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-0"
+        className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-8"
       >
-        <DashboardPreview />
+        <TiltPreview>
+          <DashboardPreview />
+        </TiltPreview>
       </motion.div>
     </section>
+  );
+}
+
+/* Wraps children in a perspective container that tilts toward the cursor,
+   with floating glass chips orbiting the card */
+function TiltPreview({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
+
+  const rotateX = useMotionValue(0);
+  const rotateY = useMotionValue(0);
+  const springX = useSpring(rotateX, { stiffness: 140, damping: 18 });
+  const springY = useSpring(rotateY, { stiffness: 140, damping: 18 });
+
+  function onMove(e: React.MouseEvent) {
+    if (reduceMotion || !ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width - 0.5;  // -0.5 … 0.5
+    const py = (e.clientY - rect.top) / rect.height - 0.5;
+    rotateY.set(px * 7);
+    rotateX.set(-py * 7);
+  }
+
+  function onLeave() {
+    rotateX.set(0);
+    rotateY.set(0);
+  }
+
+  return (
+    <div ref={ref} onMouseMove={onMove} onMouseLeave={onLeave} style={{ perspective: 1400 }} className="relative">
+
+      {/* Floating glass chips — desktop only */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.2, duration: 0.6 }}
+        className="animate-float hidden lg:flex absolute -left-10 top-16 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-3"
+      >
+        <Flame size={18} className="text-orange-500" />
+        <div>
+          <p className="text-sm font-black text-slate-900 leading-none">22 days</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">current streak</p>
+        </div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.4, duration: 0.6 }}
+        className="animate-float-delayed hidden lg:flex absolute -right-12 top-32 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-3"
+      >
+        <BellRing size={18} className="text-blue-500" />
+        <div>
+          <p className="text-sm font-black text-slate-900 leading-none">Dhuhr · 42 min</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">next prayer</p>
+        </div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.6, duration: 0.6 }}
+        className="animate-float hidden lg:flex absolute -right-6 bottom-24 z-10 glass-card items-center gap-2 rounded-2xl px-4 py-2.5"
+        style={{ animationDelay: "4s" }}
+      >
+        <Sparkles size={15} className="text-indigo-500" />
+        <p className="text-sm font-bold text-indigo-600">+25 XP earned</p>
+      </motion.div>
+
+      <motion.div style={{ rotateX: springX, rotateY: springY, transformStyle: "preserve-3d" }}>
+        {children}
+      </motion.div>
+    </div>
   );
 }
 
@@ -122,19 +201,21 @@ function DashboardPreview() {
   return (
     <div className="relative">
       {/* Glow behind card */}
-      <div className="absolute -bottom-4 inset-x-16 h-16 bg-blue-300/20 blur-2xl rounded-full pointer-events-none" />
+      <div className="absolute -bottom-6 inset-x-16 h-20 bg-blue-400/25 blur-3xl rounded-full pointer-events-none" />
 
-      <div className="bg-white rounded-2xl shadow-2xl shadow-slate-300/40 ring-1 ring-slate-100 overflow-hidden">
+      <div className="glass-deep rounded-3xl overflow-hidden">
 
         {/* Browser chrome */}
-        <div className="bg-slate-50 border-b border-slate-100 px-5 py-3 flex items-center gap-3">
+        <div className="px-5 py-3 flex items-center gap-3 border-b border-white/60"
+          style={{ background: "rgba(255,255,255,0.35)" }}>
           <div className="flex gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-slate-300" />
-            <div className="w-3 h-3 rounded-full bg-slate-300" />
-            <div className="w-3 h-3 rounded-full bg-slate-300" />
+            <div className="w-3 h-3 rounded-full bg-red-400/80" />
+            <div className="w-3 h-3 rounded-full bg-amber-400/80" />
+            <div className="w-3 h-3 rounded-full bg-emerald-400/80" />
           </div>
           <div className="flex-1 mx-4">
-            <div className="bg-white rounded-md px-3 py-1 text-xs text-slate-400 border border-slate-100 text-center max-w-xs mx-auto">
+            <div className="rounded-lg px-3 py-1 text-xs text-slate-500 text-center max-w-xs mx-auto border border-white/70"
+              style={{ background: "rgba(255,255,255,0.55)" }}>
               jannatie.com/dashboard
             </div>
           </div>
@@ -153,22 +234,23 @@ function DashboardPreview() {
                 <p className="text-slate-900 font-bold text-xl">Good morning</p>
               </div>
               <div className="text-right">
-                <span className="inline-block bg-blue-50 text-blue-600 text-xs font-semibold px-3 py-1 rounded-full">Level 12</span>
+                <span className="inline-block text-blue-600 text-xs font-semibold px-3 py-1 rounded-full border border-blue-200/60"
+                  style={{ background: "rgba(219,234,254,0.6)" }}>Level 12</span>
               </div>
             </div>
 
             {/* XP bar */}
-            <div className="bg-slate-50 rounded-xl p-4">
+            <div className="glass-sm rounded-2xl p-4">
               <div className="flex justify-between text-xs mb-2">
                 <span className="text-slate-600 font-medium">2,450 XP</span>
                 <span className="text-slate-400">550 XP to Level 13</span>
               </div>
-              <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div className="h-2 bg-slate-200/70 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: "82%" }}
                   transition={{ duration: 1.6, delay: 1.0, ease: "easeOut" }}
-                  className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full"
+                  className="h-full bg-gradient-to-r from-blue-500 to-indigo-400 rounded-full"
                 />
               </div>
             </div>
@@ -186,9 +268,10 @@ function DashboardPreview() {
                     initial={{ opacity: 0, x: -12 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.7 + i * 0.1 }}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
-                      h.done ? "bg-blue-50" : "bg-slate-50"
-                    }`}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl border"
+                    style={h.done
+                      ? { background: "rgba(219,234,254,0.55)", borderColor: "rgba(191,219,254,0.6)" }
+                      : { background: "rgba(255,255,255,0.40)", borderColor: "rgba(255,255,255,0.65)" }}
                   >
                     <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${
                       h.done ? "bg-blue-500" : "border-2 border-slate-300"
@@ -219,17 +302,21 @@ function DashboardPreview() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8 }}
-              className="bg-blue-600 rounded-2xl p-5 text-white"
+              className="rounded-2xl p-5 text-white"
+              style={{
+                background: "linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%)",
+                boxShadow: "0 12px 32px rgba(59,130,246,0.35), inset 0 1px 0 rgba(255,255,255,0.30)",
+              }}
             >
-              <p className="text-blue-200 text-xs font-medium mb-2">Next prayer</p>
+              <p className="text-blue-100 text-xs font-medium mb-2">Next prayer</p>
               <p className="font-black text-2xl mb-0.5">Dhuhr</p>
-              <p className="text-blue-200 text-sm">1:15 PM · in 42 min</p>
-              <div className="mt-3 h-1 bg-blue-500/50 rounded-full overflow-hidden">
+              <p className="text-blue-100 text-sm">1:15 PM · in 42 min</p>
+              <div className="mt-3 h-1 bg-white/25 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: "60%" }}
                   transition={{ duration: 1.4, delay: 1.2 }}
-                  className="h-full bg-white/70 rounded-full"
+                  className="h-full bg-white/80 rounded-full"
                 />
               </div>
             </motion.div>
@@ -239,7 +326,7 @@ function DashboardPreview() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.9 }}
-              className="bg-orange-50 rounded-2xl p-5"
+              className="glass-sm rounded-2xl p-5"
             >
               <p className="text-orange-400 text-xs font-medium mb-1">Current streak</p>
               <div className="flex items-end gap-2">
@@ -254,7 +341,7 @@ function DashboardPreview() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.0 }}
-              className="bg-slate-50 rounded-2xl p-4"
+              className="glass-sm rounded-2xl p-4"
             >
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">

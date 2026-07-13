@@ -62,7 +62,7 @@ export default function Navbar() {
       <header
         className={cn(
           "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-          scrolled ? "bg-white/90 backdrop-blur-xl border-b border-slate-100" : "bg-transparent"
+          scrolled ? "glass-nav border-b border-white/60 shadow-[0_4px_24px_rgba(15,23,42,0.06)]" : "bg-transparent"
         )}
       >
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">

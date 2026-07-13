@@ -43,7 +43,7 @@ export default function AIBuddySpotlight() {
   }, [visibleChars, currentText, msgIndex, inView]);
 
   return (
-    <section className="py-28 bg-white">
+    <section className="relative py-28">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
 
@@ -55,9 +55,9 @@ export default function AIBuddySpotlight() {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <div className="bg-white rounded-3xl overflow-hidden shadow-xl shadow-slate-200/80 ring-1 ring-slate-100">
+            <div className="glass-deep rounded-3xl overflow-hidden">
               {/* Header */}
-              <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+              <div className="px-6 py-4 border-b border-white/60 flex items-center gap-3">
                 <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                   <span className="text-white text-xs font-bold">J</span>
                 </div>
@@ -74,7 +74,7 @@ export default function AIBuddySpotlight() {
               </div>
 
               {/* Messages */}
-              <div className="p-6 min-h-[300px] flex flex-col gap-4 bg-slate-50/50">
+              <div className="p-6 min-h-[300px] flex flex-col gap-4" style={{ background: "rgba(255,255,255,0.25)" }}>
                 {conversation.slice(0, msgIndex).map((msg, i) => (
                   <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                     <div className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
@@ -102,7 +102,7 @@ export default function AIBuddySpotlight() {
               </div>
 
               {/* Footer */}
-              <div className="px-6 py-3 border-t border-slate-100 text-center bg-white">
+              <div className="px-6 py-3 border-t border-white/60 text-center" style={{ background: "rgba(255,255,255,0.35)" }}>
                 <p className="text-slate-400 text-xs">For guidance only. Not a fatwa.</p>
               </div>
             </div>

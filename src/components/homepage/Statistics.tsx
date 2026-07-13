@@ -39,7 +39,7 @@ function CountUp({ to, suffix, decimal }: { to: number; suffix: string; decimal?
 
 export default function Statistics() {
   return (
-    <section className="py-24 bg-slate-50">
+    <section className="relative py-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -51,7 +51,7 @@ export default function Statistics() {
           <h2 className="text-4xl sm:text-5xl font-black text-slate-900">A growing Ummah.</h2>
         </motion.div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="glass-deep rounded-[2rem] px-6 py-12 sm:px-12 grid grid-cols-2 lg:grid-cols-4 gap-8">
           {stats.map(({ value, suffix, label, note, decimal }, i) => (
             <motion.div
               key={label}

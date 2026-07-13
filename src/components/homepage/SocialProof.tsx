@@ -15,7 +15,7 @@ const doubled = [...reviews, ...reviews];
 
 export default function SocialProof() {
   return (
-    <section className="py-16 bg-slate-50 overflow-hidden">
+    <section className="relative py-16 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 mb-10 flex items-center justify-between">
         <p className="text-sm font-medium text-slate-400 uppercase tracking-widest">Loved by the Ummah</p>
         <div className="flex items-center gap-2">
@@ -24,15 +24,18 @@ export default function SocialProof() {
         </div>
       </div>
 
-      <div className="relative">
-        <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-slate-50 to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-slate-50 to-transparent z-10 pointer-events-none" />
-
+      <div
+        className="relative"
+        style={{
+          maskImage: "linear-gradient(to right, transparent, black 6%, black 94%, transparent)",
+          WebkitMaskImage: "linear-gradient(to right, transparent, black 6%, black 94%, transparent)",
+        }}
+      >
         <div className="flex animate-ticker whitespace-nowrap gap-3 px-4">
           {doubled.map((review, i) => (
             <div
               key={i}
-              className="inline-flex flex-shrink-0 flex-col gap-2 bg-white rounded-2xl px-5 py-4 w-72 whitespace-normal shadow-sm"
+              className="glass-card inline-flex flex-shrink-0 flex-col gap-2 rounded-2xl px-5 py-4 w-72 whitespace-normal"
             >
               <div className="flex gap-0.5">
                 {Array.from({ length: 5 }).map((_, s) => (
