@@ -76,6 +76,8 @@ interface UserProfile {
   parentEmail?: string;             // parent contact email
   parentDashboardPassword?: string; // SHA-256 hash of parental PIN
   pendingFriends?: string[];        // UIDs awaiting parental approval (age < 13)
+  adWatchDate?: string;  // YYYY-MM-DD of last rewarded-ad view
+  adWatchCount?: string; // ads watched on adWatchDate (stored as string by the admin REST helper)
 }
 
 interface AuthContextValue {

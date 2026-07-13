@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { stripe, planFromPriceId } from "@/lib/stripe";
-import { updateUserDoc } from "@/lib/firestore-admin";
+import { updateUserDoc, incrementUserField } from "@/lib/firestore-admin";
 import Stripe from "stripe";
 
 export async function POST(request: NextRequest) {
@@ -25,6 +25,17 @@ export async function POST(request: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const uid = session.metadata?.uid;
+
+        // Gem pack one-time purchase
+        if (session.metadata?.type === "gems" && uid) {
+          const gemsAmount = parseInt(session.metadata?.gemsAmount ?? "0");
+          if (gemsAmount > 0) {
+            await incrementUserField(uid, "gems", gemsAmount);
+          }
+          break;
+        }
+
+        // Subscription plan upgrade
         const plan = session.metadata?.plan ?? "premium";
         const customerId = typeof session.customer === "string" ? session.customer : null;
         const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;

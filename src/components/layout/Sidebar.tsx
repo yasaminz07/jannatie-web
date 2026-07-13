@@ -291,10 +291,15 @@ export default function Sidebar() {
             <span>Level {profile.level}</span>
             <span>{profile.xp} XP</span>
           </div>
-          <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
+          <div className="h-1 bg-slate-200 rounded-full overflow-hidden mb-2">
             <div className="h-full bg-blue-500 rounded-full transition-all duration-500"
               style={{ width: `${levelProgress(profile.xp)}%` }} />
           </div>
+          <Link href="/gems"
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold text-amber-700 transition-colors hover:bg-amber-100"
+            style={{ background: "rgba(251,191,36,0.15)" }}>
+            💎 {(profile.gems ?? 0).toLocaleString()} gems
+          </Link>
         </div>
       )}
 

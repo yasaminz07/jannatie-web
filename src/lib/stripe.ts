@@ -30,6 +30,15 @@ export function planFromPriceId(priceId: string | undefined | null): "premium" |
   return "free";
 }
 
+// Stripe price IDs for one-time gem pack purchases (pack data itself lives
+// client-safe in src/lib/gemPacks.ts)
+export const GEM_PACK_PRICE_IDS: Record<string, string> = {
+  gems_100:  process.env.STRIPE_PRICE_GEMS_100  ?? "",
+  gems_500:  process.env.STRIPE_PRICE_GEMS_500  ?? "",
+  gems_1500: process.env.STRIPE_PRICE_GEMS_1500 ?? "",
+  gems_5000: process.env.STRIPE_PRICE_GEMS_5000 ?? "",
+};
+
 export const PLANS = {
   FREE: { name: "Free", price: 0, interval: null },
   PREMIUM_MONTHLY: {

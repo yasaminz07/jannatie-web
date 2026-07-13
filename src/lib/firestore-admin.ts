@@ -63,6 +63,28 @@ export async function updateUserDoc(userId: string, fields: Record<string, Field
   if (!res.ok) throw new Error(`Firestore update failed: ${await res.text()}`);
 }
 
+// Atomically increment a numeric field on a user document (avoids read-modify-write races)
+export async function incrementUserField(userId: string, field: string, amount: number): Promise<void> {
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
+  if (!projectId) throw new Error("Missing NEXT_PUBLIC_FIREBASE_PROJECT_ID");
+  const accessToken = await getFirestoreAccessToken();
+  const docPath = `projects/${projectId}/databases/(default)/documents/users/${userId}`;
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:commit`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      writes: [{
+        transform: {
+          document: docPath,
+          fieldTransforms: [{ fieldPath: field, increment: { integerValue: String(amount) } }],
+        },
+      }],
+    }),
+  });
+  if (!res.ok) throw new Error(`Firestore increment failed: ${await res.text()}`);
+}
+
 export async function getUserDoc(userId: string): Promise<Record<string, unknown>> {
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
   if (!projectId) throw new Error("Missing NEXT_PUBLIC_FIREBASE_PROJECT_ID");
