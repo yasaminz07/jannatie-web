@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { ArrowRight, Flame, BellRing, MousePointer2, Swords, Zap } from "lucide-react";
+import {
+  ArrowRight, Flame, BellRing, MousePointer2, Swords, Zap,
+  ShieldCheck, Send,
+} from "lucide-react";
 
 export default function Hero() {
   return (
@@ -85,7 +88,7 @@ export default function Hero() {
           </motion.div>
         </div>
 
-        {/* ── Right — self-playing product scene ────────────────────────────── */}
+        {/* ── Right — looping product tour ──────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 40, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -157,101 +160,164 @@ function AnimatedTitle() {
   );
 }
 
-/* One-shot product scene:
-   Act 1 — the dashboard uses itself: a cursor glides in, ticks off Morning
-   Dhikr, XP rises, the streak pops.
-   Act 2 — the card flips over to reveal a live Dual Quiz battle.
-   Nothing loops and nothing follows the real cursor. */
+/* ── Looping product tour ─────────────────────────────────────────────────────
+   Three acts on a flip loop, each with its own scripted animation:
+   1. Dashboard  — a cursor ticks off Morning Dhikr; XP rises, streak pops
+   2. Dual Quiz  — the cursor answers "Bismillah"; the score ticks up
+   3. AI Buddy   — a question is asked, the AI types, a cited answer lands   */
 
-// Scene timeline (seconds)
-const T_CURSOR = 1.0;   // cursor fades in and starts gliding
-const T_CLICK = 2.0;    // click — checkbox springs
-const T_XP = 2.3;       // XP bar extends
-const T_STREAK = 2.8;   // streak pops
-const T_CHIPS = 3.1;    // corner chips settle in
-const T_FLIP = 5.2;     // card flips to the Dual Quiz face
+const ACT_MS = 5600; // per-act duration before flipping to the next
 
 function ProductScene() {
-  const [flipped, setFlipped] = useState(false);
+  const [act, setAct] = useState(0);
 
   useEffect(() => {
-    const t = setTimeout(() => setFlipped(true), T_FLIP * 1000);
-    return () => clearTimeout(t);
+    const t = setInterval(() => setAct((a) => a + 1), ACT_MS);
+    return () => clearInterval(t);
   }, []);
+
+  const face = act % 3;
 
   return (
     <div className="relative" style={{ perspective: 1600 }}>
       {/* Glow behind card */}
       <div className="absolute -bottom-6 inset-x-16 h-20 bg-blue-400/20 blur-3xl rounded-full pointer-events-none" />
 
-      {/* Corner chips — dashboard act only */}
-      <motion.div
-        initial={{ opacity: 0, y: 10, scale: 0.9 }}
-        animate={{ opacity: flipped ? 0 : 1, y: 0, scale: 1 }}
-        transition={flipped ? { duration: 0.3 } : { delay: T_CHIPS, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="hidden sm:flex absolute -top-5 -left-4 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-2.5"
-      >
-        <Flame size={17} className="text-orange-500" />
-        <div>
-          <p className="text-sm font-black text-slate-900 leading-none">22 days</p>
-          <p className="text-[10px] text-slate-400 mt-0.5">current streak</p>
-        </div>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 10, scale: 0.9 }}
-        animate={{ opacity: flipped ? 0 : 1, y: 0, scale: 1 }}
-        transition={flipped ? { duration: 0.3 } : { delay: T_CHIPS + 0.15, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="hidden sm:flex absolute -bottom-5 -right-4 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-2.5"
-      >
-        <BellRing size={17} className="text-blue-500" />
-        <div>
-          <p className="text-sm font-black text-slate-900 leading-none">Dhuhr · 42 min</p>
-          <p className="text-[10px] text-slate-400 mt-0.5">next prayer</p>
-        </div>
-      </motion.div>
-
-      {/* Quiz chip — appears after the flip */}
+      {/* Corner chips — swap with each act */}
       <AnimatePresence>
-        {flipped && (
+        {face === 0 && (
           <motion.div
+            key={`chip-a-${act}`}
             initial={{ opacity: 0, y: 10, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ delay: 0.8, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.25 } }}
+            transition={{ delay: 3.1, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="hidden sm:flex absolute -top-5 -left-4 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-2.5"
+          >
+            <Flame size={17} className="text-orange-500" />
+            <div>
+              <p className="text-sm font-black text-slate-900 leading-none">22 days</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">current streak</p>
+            </div>
+          </motion.div>
+        )}
+        {face === 0 && (
+          <motion.div
+            key={`chip-b-${act}`}
+            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.25 } }}
+            transition={{ delay: 3.3, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="hidden sm:flex absolute -bottom-5 -right-4 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-2.5"
+          >
+            <BellRing size={17} className="text-blue-500" />
+            <div>
+              <p className="text-sm font-black text-slate-900 leading-none">Dhuhr · 42 min</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">next prayer</p>
+            </div>
+          </motion.div>
+        )}
+        {face === 1 && (
+          <motion.div
+            key={`chip-c-${act}`}
+            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.25 } }}
+            transition={{ delay: 3.0, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             className="hidden sm:flex absolute -bottom-5 -right-4 z-10 glass-card items-center gap-2 rounded-2xl px-4 py-2.5"
           >
             <Zap size={15} className="text-indigo-500" />
             <p className="text-xs font-bold text-indigo-600">+60 XP to the winner</p>
           </motion.div>
         )}
+        {face === 2 && (
+          <motion.div
+            key={`chip-d-${act}`}
+            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.25 } }}
+            transition={{ delay: 3.4, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="hidden sm:flex absolute -bottom-5 -right-4 z-10 glass-card items-center gap-2 rounded-2xl px-4 py-2.5"
+          >
+            <ShieldCheck size={15} className="text-emerald-500" />
+            <p className="text-xs font-bold text-emerald-600">Every answer is cited</p>
+          </motion.div>
+        )}
       </AnimatePresence>
 
-      {/* Flip container */}
-      <motion.div
-        animate={{ rotateY: flipped ? 180 : 0 }}
-        transition={{ duration: 0.9, ease: [0.45, 0, 0.55, 1] }}
-        style={{ transformStyle: "preserve-3d", position: "relative" }}
-      >
-        {/* Front — dashboard */}
-        <div style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}>
-          <DashboardFace />
-        </div>
-
-        {/* Back — Dual Quiz */}
-        <div
-          className="absolute inset-0"
-          style={{
-            backfaceVisibility: "hidden",
-            WebkitBackfaceVisibility: "hidden",
-            transform: "rotateY(180deg)",
-          }}
+      {/* Flip between faces; each face remounts so its scene replays */}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={act}
+          initial={{ rotateY: -90, opacity: 0.4 }}
+          animate={{ rotateY: 0, opacity: 1 }}
+          exit={{ rotateY: 90, opacity: 0.4 }}
+          transition={{ duration: 0.5, ease: [0.45, 0, 0.55, 1] }}
+          style={{ transformStyle: "preserve-3d" }}
         >
-          <QuizFace active={flipped} />
-        </div>
-      </motion.div>
+          {face === 0 ? <DashboardFace /> : face === 1 ? <QuizFace /> : <AIFace />}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
+
+/* Shared browser chrome bar */
+function Chrome({ url }: { url: string }) {
+  return (
+    <div className="px-5 py-3 flex items-center gap-3 border-b border-white/60 flex-shrink-0"
+      style={{ background: "rgba(255,255,255,0.35)" }}>
+      <div className="flex gap-1.5">
+        <div className="w-3 h-3 rounded-full bg-red-400/80" />
+        <div className="w-3 h-3 rounded-full bg-amber-400/80" />
+        <div className="w-3 h-3 rounded-full bg-emerald-400/80" />
+      </div>
+      <div className="flex-1 mx-4">
+        <div className="rounded-lg px-3 py-1 text-xs text-slate-500 text-center max-w-xs mx-auto border border-white/70"
+          style={{ background: "rgba(255,255,255,0.55)" }}>
+          {url}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Animated cursor that glides between keyframe positions and "clicks" */
+function Cursor({
+  path, clickAtIndex, delay, duration,
+}: {
+  path: { left: string; top: string }[];
+  clickAtIndex: number;
+  delay: number;
+  duration: number;
+}) {
+  const lefts = path.map((p) => p.left);
+  const tops = path.map((p) => p.top);
+  const scales = path.map((_, i) => (i === clickAtIndex ? 0.82 : 1));
+  const n = path.length;
+  const times = path.map((_, i) => i / (n - 1));
+
+  return (
+    <motion.div
+      className="absolute z-20 pointer-events-none hidden sm:block"
+      initial={{ opacity: 0, left: lefts[0], top: tops[0] }}
+      animate={{
+        opacity: [0, 1, ...Array(Math.max(n - 3, 0)).fill(1), 0],
+        left: lefts,
+        top: tops,
+        scale: scales,
+      }}
+      transition={{ duration, delay, times, ease: "easeInOut" }}
+    >
+      <MousePointer2 size={22} className="text-slate-800 fill-white drop-shadow-md" />
+    </motion.div>
+  );
+}
+
+/* Act 1 — dashboard uses itself */
+const T_CLICK = 2.0;
+const T_XP = 2.3;
+const T_STREAK = 2.8;
 
 function DashboardFace() {
   const habits = [
@@ -262,27 +328,21 @@ function DashboardFace() {
   ];
 
   return (
-    <div className="glass-deep rounded-3xl overflow-hidden relative">
+    <div className="glass-deep rounded-3xl overflow-hidden relative sm:h-[480px] flex flex-col">
 
-      {/* Animated cursor — glides to Morning Dhikr and clicks it */}
-      <motion.div
-        className="absolute z-20 pointer-events-none hidden sm:block"
-        initial={{ opacity: 0, left: "58%", top: "82%" }}
-        animate={{
-          opacity: [0, 1, 1, 1, 1, 0],
-          left: ["58%", "58%", "17%", "17%", "17%", "17%"],
-          top: ["82%", "82%", "63%", "63%", "63%", "63%"],
-          scale: [1, 1, 1, 0.82, 1, 1],
-        }}
-        transition={{
-          duration: 2.8,
-          delay: T_CURSOR,
-          times: [0, 0.08, 0.32, 0.38, 0.46, 1],
-          ease: "easeInOut",
-        }}
-      >
-        <MousePointer2 size={22} className="text-slate-800 fill-white drop-shadow-md" />
-      </motion.div>
+      <Cursor
+        path={[
+          { left: "58%", top: "82%" },
+          { left: "58%", top: "82%" },
+          { left: "17%", top: "63%" },
+          { left: "17%", top: "63%" },
+          { left: "17%", top: "63%" },
+          { left: "17%", top: "63%" },
+        ]}
+        clickAtIndex={3}
+        delay={1.0}
+        duration={2.8}
+      />
 
       {/* Click ripple */}
       <motion.span
@@ -293,24 +353,10 @@ function DashboardFace() {
         transition={{ delay: T_CLICK, duration: 0.55, ease: "easeOut" }}
       />
 
-      {/* Browser chrome */}
-      <div className="px-5 py-3 flex items-center gap-3 border-b border-white/60"
-        style={{ background: "rgba(255,255,255,0.35)" }}>
-        <div className="flex gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-red-400/80" />
-          <div className="w-3 h-3 rounded-full bg-amber-400/80" />
-          <div className="w-3 h-3 rounded-full bg-emerald-400/80" />
-        </div>
-        <div className="flex-1 mx-4">
-          <div className="rounded-lg px-3 py-1 text-xs text-slate-500 text-center max-w-xs mx-auto border border-white/70"
-            style={{ background: "rgba(255,255,255,0.55)" }}>
-            jannatie.com/dashboard
-          </div>
-        </div>
-      </div>
+      <Chrome url="jannatie.com/dashboard" />
 
       {/* Dashboard body */}
-      <div className="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-3 gap-4 flex-1 min-h-0">
 
         {/* Main area */}
         <div className="sm:col-span-2 space-y-4">
@@ -334,7 +380,7 @@ function DashboardFace() {
               <motion.div
                 initial={{ width: "0%" }}
                 animate={{ width: ["0%", "70%", "70%", "82%"] }}
-                transition={{ duration: T_XP + 0.6, times: [0, 0.45, 0.75, 1], ease: "easeOut", delay: 0.8 }}
+                transition={{ duration: T_XP + 0.6, times: [0, 0.45, 0.75, 1], ease: "easeOut", delay: 0.6 }}
                 className="h-full bg-gradient-to-r from-blue-500 to-indigo-400 rounded-full"
               />
             </div>
@@ -359,8 +405,8 @@ function DashboardFace() {
                     backgroundColor: (h.preDone || h.selfChecks) ? "rgba(219,234,254,0.55)" : "rgba(255,255,255,0.40)",
                   }}
                   transition={{
-                    opacity: { delay: 0.7 + i * 0.1 },
-                    x: { delay: 0.7 + i * 0.1 },
+                    opacity: { delay: 0.4 + i * 0.1 },
+                    x: { delay: 0.4 + i * 0.1 },
                     backgroundColor: { delay: h.selfChecks ? T_CLICK : 0, duration: 0.4 },
                   }}
                   className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border"
@@ -418,7 +464,7 @@ function DashboardFace() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8 }}
+            transition={{ delay: 0.5 }}
             className="rounded-2xl p-4 text-white"
             style={{
               background: "linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%)",
@@ -432,7 +478,7 @@ function DashboardFace() {
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: "60%" }}
-                transition={{ duration: 1.4, delay: 1.2 }}
+                transition={{ duration: 1.4, delay: 0.9 }}
                 className="h-full bg-white/80 rounded-full"
               />
             </div>
@@ -441,7 +487,7 @@ function DashboardFace() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.9 }}
+            transition={{ delay: 0.6 }}
             className="glass-sm rounded-2xl p-4"
           >
             <p className="text-orange-400 text-xs font-medium mb-1">Current streak</p>
@@ -466,7 +512,7 @@ function DashboardFace() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.0 }}
+            transition={{ delay: 0.7 }}
             className="glass-sm rounded-2xl p-3.5"
           >
             <div className="flex items-center gap-2 mb-1.5">
@@ -485,37 +531,48 @@ function DashboardFace() {
   );
 }
 
-/* Back face — a Dual Quiz battle mid-game. Animations fire once when revealed. */
-function QuizFace({ active }: { active: boolean }) {
+/* Act 2 — the cursor answers a Dual Quiz question */
+const Q_CLICK = 2.2;
+
+function QuizFace() {
   const options = ["Alhamdulillah", "Bismillah", "SubhanAllah", "Astaghfirullah"];
   const correct = 1;
 
   return (
-    <div className="glass-deep rounded-3xl overflow-hidden h-full flex flex-col">
+    <div className="glass-deep rounded-3xl overflow-hidden relative sm:h-[480px] flex flex-col">
 
-      {/* Browser chrome */}
-      <div className="px-5 py-3 flex items-center gap-3 border-b border-white/60 flex-shrink-0"
-        style={{ background: "rgba(255,255,255,0.35)" }}>
-        <div className="flex gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-red-400/80" />
-          <div className="w-3 h-3 rounded-full bg-amber-400/80" />
-          <div className="w-3 h-3 rounded-full bg-emerald-400/80" />
-        </div>
-        <div className="flex-1 mx-4">
-          <div className="rounded-lg px-3 py-1 text-xs text-slate-500 text-center max-w-xs mx-auto border border-white/70"
-            style={{ background: "rgba(255,255,255,0.55)" }}>
-            jannatie.com/pvp
-          </div>
-        </div>
-      </div>
+      <Cursor
+        path={[
+          { left: "40%", top: "88%" },
+          { left: "40%", top: "88%" },
+          { left: "70%", top: "64%" },
+          { left: "70%", top: "64%" },
+          { left: "70%", top: "64%" },
+          { left: "70%", top: "64%" },
+        ]}
+        clickAtIndex={3}
+        delay={0.9}
+        duration={2.6}
+      />
+
+      {/* Click ripple on the answer */}
+      <motion.span
+        className="absolute z-10 w-10 h-10 rounded-full bg-emerald-400/40 pointer-events-none hidden sm:block"
+        style={{ left: "67%", top: "61%" }}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: [0, 2.2], opacity: [0.6, 0] }}
+        transition={{ delay: Q_CLICK, duration: 0.55, ease: "easeOut" }}
+      />
+
+      <Chrome url="jannatie.com/pvp" />
 
       {/* Battle body */}
       <div className="p-5 sm:p-6 flex-1 flex flex-col justify-center">
 
         <motion.p
           initial={{ opacity: 0, y: 8 }}
-          animate={active ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.55 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
           className="text-[11px] font-bold text-indigo-500 uppercase tracking-widest text-center mb-4"
         >
           <Swords size={12} className="inline mr-1.5 -mt-0.5" />
@@ -525,8 +582,8 @@ function QuizFace({ active }: { active: boolean }) {
         {/* Scoreboard */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
-          animate={active ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.65 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
           className="flex items-center gap-3 mb-5"
         >
           <div className="flex-1 glass-sm rounded-2xl px-4 py-2.5 flex items-center gap-3">
@@ -534,7 +591,24 @@ function QuizFace({ active }: { active: boolean }) {
               style={{ background: "linear-gradient(135deg, #3b82f6, #4f46e5)" }}>
               You
             </div>
-            <p className="text-xl font-black text-blue-600 ml-auto">3</p>
+            {/* Score ticks 2 → 3 when the answer lands */}
+            <span className="relative text-xl font-black text-blue-600 ml-auto w-4 text-center">
+              <motion.span
+                className="absolute inset-0"
+                animate={{ opacity: [1, 1, 0] }}
+                transition={{ delay: Q_CLICK + 0.2, duration: 0.25, times: [0, 0.6, 1] }}
+              >
+                2
+              </motion.span>
+              <motion.span
+                className="absolute inset-0"
+                initial={{ opacity: 0, scale: 1.6 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: Q_CLICK + 0.35, type: "spring", stiffness: 320, damping: 16 }}
+              >
+                3
+              </motion.span>
+            </span>
           </div>
           <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border border-white/70"
             style={{ background: "rgba(224,231,255,0.8)" }}>
@@ -549,25 +623,20 @@ function QuizFace({ active }: { active: boolean }) {
         </motion.div>
 
         {/* Timer */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={active ? { opacity: 1 } : {}}
-          transition={{ delay: 0.75 }}
-          className="h-1.5 bg-slate-200/60 rounded-full overflow-hidden mb-5"
-        >
+        <div className="h-1.5 bg-slate-200/60 rounded-full overflow-hidden mb-5">
           <motion.div
             initial={{ width: "100%" }}
-            animate={active ? { width: "42%" } : {}}
-            transition={{ delay: 0.8, duration: 2.4, ease: "linear" }}
+            animate={{ width: "22%" }}
+            transition={{ delay: 0.5, duration: 4.4, ease: "linear" }}
             className="h-full rounded-full bg-violet-500"
           />
-        </motion.div>
+        </div>
 
         {/* Question */}
         <motion.p
           initial={{ opacity: 0, y: 10 }}
-          animate={active ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.85 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
           className="text-sm font-bold text-slate-900 mb-4"
         >
           What do we say before starting to eat?
@@ -579,18 +648,118 @@ function QuizFace({ active }: { active: boolean }) {
             return (
               <motion.div
                 key={opt}
-                initial={{ opacity: 0, y: 10 }}
-                animate={active ? { opacity: 1, y: 0 } : {}}
-                transition={{ delay: 0.95 + i * 0.08 }}
+                initial={{
+                  opacity: 0, y: 10,
+                  backgroundColor: "rgba(255,255,255,0.45)",
+                  borderColor: "rgba(255,255,255,0.65)",
+                  color: "#475569",
+                }}
+                animate={isCorrect ? {
+                  opacity: 1, y: 0,
+                  backgroundColor: "rgba(209,250,229,0.85)",
+                  borderColor: "rgba(52,211,153,0.6)",
+                  color: "#047857",
+                  scale: [1, 1.05, 1],
+                } : { opacity: 1, y: 0 }}
+                transition={isCorrect ? {
+                  opacity: { delay: 0.55 + i * 0.08 },
+                  y: { delay: 0.55 + i * 0.08 },
+                  backgroundColor: { delay: Q_CLICK, duration: 0.3 },
+                  borderColor: { delay: Q_CLICK, duration: 0.3 },
+                  color: { delay: Q_CLICK, duration: 0.3 },
+                  scale: { delay: Q_CLICK, duration: 0.4 },
+                } : { opacity: { delay: 0.55 + i * 0.08 }, y: { delay: 0.55 + i * 0.08 } }}
                 className="rounded-xl px-3 py-2.5 text-xs font-semibold text-center border"
-                style={isCorrect
-                  ? { background: "rgba(209,250,229,0.85)", borderColor: "rgba(52,211,153,0.6)", color: "#047857" }
-                  : { background: "rgba(255,255,255,0.45)", borderColor: "rgba(255,255,255,0.65)", color: "#475569" }}
               >
                 {opt}
               </motion.div>
             );
           })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Act 3 — AI Buddy answers with a citation */
+function AIFace() {
+  return (
+    <div className="glass-deep rounded-3xl overflow-hidden relative sm:h-[480px] flex flex-col">
+
+      <Chrome url="jannatie.com/ai" />
+
+      {/* Chat header */}
+      <div className="px-5 py-3 border-b border-white/50 flex items-center gap-3 flex-shrink-0">
+        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+          <span className="text-white text-xs font-bold">J</span>
+        </div>
+        <div>
+          <p className="text-slate-900 text-sm font-semibold leading-tight">AI Buddy</p>
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
+            <p className="text-slate-400 text-[11px]">Online · Scholar-reviewed</p>
+          </div>
+        </div>
+        <ShieldCheck size={16} className="text-blue-500 ml-auto" />
+      </div>
+
+      {/* Chat body */}
+      <div className="p-5 flex-1 flex flex-col justify-end gap-3 min-h-0">
+
+        {/* User question */}
+        <motion.div
+          initial={{ opacity: 0, y: 14, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 0.5, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="self-end max-w-[80%] rounded-2xl rounded-br-sm px-4 py-2.5 text-sm text-white"
+          style={{ background: "linear-gradient(135deg, #3b82f6, #4f46e5)" }}
+        >
+          What should I recite before going to sleep?
+        </motion.div>
+
+        {/* Typing indicator → answer */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 1, 1, 0] }}
+          transition={{ delay: 1.1, duration: 1.2, times: [0, 0.15, 0.85, 1] }}
+          className="self-start glass-sm rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1.5"
+        >
+          <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse-dot" />
+          <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse-dot" style={{ animationDelay: "0.2s" }} />
+          <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse-dot" style={{ animationDelay: "0.4s" }} />
+        </motion.div>
+
+        {/* AI answer */}
+        <motion.div
+          initial={{ opacity: 0, y: 14, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 2.4, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+          className="self-start max-w-[85%] glass-sm rounded-2xl rounded-bl-sm px-4 py-3"
+        >
+          <p className="text-sm text-slate-700 leading-relaxed">
+            Recite <span className="font-semibold">Ayat al-Kursi</span> — the Prophet ﷺ said
+            whoever recites it before sleeping will have a guardian from Allah, and no
+            shaytan will come near until morning.
+          </p>
+          <motion.span
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 3.2, type: "spring", stiffness: 300, damping: 18 }}
+            className="inline-flex items-center gap-1 mt-2 text-[11px] font-bold text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200"
+            style={{ background: "rgba(209,250,229,0.7)" }}
+          >
+            <ShieldCheck size={11} />
+            Sahih al-Bukhari 5010
+          </motion.span>
+        </motion.div>
+
+        {/* Input bar */}
+        <div className="glass-sm rounded-2xl px-4 py-2.5 flex items-center gap-3 mt-2">
+          <p className="text-xs text-slate-400 flex-1">Ask anything about Islam…</p>
+          <div className="w-7 h-7 rounded-full flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg, #3b82f6, #4f46e5)" }}>
+            <Send size={12} className="text-white" />
+          </div>
         </div>
       </div>
     </div>
