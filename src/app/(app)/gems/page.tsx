@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, CheckCircle, Lock, Clock, Star } from "lucide-react";
+import { Play, CheckCircle, Lock, Clock, Star, Gem, Shield, Heart, SkipForward } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useSearchParams } from "next/navigation";
 import { GEM_PACKS } from "@/lib/gemPacks";
@@ -23,43 +23,51 @@ function GemPackCard({
   const poundsStr = `£${(pack.pence / 100).toFixed(2)}`;
 
   return (
-    <motion.div
-      whileHover={{ scale: 1.02 }}
+    <motion.button
+      whileHover={{ y: -4 }}
       whileTap={{ scale: 0.98 }}
-      className="relative rounded-2xl p-4 cursor-pointer"
-      style={
-        popular
-          ? { background: "linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.12))", border: "1.5px solid rgba(99,102,241,0.35)" }
-          : { background: "rgba(248,250,252,0.9)", border: "1px solid rgba(226,232,240,0.7)" }
-      }
       onClick={() => !loading && onBuy(pack.id)}
+      disabled={loading}
+      className={`relative rounded-3xl p-5 text-center ${popular ? "" : "glass-card"}`}
+      style={popular ? {
+        background: "rgba(255,255,255,0.65)",
+        backdropFilter: "blur(24px) saturate(170%)",
+        WebkitBackdropFilter: "blur(24px) saturate(170%)",
+        border: "1.5px solid rgba(99,102,241,0.45)",
+        boxShadow: "0 18px 44px rgba(79,70,229,0.18), inset 0 1px 0 rgba(255,255,255,0.95)",
+      } : undefined}
     >
       {popular && (
-        <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-white text-[10px] font-bold px-3 py-1 rounded-full whitespace-nowrap"
+          style={{ background: "linear-gradient(135deg, #3b82f6, #4f46e5)", boxShadow: "0 4px 12px rgba(79,70,229,0.35)" }}>
           BEST VALUE
         </span>
       )}
-      <div className="text-center">
-        <p className="text-2xl font-black text-slate-900 dark:text-slate-100">
-          {pack.gems.toLocaleString()}
-        </p>
-        <p className="text-xs text-amber-500 font-semibold mb-3">💎 gems</p>
-        <p className={`text-sm font-bold ${popular ? "text-indigo-700 dark:text-indigo-300" : "text-slate-600 dark:text-slate-400"}`}>
-          {pack.label}
-        </p>
-        <button
-          className="mt-3 w-full py-2 rounded-xl text-sm font-bold text-white transition-all"
-          style={
-            popular
-              ? { background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }
-              : { background: "rgba(99,102,241,0.8)" }
-          }
-          disabled={loading}
-        >
-          {poundsStr}
-        </button>
+
+      {/* Gem icon with soft glow */}
+      <div className="relative w-12 h-12 mx-auto mb-3">
+        <div className="absolute inset-0 rounded-2xl bg-blue-400/20 blur-lg" />
+        <div className="relative w-12 h-12 rounded-2xl flex items-center justify-center border border-white/70"
+          style={{ background: "linear-gradient(135deg, rgba(219,234,254,0.9), rgba(224,231,255,0.9))" }}>
+          <Gem size={22} className="text-blue-500" />
+        </div>
       </div>
-    </motion.div>
+
+      <p className="text-2xl font-black text-slate-900 tracking-tight">
+        {pack.gems.toLocaleString()}
+      </p>
+      <p className="text-xs text-slate-400 font-medium mb-4">{pack.label} pack</p>
+
+      <span
+        className="block w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all"
+        style={{
+          background: "linear-gradient(135deg, #3b82f6, #4f46e5)",
+          boxShadow: "0 6px 18px rgba(59,130,246,0.28), inset 0 1px 0 rgba(255,255,255,0.30)",
+        }}
+      >
+        {loading ? "Opening…" : poundsStr}
+      </span>
+    </motion.button>
   );
 }
 
@@ -89,19 +97,28 @@ function AdPlayer({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.75)" }}
+      style={{ background: "rgba(15,23,42,0.60)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
     >
-      <div className="w-full max-w-sm rounded-2xl overflow-hidden"
-        style={{ background: "#0f172a" }}>
+      <motion.div
+        initial={{ scale: 0.94, y: 12 }}
+        animate={{ scale: 1, y: 0 }}
+        className="w-full max-w-sm rounded-3xl overflow-hidden"
+        style={{
+          background: "rgba(15,23,42,0.92)",
+          border: "1px solid rgba(255,255,255,0.12)",
+          boxShadow: "0 32px 80px rgba(15,23,42,0.5), inset 0 1px 0 rgba(255,255,255,0.12)",
+        }}
+      >
         {/* Ad placeholder */}
-        <div className="relative h-48 flex flex-col items-center justify-center"
+        <div className="relative h-48 flex flex-col items-center justify-center overflow-hidden"
           style={{ background: "linear-gradient(135deg, #1e1b4b, #312e81)" }}>
-          <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-3">
+          <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-blue-500/20 blur-3xl" />
+          <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-3 border border-white/15">
             <Star size={28} className="text-amber-300" />
           </div>
           <p className="text-white font-bold text-lg">Advertisement</p>
           <p className="text-white/50 text-xs mt-1">Support Jannatie by watching this ad</p>
-          <span className="absolute top-3 left-3 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full">
+          <span className="absolute top-3 left-3 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full border border-white/10">
             AD
           </span>
         </div>
@@ -119,8 +136,11 @@ function AdPlayer({
           </div>
           <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
             <motion.div
-              className="h-full bg-amber-400 rounded-full"
-              style={{ width: `${((AD_DURATION_SEC - timeLeft) / AD_DURATION_SEC) * 100}%` }}
+              className="h-full rounded-full"
+              style={{
+                width: `${((AD_DURATION_SEC - timeLeft) / AD_DURATION_SEC) * 100}%`,
+                background: "linear-gradient(90deg, #fbbf24, #f59e0b)",
+              }}
             />
           </div>
           <button
@@ -130,7 +150,7 @@ function AdPlayer({
             Cancel (gems not awarded)
           </button>
         </div>
-      </div>
+      </motion.div>
     </motion.div>
   );
 }
@@ -194,7 +214,7 @@ export default function GemsPage() {
       });
       const data = await res.json() as { gemsAwarded?: number; adsToday?: number; error?: string; limitReached?: boolean };
       if (!res.ok) {
-        setAdError(data.limitReached ? "You&apos;ve reached today&apos;s limit." : (data.error ?? "Something went wrong."));
+        setAdError(data.limitReached ? "You've reached today's limit." : (data.error ?? "Something went wrong."));
       } else {
         setAdsToday(data.adsToday ?? null);
         setAdSuccess(true);
@@ -247,7 +267,7 @@ export default function GemsPage() {
         )}
       </AnimatePresence>
 
-      <div className="min-h-screen p-4 max-w-lg mx-auto">
+      <div className="min-h-screen p-4 sm:p-6 max-w-2xl mx-auto">
         {/* Purchased success banner */}
         <AnimatePresence>
           {showPurchasedBanner && (
@@ -255,42 +275,72 @@ export default function GemsPage() {
               initial={{ opacity: 0, y: -12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
-              className="mb-4 rounded-2xl px-4 py-3 flex items-center gap-3"
-              style={{ background: "rgba(209,250,229,0.9)", border: "1px solid rgba(52,211,153,0.4)" }}
+              className="glass-card mb-4 rounded-2xl px-4 py-3 flex items-center gap-3"
+              style={{ borderColor: "rgba(52,211,153,0.45)" }}
             >
               <CheckCircle size={18} className="text-emerald-500 flex-shrink-0" />
-              <p className="text-sm font-semibold text-emerald-800">
+              <p className="text-sm font-semibold text-emerald-700">
                 +{purchasedAmount} 💎 gems added to your account!
               </p>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Header */}
-        <div className="text-center py-6">
-          <p className="text-5xl font-black text-slate-900 dark:text-white">
-            {gemBalance.toLocaleString()}
-          </p>
-          <p className="text-amber-500 font-bold mt-1">💎 gems</p>
-          <p className="text-xs text-slate-400 mt-2">
-            Spend gems on streak freezes, heart refills, and more
-          </p>
-        </div>
+        {/* ── Balance hero ─────────────────────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-deep relative overflow-hidden rounded-[2rem] px-6 py-10 mb-8 text-center"
+        >
+          {/* soft glows inside the panel */}
+          <div className="absolute -top-16 -left-10 w-56 h-56 rounded-full bg-blue-400/15 blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-20 -right-8 w-64 h-64 rounded-full bg-indigo-400/15 blur-3xl pointer-events-none" />
 
-        {/* ── Earn free gems section ──────────────────────────────────────────── */}
-        <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3 px-1">
+          <div className="relative">
+            <motion.div
+              initial={{ scale: 0.6, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", delay: 0.1 }}
+              className="relative w-16 h-16 mx-auto mb-4"
+            >
+              <div className="absolute inset-0 rounded-3xl bg-blue-400/25 blur-xl" />
+              <div className="relative w-16 h-16 rounded-3xl flex items-center justify-center border border-white/80"
+                style={{ background: "linear-gradient(135deg, rgba(219,234,254,0.95), rgba(224,231,255,0.95))" }}>
+                <Gem size={30} className="text-blue-500" />
+              </div>
+            </motion.div>
+
+            <p className="text-5xl font-black text-slate-900 tracking-tight mb-1">
+              {gemBalance.toLocaleString()}
+            </p>
+            <p className="text-sm font-semibold text-blue-500 mb-2">gems</p>
+            <p className="text-xs text-slate-400 max-w-xs mx-auto">
+              Spend gems on streak freezes, heart refills and more
+            </p>
+          </div>
+        </motion.div>
+
+        {/* ── Earn free gems ───────────────────────────────────────────────────── */}
+        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">
           Earn Free Gems
         </h2>
 
-        <div className="rounded-2xl p-4 mb-6"
-          style={{ background: "rgba(254,243,199,0.6)", border: "1px solid rgba(251,191,36,0.3)" }}>
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08 }}
+          className="glass-card rounded-3xl p-5 mb-8"
+        >
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: "rgba(251,191,36,0.2)" }}>
-              <Play size={22} className="text-amber-500" />
+            <div className="relative w-12 h-12 flex-shrink-0">
+              <div className="absolute inset-0 rounded-2xl bg-amber-400/25 blur-lg" />
+              <div className="relative w-12 h-12 rounded-2xl flex items-center justify-center border border-white/70"
+                style={{ background: "linear-gradient(135deg, rgba(254,243,199,0.95), rgba(253,230,138,0.75))" }}>
+                <Play size={20} className="text-amber-600" />
+              </div>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Watch an Ad</p>
+              <p className="text-sm font-bold text-slate-900">Watch an Ad</p>
               <p className="text-xs text-slate-500 mt-0.5">
                 {canWatchAd
                   ? `Earn +${AD_GEMS} 💎 · ${adsRemaining} of ${MAX_ADS_PER_DAY} remaining today`
@@ -310,12 +360,11 @@ export default function GemsPage() {
             <button
               onClick={startAd}
               disabled={!canWatchAd || adLoading || adPlaying}
-              className="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold transition-all"
-              style={
-                canWatchAd && !adLoading
-                  ? { background: "rgba(251,191,36,0.9)", color: "#78350f" }
-                  : { background: "rgba(226,232,240,0.7)", color: "#94a3b8" }
-              }
+              className="flex-shrink-0 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-40"
+              style={{
+                background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                boxShadow: canWatchAd ? "0 6px 18px rgba(245,158,11,0.30), inset 0 1px 0 rgba(255,255,255,0.35)" : "none",
+              }}
             >
               {adLoading ? "…" : canWatchAd ? "Watch" : <Lock size={14} />}
             </button>
@@ -323,60 +372,78 @@ export default function GemsPage() {
 
           {/* Progress bar of ads watched today */}
           {adsToday !== null && (
-            <div className="mt-3">
-              <div className="h-1.5 bg-amber-100 rounded-full overflow-hidden">
+            <div className="mt-4">
+              <div className="h-1.5 bg-slate-200/60 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-amber-400 rounded-full transition-all duration-500"
-                  style={{ width: `${(adsToday / MAX_ADS_PER_DAY) * 100}%` }}
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${(adsToday / MAX_ADS_PER_DAY) * 100}%`,
+                    background: "linear-gradient(90deg, #fbbf24, #f59e0b)",
+                  }}
                 />
               </div>
-              <p className="text-[10px] text-amber-600 text-right mt-0.5">{adsToday}/{MAX_ADS_PER_DAY} today</p>
+              <p className="text-[10px] text-slate-400 text-right mt-1">{adsToday}/{MAX_ADS_PER_DAY} today</p>
             </div>
           )}
-        </div>
+        </motion.div>
 
-        {/* ── Buy gems section ────────────────────────────────────────────────── */}
-        <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3 px-1">
+        {/* ── Buy gems ─────────────────────────────────────────────────────────── */}
+        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">
           Buy Gems
         </h2>
 
         {buyError && (
-          <p className="text-sm text-red-500 mb-3 px-1">{buyError}</p>
+          <div className="glass-card rounded-2xl px-4 py-3 mb-3" style={{ borderColor: "rgba(248,113,113,0.45)" }}>
+            <p className="text-sm text-red-500">{buyError}</p>
+          </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          {GEM_PACKS.map((pack) => (
-            <GemPackCard
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8 pt-2">
+          {GEM_PACKS.map((pack, i) => (
+            <motion.div
               key={pack.id}
-              pack={pack}
-              onBuy={buyPack}
-              loading={buyingPack === pack.id}
-            />
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.12 + i * 0.06 }}
+            >
+              <GemPackCard
+                pack={pack}
+                onBuy={buyPack}
+                loading={buyingPack === pack.id}
+              />
+            </motion.div>
           ))}
         </div>
 
-        {/* ── What can I spend gems on? ────────────────────────────────────────── */}
-        <div className="rounded-2xl p-4"
-          style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.12)" }}>
-          <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-3">
+        {/* ── What can I spend gems on? ─────────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="glass-card rounded-3xl p-5"
+        >
+          <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-4">
             What can I spend gems on?
           </p>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {[
-              { icon: "🛡️", label: "Streak Freeze", detail: "Protect your streak for 1 day — 25 💎" },
-              { icon: "❤️", label: "Heart Refill",  detail: "Restore all 5 hearts instantly — 20 💎" },
-              { icon: "⏭️", label: "Skip Question",  detail: "Skip a hard question in a lesson — 10 💎" },
-            ].map(({ icon, label, detail }) => (
-              <div key={label} className="flex items-center gap-3 text-sm">
-                <span className="text-lg leading-none">{icon}</span>
+              { Icon: Shield,      tint: "text-blue-500",    bg: "rgba(219,234,254,0.8)", label: "Streak Freeze", detail: "Protect your streak for 1 day — 25 💎" },
+              { Icon: Heart,       tint: "text-rose-500",    bg: "rgba(254,226,226,0.8)", label: "Heart Refill",  detail: "Restore all 5 hearts instantly — 20 💎" },
+              { Icon: SkipForward, tint: "text-indigo-500",  bg: "rgba(224,231,255,0.8)", label: "Skip Question", detail: "Skip a hard question in a lesson — 10 💎" },
+            ].map(({ Icon, tint, bg, label, detail }) => (
+              <div key={label} className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border border-white/70"
+                  style={{ background: bg }}>
+                  <Icon size={16} className={tint} />
+                </div>
                 <div>
-                  <p className="font-semibold text-slate-800 dark:text-slate-200 leading-tight">{label}</p>
+                  <p className="text-sm font-semibold text-slate-800 leading-tight">{label}</p>
                   <p className="text-xs text-slate-400">{detail}</p>
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         <p className="text-center text-[11px] text-slate-300 mt-6 pb-4">
           Payments are processed securely by Stripe. Gems are non-refundable.

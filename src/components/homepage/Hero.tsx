@@ -34,20 +34,9 @@ export default function Hero() {
           <span className="text-sm font-medium text-slate-600">Trusted by Muslims across the UK, UAE and Malaysia</span>
         </motion.div>
 
-        <motion.h1
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.08 }}
-          className="text-6xl sm:text-7xl lg:text-[5.5rem] font-black text-slate-900 leading-[0.95] tracking-tight mb-8"
-        >
-          Grow closer
-          <br />
-          to{" "}
-          <span className="italic text-gradient">Allah</span>{" "}
-          <span className="arabic text-indigo-500 not-italic" style={{ fontSize: "68%" }}>ﷻ</span>
-          <br />
-          every day.
-        </motion.h1>
+        <h1 className="text-6xl sm:text-7xl lg:text-[5.5rem] font-black text-slate-900 leading-[0.95] tracking-tight mb-8">
+          <AnimatedTitle />
+        </h1>
 
         <motion.p
           initial={{ opacity: 0, y: 16 }}
@@ -117,6 +106,49 @@ export default function Hero() {
   );
 }
 
+/* Word-by-word blur-in reveal for the hero headline */
+function AnimatedTitle() {
+  // Each word carries its own line + styling; rendered as one stagger sequence
+  const words: { text: string; line: number; gradient?: boolean; arabic?: boolean }[] = [
+    { text: "Grow",   line: 0 },
+    { text: "closer", line: 0 },
+    { text: "to",     line: 1 },
+    { text: "Allah",  line: 1, gradient: true },
+    { text: "ﷻ",      line: 1, arabic: true },
+    { text: "every",  line: 2 },
+    { text: "day.",   line: 2 },
+  ];
+
+  const lines = [0, 1, 2].map((l) => words.filter((w) => w.line === l));
+  let wordIndex = -1;
+
+  return (
+    <>
+      {lines.map((line, li) => (
+        <span key={li} className="block">
+          {line.map((w) => {
+            wordIndex++;
+            return (
+              <motion.span
+                key={`${li}-${w.text}`}
+                initial={{ opacity: 0, y: 34, filter: "blur(12px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                transition={{ duration: 0.65, delay: 0.15 + wordIndex * 0.09, ease: [0.16, 1, 0.3, 1] }}
+                className={`inline-block mr-[0.22em] last:mr-0 ${
+                  w.gradient ? "italic text-gradient pr-1" : ""
+                } ${w.arabic ? "arabic text-indigo-500 not-italic align-baseline" : ""}`}
+                style={w.arabic ? { fontSize: "68%" } : undefined}
+              >
+                {w.text}
+              </motion.span>
+            );
+          })}
+        </span>
+      ))}
+    </>
+  );
+}
+
 /* Wraps children in a perspective container that tilts toward the cursor,
    with floating glass chips orbiting the card */
 function TiltPreview({ children }: { children: React.ReactNode }) {
@@ -150,7 +182,7 @@ function TiltPreview({ children }: { children: React.ReactNode }) {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.2, duration: 0.6 }}
-        className="animate-float hidden lg:flex absolute -left-10 top-16 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-3"
+        className="animate-float hidden xl:flex absolute -left-24 top-14 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-3"
       >
         <Flame size={18} className="text-orange-500" />
         <div>
@@ -163,7 +195,7 @@ function TiltPreview({ children }: { children: React.ReactNode }) {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.4, duration: 0.6 }}
-        className="animate-float-delayed hidden lg:flex absolute -right-12 top-32 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-3"
+        className="animate-float-delayed hidden xl:flex absolute -right-24 top-36 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-3"
       >
         <BellRing size={18} className="text-blue-500" />
         <div>
@@ -176,7 +208,7 @@ function TiltPreview({ children }: { children: React.ReactNode }) {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.6, duration: 0.6 }}
-        className="animate-float hidden lg:flex absolute -right-6 bottom-24 z-10 glass-card items-center gap-2 rounded-2xl px-4 py-2.5"
+        className="animate-float hidden xl:flex absolute -left-20 bottom-20 z-10 glass-card items-center gap-2 rounded-2xl px-4 py-2.5"
         style={{ animationDelay: "4s" }}
       >
         <Sparkles size={15} className="text-indigo-500" />

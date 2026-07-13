@@ -303,15 +303,15 @@ export default function Sidebar() {
         </div>
       )}
 
-      {/* Nav — flex-1, no scroll */}
-      <nav className="flex-1 px-3 py-2 flex flex-col justify-between overflow-hidden">
-        <div className="space-y-0.5">
+      {/* Nav — items scroll if they overflow; bottom links stay pinned */}
+      <nav className="flex-1 px-3 py-2 flex flex-col overflow-hidden min-h-0">
+        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide space-y-0.5">
           {navItems.map(({ label, href, icon: Icon }) => {
             const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href + "/"));
             return (
               <Link key={href} href={href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all",
+                  "flex items-center gap-3 px-3 py-1.5 rounded-xl text-sm font-medium transition-all",
                   active
                     ? "bg-blue-600/10 text-blue-700 border border-blue-200"
                     : "text-slate-500 hover:text-slate-900 hover:bg-slate-900/5 border border-transparent"
@@ -331,11 +331,11 @@ export default function Sidebar() {
         </div>
 
         {/* Bottom links — inside the nav flex column, pinned to bottom */}
-        <div className="border-t border-slate-200/60 pt-2 space-y-0.5">
+        <div className="border-t border-slate-200/60 pt-2 space-y-0.5 flex-shrink-0">
           {isChild && (
             <Link href="/parental"
               className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all border",
+                "flex items-center gap-3 px-3 py-1.5 rounded-xl text-sm font-medium transition-all border",
                 pathname === "/parental"
                   ? "bg-amber-50 text-amber-700 border-amber-200"
                   : "text-amber-600 hover:bg-amber-50/60 border-transparent"
@@ -345,13 +345,13 @@ export default function Sidebar() {
             </Link>
           )}
           <Link href="/"
-            className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-900/5 transition-all border border-transparent">
+            className="flex items-center gap-3 px-3 py-1.5 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-900/5 transition-all border border-transparent">
             <Home size={15} />
             Home
           </Link>
           <Link href="/settings"
             className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all border",
+              "flex items-center gap-3 px-3 py-1.5 rounded-xl text-sm font-medium transition-all border",
               pathname === "/settings"
                 ? "bg-blue-600/10 text-blue-700 border-blue-200"
                 : "text-slate-500 hover:text-slate-900 hover:bg-slate-900/5 border-transparent"
@@ -360,7 +360,7 @@ export default function Sidebar() {
             Settings
           </Link>
           <button onClick={logOut}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all border border-transparent">
+            className="w-full flex items-center gap-3 px-3 py-1.5 rounded-xl text-sm font-medium text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all border border-transparent">
             <LogOut size={15} />
             Sign out
           </button>
