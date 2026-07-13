@@ -23,7 +23,8 @@ export async function POST(request: NextRequest) {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/gems?purchased=${pack.gems}`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/gems`,
-      metadata: { type: "gems", gemsAmount: String(pack.gems), userId },
+      // Webhook fulfilment keys off metadata.uid (same convention as subscriptions)
+      metadata: { type: "gems", gemsAmount: String(pack.gems), uid: userId },
     });
 
     return NextResponse.json({ url: session.url });
