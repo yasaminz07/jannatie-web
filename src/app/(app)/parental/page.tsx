@@ -77,11 +77,10 @@ export default function ParentalPage() {
   }, [profile, router]);
 
   useEffect(() => {
-    if (!unlocked || !profile?.pendingFriends?.length) return;
+    const uids = profile?.pendingFriends ?? [];
+    if (!unlocked || !uids.length) return;
     setLoadingPending(true);
     async function fetchPending() {
-      const uids = profile!.pendingFriends ?? [];
-      if (!uids.length) { setPendingUsers([]); setLoadingPending(false); return; }
       // Fetch each pending user — batched by chunks of 10 (Firestore 'in' limit)
       const chunks: string[][] = [];
       for (let i = 0; i < uids.length; i += 10) chunks.push(uids.slice(i, i + 10));

@@ -207,6 +207,17 @@
   100% { background-position: 200% 50%; }
 }
 
+/* iOS liquid-glass button: light drifts slowly across the gradient */
+@keyframes gradient-pan {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+.btn-liquid {
+  background-image: linear-gradient(120deg, #3b82f6, #4f46e5, #6366f1, #4f46e5, #3b82f6);
+  background-size: 220% 220%;
+  animation: gradient-pan 7s ease-in-out infinite;
+}
+
 /* Aurora orbs — slow drifting colour blobs behind the landing page */
 @keyframes aurora-a {
   0%, 100% { transform: translate(0, 0) scale(1); }
@@ -229,7 +240,7 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-aurora-a, .animate-aurora-b, .animate-aurora-c,
   .animate-float, .animate-float-delayed, .animate-ticker,
-  .text-gradient-animated {
+  .text-gradient-animated, .btn-liquid {
     animation: none;
   }
 }
