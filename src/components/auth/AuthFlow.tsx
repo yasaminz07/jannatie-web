@@ -293,22 +293,43 @@ export default function AuthFlow({
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoginLoading(true);
+    const connectionError = "Connection problem — check your internet and try again.";
     try {
-      const snap = await getDocs(
-        query(
-          collection(db, "users"),
-          where("username", "==", username.toLowerCase().trim())
-        )
-      );
+      let snap;
+      try {
+        snap = await getDocs(
+          query(
+            collection(db, "users"),
+            where("username", "==", username.toLowerCase().trim())
+          )
+        );
+      } catch {
+        toast.error(connectionError);
+        return;
+      }
+      // An empty result served from the local cache means Firestore was
+      // unreachable — don't misreport that as a missing account
+      if (snap.empty && snap.metadata.fromCache) {
+        toast.error(connectionError);
+        return;
+      }
       if (snap.empty) {
         toast.error("No account found with that username.");
         return;
       }
-      await signIn(snap.docs[0].data().email, loginPw);
+      try {
+        await signIn(snap.docs[0].data().email, loginPw);
+      } catch (err: unknown) {
+        const code = (err as { code?: string })?.code ?? "";
+        toast.error(
+          code === "auth/network-request-failed"
+            ? connectionError
+            : "Incorrect username or password."
+        );
+        return;
+      }
       toast.success("Welcome back!");
       router.push(redirectTo);
-    } catch {
-      toast.error("Incorrect username or password.");
     } finally {
       setLoginLoading(false);
     }
@@ -451,15 +472,23 @@ export default function AuthFlow({
     e.preventDefault();
     setFpLoading(true);
     try {
-      const res = await fetch("/api/password-reset", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: fpEmail.trim() }),
-      });
-      if (!res.ok) throw new Error("failed");
+      let res;
+      try {
+        res = await fetch("/api/password-reset", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: fpEmail.trim() }),
+        });
+      } catch {
+        // fetch itself throwing means the request never reached the server
+        toast.error("Connection problem — check your internet and try again.");
+        return;
+      }
+      if (!res.ok) {
+        toast.error("No account found with that email address.");
+        return;
+      }
       setFpSent(true);
-    } catch {
-      toast.error("No account found with that email address.");
     } finally {
       setFpLoading(false);
     }

@@ -15,20 +15,25 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("/api/password-reset", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
-      });
-      const data = await res.json() as { success?: boolean; error?: string };
+      let res;
+      try {
+        res = await fetch("/api/password-reset", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim() }),
+        });
+      } catch {
+        // fetch itself throwing means the request never reached the server
+        toast.error("Connection problem — check your internet and try again.");
+        return;
+      }
 
       if (!res.ok) {
-        throw new Error(data.error ?? "failed");
+        toast.error("No account found with that email address.");
+        return;
       }
 
       setSent(true);
-    } catch {
-      toast.error("No account found with that email address.");
     } finally {
       setLoading(false);
     }
