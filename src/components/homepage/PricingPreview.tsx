@@ -58,13 +58,27 @@ export default function PricingPreview() {
           <div className="glass-card inline-flex items-center gap-1 rounded-full p-1">
             <button
               onClick={() => setAnnual(false)}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${!annual ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-700"}`}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${!annual ? "text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
+              style={!annual ? {
+                background: "rgba(255,255,255,0.85)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                boxShadow: "0 4px 14px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.95)",
+                border: "1px solid rgba(255,255,255,0.9)",
+              } : undefined}
             >
               Monthly
             </button>
             <button
               onClick={() => setAnnual(true)}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-2 ${annual ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-700"}`}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-2 ${annual ? "text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
+              style={annual ? {
+                background: "rgba(255,255,255,0.85)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                boxShadow: "0 4px 14px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.95)",
+                border: "1px solid rgba(255,255,255,0.9)",
+              } : undefined}
             >
               Annual
               <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Save up to 33%</span>
@@ -88,7 +102,14 @@ export default function PricingPreview() {
               } : undefined}
             >
               {popular && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-bold px-4 py-1.5 rounded-full">
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 text-slate-800 text-xs font-bold px-4 py-1.5 rounded-full"
+                  style={{
+                    background: "rgba(255,255,255,0.80)",
+                    backdropFilter: "blur(14px)",
+                    WebkitBackdropFilter: "blur(14px)",
+                    border: "1px solid rgba(255,255,255,0.9)",
+                    boxShadow: "0 6px 18px rgba(15,23,42,0.12), inset 0 1px 0 rgba(255,255,255,0.95)",
+                  }}>
                   Most Popular
                 </div>
               )}
@@ -131,8 +152,15 @@ export default function PricingPreview() {
                 className={`block text-center font-semibold py-3.5 rounded-xl transition-all text-sm ${
                   highlight
                     ? "bg-white text-blue-600 hover:bg-blue-50"
-                    : "bg-slate-900 text-white hover:bg-slate-800"
+                    : "text-slate-800 hover:-translate-y-0.5"
                 }`}
+                style={!highlight ? {
+                  background: "rgba(255,255,255,0.60)",
+                  backdropFilter: "blur(16px)",
+                  WebkitBackdropFilter: "blur(16px)",
+                  border: "1px solid rgba(255,255,255,0.85)",
+                  boxShadow: "0 6px 20px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.95)",
+                } : undefined}
               >
                 {cta}
               </Link>

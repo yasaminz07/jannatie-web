@@ -1,9 +1,8 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useMotionValue, useSpring, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Flame, BellRing, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, Flame, BellRing } from "lucide-react";
 
 export default function Hero() {
   return (
@@ -15,7 +14,7 @@ export default function Hero() {
         style={{
           backgroundImage: "radial-gradient(circle, #cbd5e1 1px, transparent 1px)",
           backgroundSize: "32px 32px",
-          opacity: 0.25,
+          opacity: 0.22,
           maskImage: "linear-gradient(to bottom, black 0%, transparent 70%)",
           WebkitMaskImage: "linear-gradient(to bottom, black 0%, transparent 70%)",
         }}
@@ -25,16 +24,6 @@ export default function Hero() {
 
         {/* ── Left — copy ──────────────────────────────────────────────────── */}
         <div className="text-center lg:text-left">
-
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45 }}
-            className="glass-sm inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-8"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-sm font-medium text-slate-600">Your deen, beautifully organised</span>
-          </motion.div>
 
           <h1 className="text-5xl sm:text-6xl xl:text-7xl font-black text-slate-900 leading-[0.98] tracking-tight mb-7">
             <AnimatedTitle />
@@ -54,37 +43,26 @@ export default function Hero() {
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.62 }}
-            className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-4 mb-9"
+            className="flex justify-center lg:justify-start mb-9"
           >
-            <motion.div
-              animate={{ scale: [1, 1.025, 1] }}
-              transition={{ repeat: Infinity, duration: 3.2, ease: "easeInOut", repeatDelay: 1.2 }}
-              className="inline-flex"
-            >
-              <Link
-                href="/signup"
-                className="group relative inline-flex items-center justify-center gap-2 text-white font-semibold px-8 py-4 rounded-2xl text-base transition-all duration-300 hover:-translate-y-0.5 overflow-hidden"
-                style={{
-                  background: "linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%)",
-                  boxShadow: "0 10px 30px rgba(59,130,246,0.35), inset 0 1px 0 rgba(255,255,255,0.35)",
-                }}
-              >
-                {/* Shine sweep on hover */}
-                <span
-                  className="absolute inset-y-0 -left-1/2 w-1/3 -skew-x-12 opacity-0 group-hover:opacity-100 group-hover:translate-x-[320%] transition-all duration-700 pointer-events-none"
-                  style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)" }}
-                />
-                Start for free
-                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </motion.div>
-
             <Link
-              href="/features"
-              className="group inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 font-semibold px-4 py-4 text-base transition-colors"
+              href="/signup"
+              className="group relative inline-flex items-center justify-center gap-2 text-white font-semibold px-9 py-4 rounded-2xl text-base transition-all duration-300 hover:-translate-y-0.5 overflow-hidden"
+              style={{
+                background: "linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%)",
+                boxShadow: "0 10px 30px rgba(59,130,246,0.35), inset 0 1px 0 rgba(255,255,255,0.35)",
+              }}
             >
-              See features
-              <ArrowRight size={15} className="text-blue-500 group-hover:translate-x-1 transition-transform" />
+              {/* Frosted glass light that settles over the button on hover */}
+              <span
+                className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-400 pointer-events-none"
+                style={{
+                  background: "linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.08) 45%, transparent 100%)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6), inset 0 0 24px rgba(255,255,255,0.15)",
+                }}
+              />
+              Start for free
+              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </motion.div>
 
@@ -134,16 +112,14 @@ export default function Hero() {
           </motion.div>
         </div>
 
-        {/* ── Right — dashboard preview ─────────────────────────────────────── */}
+        {/* ── Right — self-playing dashboard scene ──────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 40, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.9, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
           className="relative"
         >
-          <TiltPreview>
-            <DashboardPreview />
-          </TiltPreview>
+          <DashboardScene />
         </motion.div>
       </div>
     </section>
@@ -209,41 +185,35 @@ function AnimatedTitle() {
   );
 }
 
-/* Wraps children in a perspective container that tilts toward the cursor,
-   with floating glass chips pinned to the card corners */
-function TiltPreview({ children }: { children: React.ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const reduceMotion = useReducedMotion();
+/* One-shot animated scene: the dashboard "uses itself" once after loading —
+   Morning Dhikr ticks itself off, XP rises, the streak pops, chips settle in.
+   Nothing loops and nothing follows the cursor. */
 
-  const rotateX = useMotionValue(0);
-  const rotateY = useMotionValue(0);
-  const springX = useSpring(rotateX, { stiffness: 140, damping: 18 });
-  const springY = useSpring(rotateY, { stiffness: 140, damping: 18 });
+// Scene timeline (seconds)
+const T_CHECK = 1.9;   // Morning Dhikr checks itself
+const T_XP = 2.2;      // XP bar extends
+const T_STREAK = 2.7;  // streak pops
+const T_CHIPS = 3.0;   // corner chips settle in
 
-  function onMove(e: React.MouseEvent) {
-    if (reduceMotion || !ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    const px = (e.clientX - rect.left) / rect.width - 0.5;  // -0.5 … 0.5
-    const py = (e.clientY - rect.top) / rect.height - 0.5;
-    rotateY.set(px * 7);
-    rotateX.set(-py * 7);
-  }
-
-  function onLeave() {
-    rotateX.set(0);
-    rotateY.set(0);
-  }
+function DashboardScene() {
+  const habits = [
+    { name: "Fajr Salah", preDone: true, xp: "+10 XP" },
+    { name: "Quran · 1 page", preDone: true, xp: "+10 XP" },
+    { name: "Morning Dhikr", preDone: false, xp: "+5 XP", selfChecks: true },
+    { name: "Dhuhr Salah", preDone: false, xp: "" },
+  ];
 
   return (
-    <div ref={ref} onMouseMove={onMove} onMouseLeave={onLeave} style={{ perspective: 1400 }} className="relative">
+    <div className="relative">
+      {/* Glow behind card */}
+      <div className="absolute -bottom-6 inset-x-16 h-20 bg-blue-400/20 blur-3xl rounded-full pointer-events-none" />
 
-      {/* Floating glass chips — pinned to the card corners, over chrome/padding
-          rather than content */}
+      {/* Corner chips — enter once at the end of the scene, then stay still */}
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.3, duration: 0.6 }}
-        className="animate-float hidden sm:flex absolute -top-5 -left-4 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-2.5"
+        initial={{ opacity: 0, y: 10, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: T_CHIPS, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="hidden sm:flex absolute -top-5 -left-4 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-2.5"
       >
         <Flame size={17} className="text-orange-500" />
         <div>
@@ -253,10 +223,10 @@ function TiltPreview({ children }: { children: React.ReactNode }) {
       </motion.div>
 
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.5, duration: 0.6 }}
-        className="animate-float-delayed hidden sm:flex absolute -bottom-5 -right-4 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-2.5"
+        initial={{ opacity: 0, y: 10, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: T_CHIPS + 0.15, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="hidden sm:flex absolute -bottom-5 -right-4 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-2.5"
       >
         <BellRing size={17} className="text-blue-500" />
         <div>
@@ -264,37 +234,6 @@ function TiltPreview({ children }: { children: React.ReactNode }) {
           <p className="text-[10px] text-slate-400 mt-0.5">next prayer</p>
         </div>
       </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.7, duration: 0.6 }}
-        className="animate-float hidden xl:flex absolute top-1/2 -left-8 z-10 glass-card items-center gap-2 rounded-2xl px-3.5 py-2"
-        style={{ animationDelay: "4s" }}
-      >
-        <Sparkles size={14} className="text-indigo-500" />
-        <p className="text-xs font-bold text-indigo-600">+25 XP earned</p>
-      </motion.div>
-
-      <motion.div style={{ rotateX: springX, rotateY: springY, transformStyle: "preserve-3d" }}>
-        {children}
-      </motion.div>
-    </div>
-  );
-}
-
-function DashboardPreview() {
-  const habits = [
-    { name: "Fajr Salah", done: true, xp: "+10 XP" },
-    { name: "Quran · 1 page", done: true, xp: "+10 XP" },
-    { name: "Morning Dhikr", done: true, xp: "+5 XP" },
-    { name: "Dhuhr Salah", done: false, xp: "" },
-  ];
-
-  return (
-    <div className="relative">
-      {/* Glow behind card */}
-      <div className="absolute -bottom-6 inset-x-16 h-20 bg-blue-400/25 blur-3xl rounded-full pointer-events-none" />
 
       <div className="glass-deep rounded-3xl overflow-hidden">
 
@@ -332,7 +271,7 @@ function DashboardPreview() {
               </div>
             </div>
 
-            {/* XP bar */}
+            {/* XP bar — fills to 70%, then nudges to 82% when the dhikr is logged */}
             <div className="glass-sm rounded-2xl p-3.5">
               <div className="flex justify-between text-xs mb-2">
                 <span className="text-slate-600 font-medium">2,450 XP</span>
@@ -340,9 +279,9 @@ function DashboardPreview() {
               </div>
               <div className="h-2 bg-slate-200/70 rounded-full overflow-hidden">
                 <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: "82%" }}
-                  transition={{ duration: 1.6, delay: 1.0, ease: "easeOut" }}
+                  initial={{ width: "0%" }}
+                  animate={{ width: ["0%", "70%", "70%", "82%"] }}
+                  transition={{ duration: T_XP + 0.6, times: [0, 0.45, 0.75, 1], ease: "easeOut", delay: 0.8 }}
                   className="h-full bg-gradient-to-r from-blue-500 to-indigo-400 rounded-full"
                 />
               </div>
@@ -358,28 +297,64 @@ function DashboardPreview() {
                 {habits.map((h, i) => (
                   <motion.div
                     key={h.name}
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.7 + i * 0.1 }}
+                    initial={{
+                      opacity: 0, x: -12,
+                      backgroundColor: h.preDone ? "rgba(219,234,254,0.55)" : "rgba(255,255,255,0.40)",
+                    }}
+                    animate={{
+                      opacity: 1, x: 0,
+                      backgroundColor: (h.preDone || h.selfChecks) ? "rgba(219,234,254,0.55)" : "rgba(255,255,255,0.40)",
+                    }}
+                    transition={{
+                      opacity: { delay: 0.7 + i * 0.1 },
+                      x: { delay: 0.7 + i * 0.1 },
+                      backgroundColor: { delay: h.selfChecks ? T_CHECK : 0, duration: 0.4 },
+                    }}
                     className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border"
-                    style={h.done
-                      ? { background: "rgba(219,234,254,0.55)", borderColor: "rgba(191,219,254,0.6)" }
-                      : { background: "rgba(255,255,255,0.40)", borderColor: "rgba(255,255,255,0.65)" }}
+                    style={{ borderColor: (h.preDone || h.selfChecks) ? "rgba(191,219,254,0.6)" : "rgba(255,255,255,0.65)" }}
                   >
-                    <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${
-                      h.done ? "bg-blue-500" : "border-2 border-slate-300"
-                    }`}>
-                      {h.done && (
-                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                          <path d="M1 4l2.5 2.5 5.5-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
+                    {/* Checkbox */}
+                    <div className="relative w-5 h-5 flex-shrink-0">
+                      {/* empty state */}
+                      {!h.preDone && (
+                        <motion.div
+                          className="absolute inset-0 rounded-md border-2 border-slate-300"
+                          animate={h.selfChecks ? { opacity: 0 } : {}}
+                          transition={{ delay: T_CHECK, duration: 0.2 }}
+                        />
+                      )}
+                      {/* filled state */}
+                      {(h.preDone || h.selfChecks) && (
+                        <motion.div
+                          initial={h.selfChecks ? { scale: 0 } : { scale: 1 }}
+                          animate={{ scale: 1 }}
+                          transition={h.selfChecks ? { delay: T_CHECK, type: "spring", stiffness: 400, damping: 18 } : {}}
+                          className="absolute inset-0 rounded-md bg-blue-500 flex items-center justify-center"
+                        >
+                          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                            <path d="M1 4l2.5 2.5 5.5-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </motion.div>
                       )}
                     </div>
-                    <span className={`text-sm font-medium flex-1 ${h.done ? "text-slate-700" : "text-slate-400"}`}>
+
+                    <span className={`text-sm font-medium flex-1 ${(h.preDone || h.selfChecks) ? "text-slate-700" : "text-slate-400"}`}>
                       {h.name}
                     </span>
+
                     {h.xp && (
-                      <span className="text-xs text-blue-500 font-semibold">{h.xp}</span>
+                      h.selfChecks ? (
+                        <motion.span
+                          initial={{ opacity: 0, y: 6, scale: 0.8 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          transition={{ delay: T_CHECK + 0.15, type: "spring", stiffness: 300, damping: 16 }}
+                          className="text-xs text-blue-500 font-semibold"
+                        >
+                          {h.xp}
+                        </motion.span>
+                      ) : (
+                        <span className="text-xs text-blue-500 font-semibold">{h.xp}</span>
+                      )
                     )}
                   </motion.div>
                 ))}
@@ -414,7 +389,7 @@ function DashboardPreview() {
               </div>
             </motion.div>
 
-            {/* Streak */}
+            {/* Streak — pops when the dhikr is logged */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -423,8 +398,19 @@ function DashboardPreview() {
             >
               <p className="text-orange-400 text-xs font-medium mb-1">Current streak</p>
               <div className="flex items-end gap-2">
-                <p className="font-black text-2xl text-slate-900">22</p>
-                <Flame size={20} className="text-orange-500 mb-0.5" />
+                <motion.p
+                  animate={{ scale: [1, 1.25, 1] }}
+                  transition={{ delay: T_STREAK, duration: 0.45, ease: "easeOut" }}
+                  className="font-black text-2xl text-slate-900 origin-left"
+                >
+                  22
+                </motion.p>
+                <motion.div
+                  animate={{ rotate: [0, -14, 12, 0], scale: [1, 1.25, 1] }}
+                  transition={{ delay: T_STREAK, duration: 0.5 }}
+                >
+                  <Flame size={20} className="text-orange-500 mb-0.5" />
+                </motion.div>
               </div>
               <p className="text-slate-500 text-xs">days in a row</p>
             </motion.div>
