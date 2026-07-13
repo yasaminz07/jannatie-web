@@ -51,15 +51,7 @@ export default function FinalCTA() {
       <div
         ref={darkRef}
         className="relative overflow-hidden pt-16 pb-24 -mt-px"
-        style={{
-          // Huge soft radial washes baked into the base colour — no hard
-          // blur-circle edges, and the top edge stays exactly #0f172a so it
-          // meets the SVG curve without a seam
-          background: `
-            radial-gradient(80rem 36rem at 18% 34%, rgba(37, 64, 143, 0.32) 0%, transparent 58%),
-            radial-gradient(64rem 30rem at 84% 46%, rgba(72, 61, 165, 0.26) 0%, transparent 58%),
-            #0f172a`,
-        }}
+        style={{ background: "#0f172a" }}
       >
 
         {/* Twinkling stars — fade out before the footer so no seam shows */}
