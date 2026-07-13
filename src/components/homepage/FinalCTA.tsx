@@ -1,9 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import {
-  motion, useMotionValue, useMotionTemplate, useScroll, useTransform,
-} from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
@@ -23,18 +21,6 @@ const STARS = [
 
 export default function FinalCTA() {
   const darkRef = useRef<HTMLDivElement>(null);
-
-  // Cursor spotlight — a soft blue glow follows the mouse over the dark block
-  const mx = useMotionValue(50);
-  const my = useMotionValue(30);
-  const spotlight = useMotionTemplate`radial-gradient(560px circle at ${mx}% ${my}%, rgba(59,130,246,0.14), transparent 70%)`;
-
-  function onMouseMove(e: React.MouseEvent) {
-    if (!darkRef.current) return;
-    const rect = darkRef.current.getBoundingClientRect();
-    mx.set(((e.clientX - rect.left) / rect.width) * 100);
-    my.set(((e.clientY - rect.top) / rect.height) * 100);
-  }
 
   // Scroll parallax — the bismillah drifts slower than the page
   const { scrollYProgress } = useScroll({
@@ -64,7 +50,6 @@ export default function FinalCTA() {
 
       <div
         ref={darkRef}
-        onMouseMove={onMouseMove}
         className="relative overflow-hidden pt-16 pb-24 -mt-px"
         style={{
           // Huge soft radial washes baked into the base colour — no hard
@@ -77,7 +62,7 @@ export default function FinalCTA() {
         }}
       >
 
-        {/* Decorative layer — fades out before the footer so no seam shows */}
+        {/* Twinkling stars — fade out before the footer so no seam shows */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -85,17 +70,6 @@ export default function FinalCTA() {
             WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 72%, transparent 100%)",
           }}
         >
-
-          {/* Dot grid */}
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)",
-              backgroundSize: "32px 32px",
-            }}
-          />
-
-          {/* Twinkling stars */}
           {STARS.map(({ left, top, size, delay }, i) => (
             <motion.span
               key={i}
@@ -107,12 +81,6 @@ export default function FinalCTA() {
           ))}
         </div>
 
-        {/* Cursor spotlight */}
-        <motion.div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: spotlight }}
-        />
-
         <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
 
           <motion.div style={{ y: bismillahY }}>
@@ -121,7 +89,7 @@ export default function FinalCTA() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.7 }}
-              className="arabic text-3xl text-white/20 mb-2"
+              className="arabic text-4xl text-white/80 mb-3"
             >
               بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ
             </motion.p>
@@ -130,7 +98,7 @@ export default function FinalCTA() {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.7, delay: 0.15 }}
-              className="text-white/25 text-xs mb-14 tracking-widest"
+              className="text-white/55 text-sm mb-14 tracking-widest"
             >
               In the name of Allah, the Most Gracious, the Most Merciful
             </motion.p>
@@ -142,11 +110,13 @@ export default function FinalCTA() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="text-5xl sm:text-6xl lg:text-7xl font-black text-white leading-[1.0] tracking-tight mb-6"
+              className="text-5xl sm:text-6xl lg:text-7xl font-black text-white leading-[1.05] tracking-tight mb-6"
             >
               Your deen deserves
               <br />
-              <span className="text-gradient-animated">more than a reminder.</span>
+              <span className="font-serif italic font-medium text-slate-200">
+                more than a reminder.
+              </span>
             </motion.h2>
 
             <motion.p
