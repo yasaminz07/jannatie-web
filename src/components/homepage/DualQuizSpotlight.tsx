@@ -120,8 +120,7 @@ function BattleDemo({ active }: { active: boolean }) {
             initial={{ width: "100%" }}
             animate={{ width: "0%" }}
             transition={{ duration: (THINK_MS + REVEAL_MS) / 1000, ease: "linear" }}
-            className="h-full rounded-full"
-            style={{ background: "linear-gradient(90deg, #34d399, #fbbf24, #f87171)" }}
+            className="h-full rounded-full bg-violet-500"
           />
         )}
       </div>

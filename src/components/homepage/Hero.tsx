@@ -24,6 +24,48 @@ export default function Hero() {
       {/* Centered copy */}
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-16 text-center">
 
+        {/* Decorative floating frost orbs behind the headline */}
+        <div className="absolute inset-0 pointer-events-none hidden md:block" aria-hidden="true">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.0, duration: 1 }}
+            className="animate-float absolute left-4 top-44 w-14 h-14 rounded-full"
+            style={{
+              background: "rgba(255,255,255,0.45)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              border: "1px solid rgba(255,255,255,0.8)",
+              boxShadow: "0 8px 24px rgba(99,102,241,0.12), inset 0 1px 0 rgba(255,255,255,0.9)",
+            }}
+          />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.2, duration: 1 }}
+            className="animate-float-delayed absolute right-10 top-32 w-9 h-9 rounded-full"
+            style={{
+              background: "rgba(219,234,254,0.55)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              border: "1px solid rgba(255,255,255,0.8)",
+              boxShadow: "0 6px 18px rgba(59,130,246,0.14), inset 0 1px 0 rgba(255,255,255,0.9)",
+            }}
+          />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.4, duration: 1 }}
+            className="animate-float absolute right-24 bottom-40 w-6 h-6 rounded-full"
+            style={{
+              animationDelay: "3s",
+              background: "rgba(224,231,255,0.6)",
+              border: "1px solid rgba(255,255,255,0.85)",
+              boxShadow: "0 4px 14px rgba(99,102,241,0.14)",
+            }}
+          />
+        </div>
+
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -53,17 +95,28 @@ export default function Hero() {
           transition={{ duration: 0.6, delay: 0.26 }}
           className="flex flex-col sm:flex-row justify-center gap-3 mb-10"
         >
-          <Link
-            href="/signup"
-            className="group relative inline-flex items-center justify-center gap-2 text-white font-semibold px-8 py-4 rounded-2xl text-base transition-all duration-300 hover:-translate-y-0.5 overflow-hidden"
-            style={{
-              background: "linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%)",
-              boxShadow: "0 10px 30px rgba(59,130,246,0.35), inset 0 1px 0 rgba(255,255,255,0.35)",
-            }}
+          <motion.div
+            animate={{ scale: [1, 1.025, 1] }}
+            transition={{ repeat: Infinity, duration: 3.2, ease: "easeInOut", repeatDelay: 1.2 }}
+            className="inline-flex"
           >
-            Start for free
-            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
+            <Link
+              href="/signup"
+              className="group relative inline-flex items-center justify-center gap-2 text-white font-semibold px-8 py-4 rounded-2xl text-base transition-all duration-300 hover:-translate-y-0.5 overflow-hidden"
+              style={{
+                background: "linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%)",
+                boxShadow: "0 10px 30px rgba(59,130,246,0.35), inset 0 1px 0 rgba(255,255,255,0.35)",
+              }}
+            >
+              {/* Shine sweep on hover */}
+              <span
+                className="absolute inset-y-0 -left-1/2 w-1/3 -skew-x-12 opacity-0 group-hover:opacity-100 group-hover:translate-x-[320%] transition-all duration-700 pointer-events-none"
+                style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)" }}
+              />
+              Start for free
+              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </motion.div>
           <Link
             href="/features"
             className="glass-card glass-card-hover inline-flex items-center justify-center text-slate-700 font-medium px-8 py-4 rounded-2xl text-base"
@@ -106,46 +159,62 @@ export default function Hero() {
   );
 }
 
-/* Word-by-word blur-in reveal for the hero headline */
+/* Letter-cascade reveal for the hero headline; "Allah" shimmers as one word */
 function AnimatedTitle() {
-  // Each word carries its own line + styling; rendered as one stagger sequence
-  const words: { text: string; line: number; gradient?: boolean; arabic?: boolean }[] = [
-    { text: "Grow",   line: 0 },
-    { text: "closer", line: 0 },
-    { text: "to",     line: 1 },
-    { text: "Allah",  line: 1, gradient: true },
-    { text: "ﷻ",      line: 1, arabic: true },
-    { text: "every",  line: 2 },
-    { text: "day.",   line: 2 },
-  ];
+  const letterEase: [number, number, number, number] = [0.16, 1, 0.3, 1];
+  let charIndex = 0;
 
-  const lines = [0, 1, 2].map((l) => words.filter((w) => w.line === l));
-  let wordIndex = -1;
+  const delayFor = () => 0.12 + charIndex++ * 0.028;
+
+  const renderWord = (word: string, extraClass = "") =>
+    word.split("").map((ch, i) => (
+      <motion.span
+        key={`${word}-${i}`}
+        initial={{ opacity: 0, y: 40, rotateX: 45, filter: "blur(10px)" }}
+        animate={{ opacity: 1, y: 0, rotateX: 0, filter: "blur(0px)" }}
+        transition={{ duration: 0.7, delay: delayFor(), ease: letterEase }}
+        className={`inline-block ${extraClass}`}
+      >
+        {ch}
+      </motion.span>
+    ));
 
   return (
-    <>
-      {lines.map((line, li) => (
-        <span key={li} className="block">
-          {line.map((w) => {
-            wordIndex++;
-            return (
-              <motion.span
-                key={`${li}-${w.text}`}
-                initial={{ opacity: 0, y: 34, filter: "blur(12px)" }}
-                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                transition={{ duration: 0.65, delay: 0.15 + wordIndex * 0.09, ease: [0.16, 1, 0.3, 1] }}
-                className={`inline-block mr-[0.22em] last:mr-0 ${
-                  w.gradient ? "italic text-gradient pr-1" : ""
-                } ${w.arabic ? "arabic text-indigo-500 not-italic align-baseline" : ""}`}
-                style={w.arabic ? { fontSize: "68%" } : undefined}
-              >
-                {w.text}
-              </motion.span>
-            );
-          })}
-        </span>
-      ))}
-    </>
+    <span style={{ perspective: 600 }}>
+      <span className="block">
+        {renderWord("Grow")}
+        <span className="inline-block w-[0.25em]" />
+        {renderWord("closer")}
+      </span>
+      <span className="block">
+        {renderWord("to")}
+        <span className="inline-block w-[0.25em]" />
+        {/* "Allah" animates in as one word, then shimmers forever */}
+        <motion.span
+          initial={{ opacity: 0, y: 40, scale: 0.92, filter: "blur(12px)" }}
+          animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+          transition={{ duration: 0.8, delay: 0.12 + (charIndex += 5) * 0.028, ease: letterEase }}
+          className="inline-block italic text-gradient-animated pr-1"
+        >
+          Allah
+        </motion.span>
+        <span className="inline-block w-[0.15em]" />
+        <motion.span
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "spring", stiffness: 200, damping: 14, delay: 0.12 + charIndex * 0.028 }}
+          className="arabic text-indigo-500 not-italic inline-block align-baseline"
+          style={{ fontSize: "68%" }}
+        >
+          ﷻ
+        </motion.span>
+      </span>
+      <span className="block">
+        {renderWord("every")}
+        <span className="inline-block w-[0.25em]" />
+        {renderWord("day.")}
+      </span>
+    </span>
   );
 }
 

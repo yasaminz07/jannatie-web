@@ -135,6 +135,15 @@
     background-clip: text;
   }
 
+  .text-gradient-animated {
+    background: linear-gradient(90deg, #3b82f6, #6366f1, #8b5cf6, #6366f1, #3b82f6);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: text-shimmer 5s linear infinite;
+  }
+
   .text-gradient-white {
     background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
     -webkit-background-clip: text;
@@ -195,6 +204,12 @@
   animation-delay: 2s;
 }
 
+/* Shimmering gradient sweep for hero keyword */
+@keyframes text-shimmer {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
 /* Aurora orbs — slow drifting colour blobs behind the landing page */
 @keyframes aurora-a {
   0%, 100% { transform: translate(0, 0) scale(1); }
@@ -216,7 +231,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .animate-aurora-a, .animate-aurora-b, .animate-aurora-c,
-  .animate-float, .animate-float-delayed, .animate-ticker {
+  .animate-float, .animate-float-delayed, .animate-ticker,
+  .text-gradient-animated {
     animation: none;
   }
 }
