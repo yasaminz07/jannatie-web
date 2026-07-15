@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
   ArrowRight, Flame, BellRing, MousePointer2, Swords, Zap,
-  ShieldCheck, Send,
+  ShieldCheck, Send, Heart, MessageCircle, Share2, BadgeCheck,
 } from "lucide-react";
 
 export default function Hero() {
@@ -88,7 +88,7 @@ export default function Hero() {
           </motion.div>
         </div>
 
-        {/* ── Right — looping product tour ──────────────────────────────────── */}
+        {/* ── Right — looping product film ──────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 40, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -160,19 +160,23 @@ function AnimatedTitle() {
   );
 }
 
-/* ── Looping product tour ─────────────────────────────────────────────────────
-   Three acts on a flip loop, each with its own scripted animation:
-   1. Dashboard  — a cursor ticks off Morning Dhikr; XP rises, streak pops
-   2. Dual Quiz  — the cursor answers "Bismillah"; the score ticks up
-   3. AI Buddy   — a question is asked, the AI types, a cited answer lands   */
+/* ── Looping product film ─────────────────────────────────────────────────────
+   Four scenes, each opening on a full-frame kinetic title card that zooms
+   through the camera to reveal the living UI beneath:
+   1. Habits     — a cursor ticks off Morning Dhikr; XP rises, streak pops
+   2. Battle     — the cursor answers "Bismillah"; the score ticks up
+   3. Ask        — a question is asked, the AI types, a cited answer lands
+   4. Community  — comments roll in live on a mosque event, the like pops   */
 
-const ACT_MS = 5600; // per-act duration before cutting to the next
+const ACT_MS = 6600;      // per-scene duration
+const TITLE_OUT = 1.35;   // when the title card zooms away
+const S = TITLE_OUT + 0.25; // scene content animations start after the reveal
 
-// Scene metadata — caption and ambient colour mood per act
 const ACTS = [
-  { num: "01", label: "Build habits that last", accent: "rgba(59, 130, 246, 0.22)" },
-  { num: "02", label: "Battle the Ummah live",  accent: "rgba(139, 92, 246, 0.22)" },
-  { num: "03", label: "Ask with evidence",      accent: "rgba(16, 185, 129, 0.18)" },
+  { num: "01", label: "Build habits that last",     accent: "rgba(59, 130, 246, 0.22)" },
+  { num: "02", label: "Battle the Ummah live",      accent: "rgba(139, 92, 246, 0.22)" },
+  { num: "03", label: "Ask with evidence",          accent: "rgba(16, 185, 129, 0.18)" },
+  { num: "04", label: "Grow with your community",   accent: "rgba(245, 158, 11, 0.18)" },
 ];
 
 function ProductScene() {
@@ -183,10 +187,10 @@ function ProductScene() {
     return () => clearInterval(t);
   }, []);
 
-  const face = act % 3;
+  const face = act % 4;
 
   return (
-    <div className="relative" style={{ perspective: 1600 }}>
+    <div className="relative">
       {/* Ambient colour mood — cross-fades to match the scene playing */}
       <motion.div
         className="absolute -inset-8 rounded-[3rem] blur-3xl pointer-events-none"
@@ -194,85 +198,18 @@ function ProductScene() {
         transition={{ duration: 1.4, ease: "easeInOut" }}
       />
 
-      {/* Corner chips — swap with each act */}
-      <AnimatePresence>
-        {face === 0 && (
-          <motion.div
-            key={`chip-a-${act}`}
-            initial={{ opacity: 0, y: 10, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.25 } }}
-            transition={{ delay: 3.1, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="hidden sm:flex absolute -top-5 -left-4 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-2.5"
-          >
-            <Flame size={17} className="text-orange-500" />
-            <div>
-              <p className="text-sm font-black text-slate-900 leading-none">22 days</p>
-              <p className="text-[10px] text-slate-400 mt-0.5">current streak</p>
-            </div>
-          </motion.div>
-        )}
-        {face === 0 && (
-          <motion.div
-            key={`chip-b-${act}`}
-            initial={{ opacity: 0, y: 10, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.25 } }}
-            transition={{ delay: 3.3, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="hidden sm:flex absolute -bottom-5 -right-4 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-2.5"
-          >
-            <BellRing size={17} className="text-blue-500" />
-            <div>
-              <p className="text-sm font-black text-slate-900 leading-none">Dhuhr · 42 min</p>
-              <p className="text-[10px] text-slate-400 mt-0.5">next prayer</p>
-            </div>
-          </motion.div>
-        )}
-        {face === 1 && (
-          <motion.div
-            key={`chip-c-${act}`}
-            initial={{ opacity: 0, y: 10, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.25 } }}
-            transition={{ delay: 3.0, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="hidden sm:flex absolute -bottom-5 -right-4 z-10 glass-card items-center gap-2 rounded-2xl px-4 py-2.5"
-          >
-            <Zap size={15} className="text-indigo-500" />
-            <p className="text-xs font-bold text-indigo-600">+60 XP to the winner</p>
-          </motion.div>
-        )}
-        {face === 2 && (
-          <motion.div
-            key={`chip-d-${act}`}
-            initial={{ opacity: 0, y: 10, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.25 } }}
-            transition={{ delay: 3.4, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="hidden sm:flex absolute -bottom-5 -right-4 z-10 glass-card items-center gap-2 rounded-2xl px-4 py-2.5"
-          >
-            <ShieldCheck size={15} className="text-emerald-500" />
-            <p className="text-xs font-bold text-emerald-600">Every answer is cited</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Cinematic cut between scenes — outgoing drifts up and defocuses,
-          incoming rises in from a blur; each face remounts so its scene replays */}
+      {/* Zoom cut between scenes — outgoing zooms toward the camera and
+          dissolves; the next scene zooms up from small. Faces remount each
+          cycle so every scene replays from its title card. */}
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={act}
-          initial={{ opacity: 0, y: 44, scale: 0.96, filter: "blur(14px)" }}
-          animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-          exit={{ opacity: 0, y: -32, scale: 0.97, filter: "blur(10px)" }}
+          initial={{ opacity: 0, scale: 0.82, filter: "blur(10px)" }}
+          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+          exit={{ opacity: 0, scale: 1.14, filter: "blur(12px)" }}
           transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
         >
-          {/* Slow Ken Burns drift for the length of the act */}
-          <motion.div
-            animate={{ scale: [1, 1.02] }}
-            transition={{ duration: ACT_MS / 1000, ease: "linear" }}
-          >
-            {face === 0 ? <DashboardFace /> : face === 1 ? <QuizFace /> : <AIFace />}
-          </motion.div>
+          {face === 0 ? <DashboardFace /> : face === 1 ? <QuizFace /> : face === 2 ? <AIFace /> : <CommunityFace />}
         </motion.div>
       </AnimatePresence>
 
@@ -294,7 +231,7 @@ function ProductScene() {
 
         <div className="flex gap-1.5">
           {ACTS.map((_, i) => (
-            <div key={i} className="h-1 w-10 rounded-full bg-slate-200/80 overflow-hidden">
+            <div key={i} className="h-1 w-9 rounded-full bg-slate-200/80 overflow-hidden">
               {i < face && <div className="h-full w-full bg-slate-400 rounded-full" />}
               {i === face && (
                 <motion.div
@@ -310,6 +247,46 @@ function ProductScene() {
         </div>
       </div>
     </div>
+  );
+}
+
+/* Full-frame kinetic title card — letters spring up, then the whole card
+   zooms through the camera to reveal the scene */
+function TitleCard({
+  word, sub, gradient, serif = false,
+}: { word: string; sub: string; gradient: string; serif?: boolean }) {
+  return (
+    <motion.div
+      className="absolute inset-0 z-30 flex flex-col items-center justify-center pointer-events-none"
+      style={{ background: gradient }}
+      initial={{ opacity: 1, scale: 1 }}
+      animate={{ opacity: 0, scale: 1.45, filter: "blur(12px)" }}
+      transition={{ delay: TITLE_OUT, duration: 0.55, ease: [0.7, 0, 0.84, 0] }}
+    >
+      <div className="flex overflow-hidden pb-2">
+        {word.split("").map((ch, i) => (
+          <motion.span
+            key={i}
+            initial={{ y: "120%", rotate: 8, opacity: 0 }}
+            animate={{ y: "0%", rotate: 0, opacity: 1 }}
+            transition={{ delay: 0.1 + i * 0.05, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            className={`text-white text-6xl sm:text-7xl leading-none ${
+              serif ? "font-serif italic" : "font-black tracking-tight"
+            }`}
+          >
+            {ch}
+          </motion.span>
+        ))}
+      </div>
+      <motion.p
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.55, duration: 0.4 }}
+        className="text-white/70 text-[11px] font-bold uppercase tracking-[0.35em] mt-3"
+      >
+        {sub}
+      </motion.p>
+    </motion.div>
   );
 }
 
@@ -365,10 +342,10 @@ function Cursor({
   );
 }
 
-/* Act 1 — dashboard uses itself */
-const T_CLICK = 2.0;
-const T_XP = 2.3;
-const T_STREAK = 2.8;
+/* Scene 1 — Habits: the dashboard uses itself */
+const T_CLICK = S + 1.0;
+const T_XP = T_CLICK + 0.3;
+const T_STREAK = T_CLICK + 0.8;
 
 function DashboardFace() {
   const habits = [
@@ -381,6 +358,8 @@ function DashboardFace() {
   return (
     <div className="glass-deep rounded-3xl overflow-hidden relative sm:h-[480px] flex flex-col">
 
+      <TitleCard word="Habits." sub="Track your day" gradient="linear-gradient(135deg, #3b82f6, #4f46e5)" />
+
       <Cursor
         path={[
           { left: "58%", top: "82%" },
@@ -391,8 +370,8 @@ function DashboardFace() {
           { left: "17%", top: "63%" },
         ]}
         clickAtIndex={3}
-        delay={1.0}
-        duration={2.8}
+        delay={S}
+        duration={2.4}
       />
 
       {/* Click ripple */}
@@ -421,7 +400,7 @@ function DashboardFace() {
               style={{ background: "rgba(219,234,254,0.6)" }}>Level 12</span>
           </div>
 
-          {/* XP bar — fills to 70%, nudges to 82% when the dhikr is logged */}
+          {/* XP bar */}
           <div className="glass-sm rounded-2xl p-3.5">
             <div className="flex justify-between text-xs mb-2">
               <span className="text-slate-600 font-medium">2,450 XP</span>
@@ -431,7 +410,7 @@ function DashboardFace() {
               <motion.div
                 initial={{ width: "0%" }}
                 animate={{ width: ["0%", "70%", "70%", "82%"] }}
-                transition={{ duration: T_XP + 0.6, times: [0, 0.45, 0.75, 1], ease: "easeOut", delay: 0.6 }}
+                transition={{ duration: T_XP - S + 0.6, times: [0, 0.45, 0.75, 1], ease: "easeOut", delay: S }}
                 className="h-full bg-gradient-to-r from-blue-500 to-indigo-400 rounded-full"
               />
             </div>
@@ -448,16 +427,17 @@ function DashboardFace() {
                 <motion.div
                   key={h.name}
                   initial={{
-                    opacity: 0, x: -12,
+                    opacity: 0, y: 14, scale: 0.97,
                     backgroundColor: h.preDone ? "rgba(219,234,254,0.55)" : "rgba(255,255,255,0.40)",
                   }}
                   animate={{
-                    opacity: 1, x: 0,
+                    opacity: 1, y: 0, scale: 1,
                     backgroundColor: (h.preDone || h.selfChecks) ? "rgba(219,234,254,0.55)" : "rgba(255,255,255,0.40)",
                   }}
                   transition={{
-                    opacity: { delay: 0.4 + i * 0.1 },
-                    x: { delay: 0.4 + i * 0.1 },
+                    opacity: { delay: S - 0.2 + i * 0.09 },
+                    y: { delay: S - 0.2 + i * 0.09, type: "spring", stiffness: 260, damping: 20 },
+                    scale: { delay: S - 0.2 + i * 0.09 },
                     backgroundColor: { delay: h.selfChecks ? T_CLICK : 0, duration: 0.4 },
                   }}
                   className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border"
@@ -513,9 +493,9 @@ function DashboardFace() {
         <div className="space-y-3">
 
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
+            transition={{ delay: S - 0.1, type: "spring", stiffness: 240, damping: 20 }}
             className="rounded-2xl p-4 text-white"
             style={{
               background: "linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%)",
@@ -529,16 +509,16 @@ function DashboardFace() {
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: "60%" }}
-                transition={{ duration: 1.4, delay: 0.9 }}
+                transition={{ duration: 1.4, delay: S + 0.2 }}
                 className="h-full bg-white/80 rounded-full"
               />
             </div>
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
+            transition={{ delay: S, type: "spring", stiffness: 240, damping: 20 }}
             className="glass-sm rounded-2xl p-4"
           >
             <p className="text-orange-400 text-xs font-medium mb-1">Current streak</p>
@@ -561,9 +541,9 @@ function DashboardFace() {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
+            transition={{ delay: S + 0.1, type: "spring", stiffness: 240, damping: 20 }}
             className="glass-sm rounded-2xl p-3.5"
           >
             <div className="flex items-center gap-2 mb-1.5">
@@ -582,8 +562,8 @@ function DashboardFace() {
   );
 }
 
-/* Act 2 — the cursor answers a Dual Quiz question */
-const Q_CLICK = 2.2;
+/* Scene 2 — Battle: the cursor answers a Dual Quiz question */
+const Q_CLICK = S + 1.2;
 
 function QuizFace() {
   const options = ["Alhamdulillah", "Bismillah", "SubhanAllah", "Astaghfirullah"];
@@ -591,6 +571,8 @@ function QuizFace() {
 
   return (
     <div className="glass-deep rounded-3xl overflow-hidden relative sm:h-[480px] flex flex-col">
+
+      <TitleCard word="Battle." sub="Live dual quiz" gradient="linear-gradient(135deg, #7c3aed, #4f46e5)" />
 
       <Cursor
         path={[
@@ -602,8 +584,8 @@ function QuizFace() {
           { left: "70%", top: "64%" },
         ]}
         clickAtIndex={3}
-        delay={0.9}
-        duration={2.6}
+        delay={S + 0.1}
+        duration={2.4}
       />
 
       {/* Click ripple on the answer */}
@@ -623,7 +605,7 @@ function QuizFace() {
         <motion.p
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
+          transition={{ delay: S - 0.25 }}
           className="text-[11px] font-bold text-indigo-500 uppercase tracking-widest text-center mb-4"
         >
           <Swords size={12} className="inline mr-1.5 -mt-0.5" />
@@ -632,9 +614,9 @@ function QuizFace() {
 
         {/* Scoreboard */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
+          initial={{ opacity: 0, y: 12, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: S - 0.15, type: "spring", stiffness: 240, damping: 20 }}
           className="flex items-center gap-3 mb-5"
         >
           <div className="flex-1 glass-sm rounded-2xl px-4 py-2.5 flex items-center gap-3">
@@ -678,7 +660,7 @@ function QuizFace() {
           <motion.div
             initial={{ width: "100%" }}
             animate={{ width: "22%" }}
-            transition={{ delay: 0.5, duration: 4.4, ease: "linear" }}
+            transition={{ delay: S, duration: 4.2, ease: "linear" }}
             className="h-full rounded-full bg-violet-500"
           />
         </div>
@@ -687,7 +669,7 @@ function QuizFace() {
         <motion.p
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.45 }}
+          transition={{ delay: S - 0.05 }}
           className="text-sm font-bold text-slate-900 mb-4"
         >
           What do we say before starting to eat?
@@ -700,7 +682,7 @@ function QuizFace() {
               <motion.div
                 key={opt}
                 initial={{
-                  opacity: 0, y: 10,
+                  opacity: 0, y: 12,
                   backgroundColor: "rgba(255,255,255,0.45)",
                   borderColor: "rgba(255,255,255,0.65)",
                   color: "#475569",
@@ -713,13 +695,13 @@ function QuizFace() {
                   scale: [1, 1.05, 1],
                 } : { opacity: 1, y: 0 }}
                 transition={isCorrect ? {
-                  opacity: { delay: 0.55 + i * 0.08 },
-                  y: { delay: 0.55 + i * 0.08 },
+                  opacity: { delay: S + i * 0.08 },
+                  y: { delay: S + i * 0.08 },
                   backgroundColor: { delay: Q_CLICK, duration: 0.3 },
                   borderColor: { delay: Q_CLICK, duration: 0.3 },
                   color: { delay: Q_CLICK, duration: 0.3 },
                   scale: { delay: Q_CLICK, duration: 0.4 },
-                } : { opacity: { delay: 0.55 + i * 0.08 }, y: { delay: 0.55 + i * 0.08 } }}
+                } : { opacity: { delay: S + i * 0.08 }, y: { delay: S + i * 0.08 } }}
                 className="rounded-xl px-3 py-2.5 text-xs font-semibold text-center border"
               >
                 {opt}
@@ -732,10 +714,12 @@ function QuizFace() {
   );
 }
 
-/* Act 3 — AI Buddy answers with a citation */
+/* Scene 3 — Ask: AI Buddy answers with a citation */
 function AIFace() {
   return (
     <div className="glass-deep rounded-3xl overflow-hidden relative sm:h-[480px] flex flex-col">
+
+      <TitleCard word="Ask." sub="Cited, every time" gradient="linear-gradient(135deg, #059669, #0d9488)" serif />
 
       <Chrome url="jannatie.com/ai" />
 
@@ -759,9 +743,9 @@ function AIFace() {
 
         {/* User question */}
         <motion.div
-          initial={{ opacity: 0, y: 14, scale: 0.96 }}
+          initial={{ opacity: 0, y: 16, scale: 0.94 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ delay: 0.5, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ delay: S, type: "spring", stiffness: 260, damping: 20 }}
           className="self-end max-w-[80%] rounded-2xl rounded-br-sm px-4 py-2.5 text-sm text-white"
           style={{ background: "linear-gradient(135deg, #3b82f6, #4f46e5)" }}
         >
@@ -772,7 +756,7 @@ function AIFace() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: [0, 1, 1, 0] }}
-          transition={{ delay: 1.1, duration: 1.2, times: [0, 0.15, 0.85, 1] }}
+          transition={{ delay: S + 0.6, duration: 1.2, times: [0, 0.15, 0.85, 1] }}
           className="self-start glass-sm rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1.5"
         >
           <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse-dot" />
@@ -782,9 +766,9 @@ function AIFace() {
 
         {/* AI answer */}
         <motion.div
-          initial={{ opacity: 0, y: 14, scale: 0.96 }}
+          initial={{ opacity: 0, y: 16, scale: 0.94 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ delay: 2.4, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ delay: S + 1.9, type: "spring", stiffness: 260, damping: 20 }}
           className="self-start max-w-[85%] glass-sm rounded-2xl rounded-bl-sm px-4 py-3"
         >
           <p className="text-sm text-slate-700 leading-relaxed">
@@ -795,7 +779,7 @@ function AIFace() {
           <motion.span
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 3.2, type: "spring", stiffness: 300, damping: 18 }}
+            transition={{ delay: S + 2.7, type: "spring", stiffness: 300, damping: 18 }}
             className="inline-flex items-center gap-1 mt-2 text-[11px] font-bold text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200"
             style={{ background: "rgba(209,250,229,0.7)" }}
           >
@@ -810,6 +794,128 @@ function AIFace() {
           <div className="w-7 h-7 rounded-full flex items-center justify-center"
             style={{ background: "linear-gradient(135deg, #3b82f6, #4f46e5)" }}>
             <Send size={12} className="text-white" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Scene 4 — Community: comments roll in live on a mosque event */
+const COMMENTS = [
+  { user: "umm_khalid",    color: "#8b5cf6", text: "Can't wait! Bringing the kids 🧁" },
+  { user: "brotherali_uk", color: "#10b981", text: "JazakAllah khair for organising 🤲" },
+  { user: "sister_fatimah", color: "#f59e0b", text: "See you all there insha'Allah!" },
+];
+
+const C_HEART = S + 3.4;
+
+function CommunityFace() {
+  return (
+    <div className="glass-deep rounded-3xl overflow-hidden relative sm:h-[480px] flex flex-col">
+
+      <TitleCard word="Community." sub="Real local events" gradient="linear-gradient(135deg, #f59e0b, #ef4444)" />
+
+      <Chrome url="jannatie.com/community" />
+
+      {/* Event post */}
+      <div className="p-5 flex-1 flex flex-col min-h-0">
+
+        {/* Event header */}
+        <motion.div
+          initial={{ opacity: 0, y: 14, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: S - 0.15, type: "spring", stiffness: 240, damping: 20 }}
+          className="flex items-center gap-3 mb-3"
+        >
+          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+            CM
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1">
+              <p className="text-sm font-bold text-slate-900 truncate">Central Mosque Youth</p>
+              <BadgeCheck size={14} className="text-blue-500 flex-shrink-0" />
+            </div>
+            <p className="text-[11px] text-slate-400">@centralmosqueyouth · 842 followers</p>
+          </div>
+        </motion.div>
+
+        {/* Event card */}
+        <motion.div
+          initial={{ opacity: 0, y: 14, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: S, type: "spring", stiffness: 240, damping: 20 }}
+          className="glass-sm rounded-2xl p-4 mb-3"
+        >
+          <p className="text-sm font-bold text-slate-900 mb-0.5">🧁 Charity Bake Sale</p>
+          <p className="text-xs text-slate-400 mb-3">Sat 14 March · 12–4 PM · Community Hall, Birmingham</p>
+          <div className="flex items-center gap-5 text-xs text-slate-400">
+            {/* Heart pops and the count ticks 95 → 96 */}
+            <span className="flex items-center gap-1.5">
+              <motion.span
+                animate={{ scale: [1, 1.5, 1] }}
+                transition={{ delay: C_HEART, duration: 0.45, ease: "easeOut" }}
+                className="inline-flex"
+              >
+                <motion.span
+                  initial={{ color: "#94a3b8" }}
+                  animate={{ color: "#f43f5e" }}
+                  transition={{ delay: C_HEART, duration: 0.2 }}
+                  className="inline-flex"
+                >
+                  <Heart size={13} fill="currentColor" />
+                </motion.span>
+              </motion.span>
+              <span className="relative w-6 text-left">
+                <motion.span
+                  className="absolute inset-0"
+                  animate={{ opacity: [1, 1, 0] }}
+                  transition={{ delay: C_HEART, duration: 0.25, times: [0, 0.6, 1] }}
+                >
+                  95
+                </motion.span>
+                <motion.span
+                  className="absolute inset-0 font-bold text-rose-500"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: C_HEART + 0.15, type: "spring", stiffness: 300, damping: 18 }}
+                >
+                  96
+                </motion.span>
+              </span>
+            </span>
+            <span className="flex items-center gap-1.5"><MessageCircle size={13} /> 14</span>
+            <span className="flex items-center gap-1.5"><Share2 size={13} /> 8</span>
+          </div>
+        </motion.div>
+
+        {/* Live comments rolling in */}
+        <div className="flex-1 flex flex-col justify-end gap-2 min-h-0">
+          {COMMENTS.map(({ user, color, text }, i) => (
+            <motion.div
+              key={user}
+              initial={{ opacity: 0, y: 18, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: S + 0.9 + i * 0.85, type: "spring", stiffness: 260, damping: 20 }}
+              className="flex items-start gap-2.5"
+            >
+              <div
+                className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
+                style={{ background: color }}
+              >
+                {user[0].toUpperCase()}
+              </div>
+              <div className="glass-sm rounded-2xl rounded-tl-sm px-3.5 py-2 min-w-0">
+                <p className="text-[11px] font-bold text-slate-500 leading-tight">@{user}</p>
+                <p className="text-xs text-slate-700 leading-relaxed">{text}</p>
+              </div>
+            </motion.div>
+          ))}
+
+          {/* Comment input */}
+          <div className="glass-sm rounded-2xl px-4 py-2.5 flex items-center gap-3 mt-1.5">
+            <p className="text-xs text-slate-400 flex-1">Add a comment…</p>
+            <Send size={13} className="text-blue-500" />
           </div>
         </div>
       </div>
