@@ -592,16 +592,16 @@ function QuizFace() {
               You
             </div>
             {/* Score ticks 2 → 3 when the answer lands */}
-            <span className="relative text-xl font-black text-blue-600 ml-auto w-4 text-center">
+            <span className="relative inline-block w-5 h-7 ml-auto text-xl font-black text-blue-600">
               <motion.span
-                className="absolute inset-0"
+                className="absolute inset-0 flex items-center justify-center"
                 animate={{ opacity: [1, 1, 0] }}
                 transition={{ delay: Q_CLICK + 0.2, duration: 0.25, times: [0, 0.6, 1] }}
               >
                 2
               </motion.span>
               <motion.span
-                className="absolute inset-0"
+                className="absolute inset-0 flex items-center justify-center"
                 initial={{ opacity: 0, scale: 1.6 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: Q_CLICK + 0.35, type: "spring", stiffness: 320, damping: 16 }}
