@@ -231,59 +231,48 @@ function ProductScene() {
       {/* Glow behind card */}
       <div className="absolute -bottom-6 inset-x-16 h-20 bg-blue-400/20 blur-3xl rounded-full pointer-events-none" />
 
-      {/* Floating badges — a different shape, size and corner for each act */}
+      {/* Corner chips — swap with each act */}
       <AnimatePresence>
         {face === 0 && (
-          /* Act 1 — vertical prayer mini-card, tilted, top-left */
           <motion.div
             key={`chip-a-${act}`}
-            initial={{ opacity: 0, y: 14, rotate: -8, scale: 0.85 }}
-            animate={{ opacity: 1, y: 0, rotate: -4, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.25 } }}
-            transition={{ delay: 1.2, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-            className="hidden sm:block absolute -top-8 -left-6 z-10 glass-card rounded-3xl px-4 py-3.5 text-center"
+            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.25 } }}
+            transition={{ delay: 1.2, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="hidden sm:flex absolute -top-5 -left-4 z-10 glass-card items-center gap-2.5 rounded-2xl px-4 py-2.5"
           >
-            <div className="w-9 h-9 mx-auto rounded-full flex items-center justify-center mb-1.5 border border-blue-200/70"
-              style={{ background: "rgba(219,234,254,0.75)" }}>
-              <BellRing size={15} className="text-blue-500" />
+            <BellRing size={17} className="text-blue-500" />
+            <div>
+              <p className="text-sm font-black text-slate-900 leading-none">Dhuhr · 42 min</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">next prayer</p>
             </div>
-            <p className="text-sm font-black text-slate-900 leading-none">Dhuhr</p>
-            <p className="text-[10px] text-slate-400 mt-1">in 42 min</p>
           </motion.div>
         )}
         {face === 1 && (
-          /* Act 2 — circular XP medallion, tilted the other way, top-right */
           <motion.div
             key={`chip-c-${act}`}
-            initial={{ opacity: 0, y: 14, rotate: 14, scale: 0.7 }}
-            animate={{ opacity: 1, y: 0, rotate: 6, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.7, transition: { duration: 0.25 } }}
-            transition={{ delay: 1.0, type: "spring", stiffness: 220, damping: 17 }}
-            className="hidden sm:flex absolute -top-9 -right-6 z-10 glass-card w-[5.5rem] h-[5.5rem] rounded-full flex-col items-center justify-center"
+            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.25 } }}
+            transition={{ delay: 1.0, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="hidden sm:flex absolute -top-5 -left-4 z-10 glass-card items-center gap-2 rounded-2xl px-4 py-2.5"
           >
-            <Zap size={17} className="text-indigo-500 mb-0.5" />
-            <p className="text-sm font-black text-indigo-600 leading-none">+60 XP</p>
-            <p className="text-[9px] text-slate-400 mt-0.5">to the winner</p>
+            <Zap size={15} className="text-indigo-500" />
+            <p className="text-xs font-bold text-indigo-600">+60 XP to the winner</p>
           </motion.div>
         )}
         {face === 2 && (
-          /* Act 3 — wide verification banner, bottom-left */
           <motion.div
             key={`chip-d-${act}`}
-            initial={{ opacity: 0, y: -12, rotate: -5, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, rotate: -2, scale: 1 }}
+            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.25 } }}
-            transition={{ delay: 1.0, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-            className="hidden sm:flex absolute -bottom-6 -left-7 z-10 glass-card items-center gap-3 rounded-full pl-2 pr-5 py-2"
+            transition={{ delay: 1.0, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="hidden sm:flex absolute -top-5 -left-4 z-10 glass-card items-center gap-2 rounded-2xl px-4 py-2.5"
           >
-            <div className="w-9 h-9 rounded-full flex items-center justify-center border border-emerald-200/70 flex-shrink-0"
-              style={{ background: "rgba(209,250,229,0.8)" }}>
-              <ShieldCheck size={16} className="text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-xs font-black text-slate-900 leading-tight">Every answer is cited</p>
-              <p className="text-[10px] text-slate-400">Quran &amp; sahih hadith only</p>
-            </div>
+            <ShieldCheck size={15} className="text-emerald-500" />
+            <p className="text-xs font-bold text-emerald-600">Every answer is cited</p>
           </motion.div>
         )}
       </AnimatePresence>
