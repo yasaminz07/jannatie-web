@@ -572,8 +572,7 @@ function DashboardFace() {
   );
 }
 
-/* Close-up 1 — streak: split layout, tall glass counter panel on the left,
-   day rows cascading in on the right */
+/* Close-up: how the streak grows +1 with each day's lesson */
 function StreakFocus({ zoom }: { zoom: boolean }) {
   const days = [
     { day: "Saturday", label: "Lesson completed" },
@@ -582,67 +581,58 @@ function StreakFocus({ zoom }: { zoom: boolean }) {
   ];
 
   return (
-    <div className="w-full px-5 sm:px-8">
-      <div className="flex items-stretch gap-3 max-w-md mx-auto">
+    <div className="w-full max-w-xs px-6 text-center">
+      <motion.div
+        animate={zoom ? { rotate: [0, -12, 10, 0], scale: [1, 1.2, 1] } : {}}
+        transition={{ delay: 0.9, duration: 0.6 }}
+        className="inline-flex mb-2"
+      >
+        <Flame size={44} className="text-orange-500" style={{ filter: "drop-shadow(0 6px 14px rgba(249,115,22,0.45))" }} />
+      </motion.div>
 
-        {/* Left — tall frosted counter panel */}
-        <motion.div
-          initial={{ opacity: 0, x: -20, scale: 0.92 }}
-          animate={zoom ? { opacity: 1, x: 0, scale: 1 } : { opacity: 0, x: -20, scale: 0.92 }}
-          transition={zoom ? { delay: 0.45, type: "spring", stiffness: 240, damping: 20 } : { duration: 0.2 }}
-          className="glass-card rounded-[1.75rem] px-6 py-7 flex flex-col items-center justify-center text-center flex-shrink-0"
+      {/* Counter ticks 21 → 22 as today's entry lands */}
+      <div className="relative h-14 mb-1">
+        <motion.p
+          className="absolute inset-0 text-5xl font-black text-slate-900"
+          animate={zoom ? { opacity: [1, 1, 0] } : { opacity: 1 }}
+          transition={{ delay: 1.5, duration: 0.25, times: [0, 0.6, 1] }}
         >
+          21
+        </motion.p>
+        <motion.p
+          className="absolute inset-0 text-5xl font-black text-slate-900"
+          initial={{ opacity: 0, scale: 1.5 }}
+          animate={zoom ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 1.5 }}
+          transition={zoom ? { delay: 1.65, type: "spring", stiffness: 300, damping: 16 } : { duration: 0.2 }}
+        >
+          22
+        </motion.p>
+      </div>
+      <p className="text-slate-500 text-sm mb-5">days in a row</p>
+
+      {/* One lesson a day = +1 streak */}
+      <div className="space-y-2 text-left">
+        {days.map(({ day, label, today }, i) => (
           <motion.div
-            animate={zoom ? { rotate: [0, -12, 10, 0], scale: [1, 1.2, 1] } : {}}
-            transition={{ delay: 1.6, duration: 0.6 }}
-            className="inline-flex mb-2"
+            key={day}
+            initial={{ opacity: 0, x: -14 }}
+            animate={zoom ? { opacity: 1, x: 0 } : { opacity: 0, x: -14 }}
+            transition={zoom ? { delay: 0.55 + i * 0.35, type: "spring", stiffness: 260, damping: 20 } : { duration: 0.2 }}
+            className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 border"
+            style={today
+              ? { background: "rgba(255,237,213,0.75)", borderColor: "rgba(251,146,60,0.5)" }
+              : { background: "rgba(255,255,255,0.55)", borderColor: "rgba(255,255,255,0.7)" }}
           >
-            <Flame size={40} className="text-orange-500" style={{ filter: "drop-shadow(0 6px 14px rgba(249,115,22,0.45))" }} />
+            <span className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${today ? "bg-orange-500" : "bg-emerald-500"}`}>
+              <Check size={12} className="text-white" strokeWidth={3} />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-slate-800 leading-tight">{day}</p>
+              <p className="text-[11px] text-slate-400">{label}</p>
+            </div>
+            <span className={`text-xs font-black ${today ? "text-orange-500" : "text-emerald-600"}`}>+1</span>
           </motion.div>
-
-          {/* Counter ticks 21 → 22 as today's entry lands */}
-          <div className="relative h-12 w-16 mb-0.5">
-            <motion.p
-              className="absolute inset-0 text-5xl font-black text-slate-900"
-              animate={zoom ? { opacity: [1, 1, 0] } : { opacity: 1 }}
-              transition={{ delay: 1.5, duration: 0.25, times: [0, 0.6, 1] }}
-            >
-              21
-            </motion.p>
-            <motion.p
-              className="absolute inset-0 text-5xl font-black text-slate-900"
-              initial={{ opacity: 0, scale: 1.5 }}
-              animate={zoom ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 1.5 }}
-              transition={zoom ? { delay: 1.65, type: "spring", stiffness: 300, damping: 16 } : { duration: 0.2 }}
-            >
-              22
-            </motion.p>
-          </div>
-          <p className="text-slate-400 text-[11px] font-semibold uppercase tracking-widest">day streak</p>
-        </motion.div>
-
-        {/* Right — one lesson a day = +1 */}
-        <div className="flex-1 flex flex-col justify-center gap-2">
-          {days.map(({ day, label, today }, i) => (
-            <motion.div
-              key={day}
-              initial={{ opacity: 0, x: 24 }}
-              animate={zoom ? { opacity: 1, x: 0 } : { opacity: 0, x: 24 }}
-              transition={zoom ? { delay: 0.65 + i * 0.32, type: "spring", stiffness: 260, damping: 20 } : { duration: 0.2 }}
-              className="glass-card flex items-center gap-3 rounded-2xl px-3.5 py-2.5"
-              style={today ? { border: "1px solid rgba(251,146,60,0.55)" } : undefined}
-            >
-              <span className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${today ? "bg-orange-500" : "bg-emerald-500"}`}>
-                <Check size={12} className="text-white" strokeWidth={3} />
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-slate-800 leading-tight">{day}</p>
-                <p className="text-[11px] text-slate-400">{label}</p>
-              </div>
-              <span className={`text-xs font-black ${today ? "text-orange-500" : "text-emerald-600"}`}>+1</span>
-            </motion.div>
-          ))}
-        </div>
+        ))}
       </div>
     </div>
   );
@@ -806,85 +796,38 @@ function QuizFace() {
   );
 }
 
-/* Close-up 2 — victory: one wide glass banner with confetti, a beaten-avatar
-   scoreline through the middle and rewards along the bottom */
+/* Close-up: victory rewards */
 function VictoryFocus({ zoom }: { zoom: boolean }) {
-  const confetti = [
-    { left: "12%", top: "16%", color: "#f59e0b", delay: 1.0 },
-    { left: "84%", top: "20%", color: "#8b5cf6", delay: 1.15 },
-    { left: "22%", top: "72%", color: "#3b82f6", delay: 1.3 },
-    { left: "74%", top: "78%", color: "#10b981", delay: 1.45 },
-    { left: "50%", top: "10%", color: "#f43f5e", delay: 1.2 },
-  ];
-
   return (
-    <div className="w-full px-5 sm:px-10">
+    <div className="w-full max-w-xs px-6 text-center">
       <motion.div
-        initial={{ opacity: 0, y: 24, scale: 0.9 }}
-        animate={zoom ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 24, scale: 0.9 }}
-        transition={zoom ? { delay: 0.45, type: "spring", stiffness: 220, damping: 20 } : { duration: 0.2 }}
-        className="glass-card relative rounded-[2rem] px-6 py-7 max-w-sm mx-auto overflow-hidden"
+        animate={zoom ? { rotate: [0, -10, 8, 0], scale: [1, 1.25, 1] } : {}}
+        transition={{ delay: 0.9, duration: 0.6 }}
+        className="inline-flex mb-3"
       >
-        {/* Confetti pops */}
-        {confetti.map(({ left, top, color, delay }, i) => (
-          <motion.span
-            key={i}
-            className="absolute w-2 h-2 rounded-full pointer-events-none"
-            style={{ left, top, background: color }}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={zoom ? { scale: [0, 1.4, 1], opacity: [0, 1, 0.7], y: [0, -6, 2] } : { scale: 0, opacity: 0 }}
-            transition={zoom ? { delay, duration: 0.7, ease: "easeOut" } : { duration: 0.15 }}
-          />
-        ))}
-
-        {/* Trophy breaks the top edge */}
-        <motion.div
-          animate={zoom ? { rotate: [0, -10, 8, 0], scale: [1, 1.25, 1] } : {}}
-          transition={{ delay: 1.1, duration: 0.6 }}
-          className="flex justify-center -mt-1 mb-2"
-        >
-          <Trophy size={42} className="text-amber-500" style={{ filter: "drop-shadow(0 6px 14px rgba(245,158,11,0.45))" }} />
-        </motion.div>
-
-        <p className="text-3xl font-black text-slate-900 text-center mb-4">Victory!</p>
-
-        {/* Scoreline */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={zoom ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.9 }}
-          transition={zoom ? { delay: 0.8, type: "spring", stiffness: 260, damping: 20 } : { duration: 0.2 }}
-          className="flex items-center justify-center gap-3 mb-5"
-        >
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
-            style={{ background: "linear-gradient(135deg, #3b82f6, #4f46e5)" }}>
-            You
-          </div>
-          <span className="text-2xl font-black text-slate-900 tabular-nums">3</span>
-          <span className="text-slate-300 font-bold text-sm">–</span>
-          <span className="text-2xl font-black text-slate-400 tabular-nums">2</span>
-          <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-white text-[10px] font-bold opacity-60">
-            A
-          </div>
-        </motion.div>
-
-        {/* Rewards */}
-        <div className="flex justify-center gap-2.5">
-          {[
-            { label: "+60 XP", tint: "text-indigo-600" },
-            { label: "+25 💎", tint: "text-blue-600" },
-          ].map(({ label, tint }, i) => (
-            <motion.span
-              key={label}
-              initial={{ opacity: 0, y: 14, scale: 0.7 }}
-              animate={zoom ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 14, scale: 0.7 }}
-              transition={zoom ? { delay: 1.35 + i * 0.2, type: "spring", stiffness: 300, damping: 16 } : { duration: 0.2 }}
-              className={`glass-sm text-sm font-black px-4 py-2 rounded-2xl ${tint}`}
-            >
-              {label}
-            </motion.span>
-          ))}
-        </div>
+        <Trophy size={44} className="text-amber-500" style={{ filter: "drop-shadow(0 6px 14px rgba(245,158,11,0.45))" }} />
       </motion.div>
+
+      <p className="text-4xl font-black text-slate-900 mb-1">Victory!</p>
+      <p className="text-slate-500 text-sm mb-6">You beat Amir 3 – 2</p>
+
+      <div className="flex justify-center gap-3">
+        {[
+          { label: "+60 XP", tint: "text-indigo-600", bg: "rgba(224,231,255,0.8)", border: "rgba(165,180,252,0.6)" },
+          { label: "+25 💎", tint: "text-blue-600",   bg: "rgba(219,234,254,0.8)", border: "rgba(147,197,253,0.6)" },
+        ].map(({ label, tint, bg, border }, i) => (
+          <motion.span
+            key={label}
+            initial={{ opacity: 0, y: 14, scale: 0.7 }}
+            animate={zoom ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 14, scale: 0.7 }}
+            transition={zoom ? { delay: 1.2 + i * 0.2, type: "spring", stiffness: 300, damping: 16 } : { duration: 0.2 }}
+            className={`text-sm font-black px-4 py-2 rounded-2xl border ${tint}`}
+            style={{ background: bg, borderColor: border }}
+          >
+            {label}
+          </motion.span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -982,59 +925,31 @@ function AIFace() {
   );
 }
 
-/* Close-up 3 — citation: a left-aligned frosted reference card, like a page
-   pulled from the book, with an emerald accent spine */
+/* Close-up: the citation, verified */
 function CitationFocus({ zoom }: { zoom: boolean }) {
   return (
-    <div className="w-full px-6 sm:px-12">
+    <div className="w-full max-w-xs px-6 text-center">
       <motion.div
-        initial={{ opacity: 0, x: 28, rotate: 2 }}
-        animate={zoom ? { opacity: 1, x: 0, rotate: 0 } : { opacity: 0, x: 28, rotate: 2 }}
-        transition={zoom ? { delay: 0.45, type: "spring", stiffness: 220, damping: 22 } : { duration: 0.2 }}
-        className="glass-card relative rounded-2xl max-w-sm mx-auto overflow-hidden flex"
+        animate={zoom ? { scale: [1, 1.2, 1] } : {}}
+        transition={{ delay: 0.9, duration: 0.5 }}
+        className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 border border-emerald-200"
+        style={{ background: "rgba(209,250,229,0.8)", boxShadow: "0 10px 30px rgba(16,185,129,0.25)" }}
       >
-        {/* Accent spine */}
-        <div className="w-1.5 flex-shrink-0 bg-gradient-to-b from-emerald-400 to-teal-500" />
-
-        <div className="p-5 flex-1 text-left relative">
-          {/* Verified shield floats top-right */}
-          <motion.div
-            animate={zoom ? { scale: [1, 1.2, 1] } : {}}
-            transition={{ delay: 1.3, duration: 0.5 }}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center border border-emerald-200"
-            style={{ background: "rgba(209,250,229,0.85)", boxShadow: "0 8px 22px rgba(16,185,129,0.25)" }}
-          >
-            <ShieldCheck size={19} className="text-emerald-600" />
-          </motion.div>
-
-          <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-[0.25em] mb-2">
-            Verified source
-          </p>
-          <p className="font-serif italic text-2xl text-slate-900 leading-tight mb-0.5">
-            Sahih al-Bukhari
-          </p>
-          <motion.p
-            initial={{ opacity: 0, y: 8 }}
-            animate={zoom ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
-            transition={zoom ? { delay: 0.9, type: "spring", stiffness: 280, damping: 20 } : { duration: 0.2 }}
-            className="text-emerald-600 font-black text-lg mb-3"
-          >
-            Hadith № 5010
-          </motion.p>
-
-          <div className="h-px bg-slate-200/80 mb-3" />
-
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={zoom ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
-            transition={zoom ? { delay: 1.15, duration: 0.45 } : { duration: 0.2 }}
-            className="text-sm text-slate-500 leading-relaxed"
-          >
-            Every answer cites its exact source, so you can open the book and
-            verify it yourself.
-          </motion.p>
-        </div>
+        <ShieldCheck size={30} className="text-emerald-600" />
       </motion.div>
+
+      <p className="text-2xl font-black text-slate-900 mb-1">Sahih al-Bukhari</p>
+      <p className="text-emerald-600 font-black text-lg mb-4">Hadith 5010</p>
+
+      <motion.p
+        initial={{ opacity: 0, y: 10 }}
+        animate={zoom ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+        transition={zoom ? { delay: 1.2, duration: 0.45 } : { duration: 0.2 }}
+        className="text-sm text-slate-500 leading-relaxed"
+      >
+        Every answer cites its exact source, so you can open the book and
+        verify it yourself.
+      </motion.p>
     </div>
   );
 }
