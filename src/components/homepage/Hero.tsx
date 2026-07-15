@@ -166,7 +166,14 @@ function AnimatedTitle() {
    2. Dual Quiz  — the cursor answers "Bismillah"; the score ticks up
    3. AI Buddy   — a question is asked, the AI types, a cited answer lands   */
 
-const ACT_MS = 5600; // per-act duration before flipping to the next
+const ACT_MS = 5600; // per-act duration before cutting to the next
+
+// Scene metadata — caption and ambient colour mood per act
+const ACTS = [
+  { num: "01", label: "Build habits that last", accent: "rgba(59, 130, 246, 0.22)" },
+  { num: "02", label: "Battle the Ummah live",  accent: "rgba(139, 92, 246, 0.22)" },
+  { num: "03", label: "Ask with evidence",      accent: "rgba(16, 185, 129, 0.18)" },
+];
 
 function ProductScene() {
   const [act, setAct] = useState(0);
@@ -180,8 +187,12 @@ function ProductScene() {
 
   return (
     <div className="relative" style={{ perspective: 1600 }}>
-      {/* Glow behind card */}
-      <div className="absolute -bottom-6 inset-x-16 h-20 bg-blue-400/20 blur-3xl rounded-full pointer-events-none" />
+      {/* Ambient colour mood — cross-fades to match the scene playing */}
+      <motion.div
+        className="absolute -inset-8 rounded-[3rem] blur-3xl pointer-events-none"
+        animate={{ backgroundColor: ACTS[face].accent }}
+        transition={{ duration: 1.4, ease: "easeInOut" }}
+      />
 
       {/* Corner chips — swap with each act */}
       <AnimatePresence>
@@ -245,19 +256,59 @@ function ProductScene() {
         )}
       </AnimatePresence>
 
-      {/* Flip between faces; each face remounts so its scene replays */}
+      {/* Cinematic cut between scenes — outgoing drifts up and defocuses,
+          incoming rises in from a blur; each face remounts so its scene replays */}
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={act}
-          initial={{ rotateY: -90, opacity: 0.4 }}
-          animate={{ rotateY: 0, opacity: 1 }}
-          exit={{ rotateY: 90, opacity: 0.4 }}
-          transition={{ duration: 0.5, ease: [0.45, 0, 0.55, 1] }}
-          style={{ transformStyle: "preserve-3d" }}
+          initial={{ opacity: 0, y: 44, scale: 0.96, filter: "blur(14px)" }}
+          animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+          exit={{ opacity: 0, y: -32, scale: 0.97, filter: "blur(10px)" }}
+          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
         >
-          {face === 0 ? <DashboardFace /> : face === 1 ? <QuizFace /> : <AIFace />}
+          {/* Slow Ken Burns drift for the length of the act */}
+          <motion.div
+            animate={{ scale: [1, 1.02] }}
+            transition={{ duration: ACT_MS / 1000, ease: "linear" }}
+          >
+            {face === 0 ? <DashboardFace /> : face === 1 ? <QuizFace /> : <AIFace />}
+          </motion.div>
         </motion.div>
       </AnimatePresence>
+
+      {/* Scene caption + story-style progress segments */}
+      <div className="flex items-center justify-between mt-6 px-1">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.p
+            key={act}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className="text-sm font-semibold text-slate-500"
+          >
+            <span className="font-black text-slate-300 mr-2.5">{ACTS[face].num}</span>
+            {ACTS[face].label}
+          </motion.p>
+        </AnimatePresence>
+
+        <div className="flex gap-1.5">
+          {ACTS.map((_, i) => (
+            <div key={i} className="h-1 w-10 rounded-full bg-slate-200/80 overflow-hidden">
+              {i < face && <div className="h-full w-full bg-slate-400 rounded-full" />}
+              {i === face && (
+                <motion.div
+                  key={act}
+                  initial={{ width: "0%" }}
+                  animate={{ width: "100%" }}
+                  transition={{ duration: ACT_MS / 1000, ease: "linear" }}
+                  className="h-full bg-slate-400 rounded-full"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
